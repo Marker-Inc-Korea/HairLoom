@@ -1,0 +1,740 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>HAIRLOOM · Design Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@latest/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --bg:#080606;--bg2:#0f0b0a;--panel:#161010;--line:#241b18;
+  --ink:#f4ece3;--muted:#9c8a7d;--faint:#5f5048;
+  --accent:#d98aa0;--gold:#caa473;
+  --serif:"Playfair Display","Gowun Batang",Georgia,serif;
+  --sans:"Pretendard",ui-sans-serif,system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --photo-scale:.9;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--sans);color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;user-select:none}
+img{display:block;-webkit-user-drag:none}
+button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+input[type=file]{display:none}
+
+.top{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:20px 24px}
+.brand{display:flex;align-items:baseline;gap:9px;opacity:.9}
+.brand b{font-family:var(--serif);font-size:17px;font-weight:600}
+.brand span{font-size:8px;letter-spacing:.34em;color:var(--faint);text-transform:uppercase}
+.toptools{display:flex;align-items:center;gap:10px}.zoomctl{display:flex;align-items:center;border:1px solid var(--line);border-radius:999px;background:rgba(8,6,6,.62);overflow:hidden}.zoomctl button{width:28px;height:28px;color:var(--muted);font-size:14px}.zoomctl button:hover{color:var(--accent)}.zoomctl span{min-width:38px;text-align:center;font-size:9px;color:var(--faint);letter-spacing:.06em}
+.back{font-size:13px;color:var(--muted);opacity:0;pointer-events:none;transition:.4s var(--ease)}
+.back.on{opacity:1;pointer-events:auto}.back:hover{color:var(--ink)}
+
+.admintoggle{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:8px;font-size:11.5px;letter-spacing:.04em;color:var(--faint);cursor:pointer}
+.admintoggle input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+.admintoggle:hover{color:var(--muted)}
+.stage{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  opacity:0;visibility:hidden;transform:translateY(10px);transition:opacity .55s var(--ease),transform .55s var(--ease),visibility .55s}
+.stage.active{opacity:1;visibility:visible;transform:none}
+.cta{display:inline-flex;align-items:center;gap:12px;padding:15px 38px;border-radius:999px;background:var(--ink);color:#0b0808;font-size:15px;font-weight:700;transition:.4s var(--ease);box-shadow:0 18px 44px rgba(0,0,0,.5)}
+.cta:hover{background:var(--accent)}
+
+/* GENDER */
+#gender{flex-direction:row;padding:0}
+.gcol{flex:1;height:100%;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:flex .7s var(--ease)}
+.gcol:before{content:"";position:absolute;inset:0;background:radial-gradient(70% 60% at 50% 40%,rgba(217,138,160,.12),transparent 60%);opacity:0;transition:.6s var(--ease)}
+.gcol:hover:before{opacity:1}.gcol:hover{flex:1.25}
+.gcol+.gcol{border-left:1px solid var(--line)}
+.gcol .en{font-family:var(--serif);font-size:clamp(40px,7vw,84px);font-weight:500;letter-spacing:-.02em;transition:.5s var(--ease)}
+.gcol:hover .en{color:var(--accent)}
+
+/* PERSONAL */
+#personal{padding:0 24px}
+.pwrap{width:min(560px,100%);display:flex;flex-direction:column;gap:30px}
+.ptit{font-family:var(--serif);font-weight:500;font-size:clamp(24px,4.4vw,38px);letter-spacing:-.02em;text-align:center;margin-bottom:4px}
+.ptit em{font-style:italic;color:var(--accent)}
+.field .flab{font-size:11px;letter-spacing:.26em;color:var(--faint);text-transform:uppercase;margin-bottom:13px}
+.chips{display:flex;gap:10px;flex-wrap:wrap}
+.chip{padding:11px 20px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:14px;font-weight:600;color:var(--muted);transition:.35s var(--ease)}
+.chip:hover{border-color:var(--faint);color:var(--ink)}
+.chip.sel{background:var(--ink);color:#0b0808;border-color:var(--ink)}
+.palette{display:flex;gap:11px;flex-wrap:wrap;align-items:center}
+.sw{width:38px;height:38px;border-radius:11px;cursor:pointer;border:1px solid rgba(244,236,227,.14);transition:.3s var(--ease);position:relative}
+.sw:hover{transform:scale(1.08)}
+.sw.sel{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--accent)}
+.sw .nm{position:absolute;left:50%;bottom:-19px;transform:translateX(-50%);font-size:9px;color:var(--faint);white-space:nowrap;opacity:0;transition:.3s}
+.sw.sel .nm,.sw:hover .nm{opacity:1}
+.pcustom{width:38px;height:38px;border-radius:11px;border:1px dashed var(--faint);display:grid;place-items:center;color:var(--gold);font-size:16px;position:relative;overflow:hidden}
+.pcustom input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.pcount{font-size:12px;color:var(--gold)}
+
+/* SLIDER shell (angles + results) */
+.slider{position:absolute;inset:0;display:flex;flex-direction:column}
+.viewport{position:relative;flex:1;overflow:hidden;touch-action:pan-y}
+.track{display:flex;height:100%;will-change:transform}
+.slide{flex:0 0 100%;height:100%;position:relative;display:flex;align-items:center;justify-content:center}
+.sarw{position:absolute;top:44%;transform:translateY(-50%);z-index:20;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(8,6,6,.5);backdrop-filter:blur(8px);display:grid;place-items:center;font-size:16px;transition:.4s var(--ease)}
+.sarw:hover{border-color:var(--accent)}.sarw.l{left:14px}.sarw.r{right:14px}
+.dots{flex:none;display:flex;gap:8px;justify-content:center;align-items:center;padding:20px 0 26px}
+.dots b{width:7px;height:7px;border-radius:50%;background:var(--line);transition:.4s var(--ease);cursor:pointer}
+.dots b.on{background:var(--accent);width:22px;border-radius:999px}
+.dcap{position:absolute;left:0;right:0;top:78px;text-align:center;font-size:11px;letter-spacing:.28em;color:var(--muted);text-transform:uppercase}
+
+/* angle drop */
+.adrop{width:min(320px,80vw);aspect-ratio:4/5;border-radius:24px;border:1.5px dashed #3a2b26;background:var(--panel);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transform:scale(var(--photo-scale));transition:transform .35s var(--ease),border-color .4s var(--ease)}
+.adrop.hover{border-color:var(--accent)}
+.adrop .ic{width:66px;height:66px;border-radius:50%;border:1.4px solid var(--gold);display:grid;place-items:center;color:var(--gold);font-size:26px}
+.adrop small{font-size:12px;color:var(--faint)}
+.adrop img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:var(--bg2);opacity:0;transition:.5s}
+.adrop.filled img{opacity:1}.adrop.filled .ic,.adrop.filled small{opacity:0}
+.gencta{position:absolute;left:50%;bottom:86px;transform:translate(-50%,8px);z-index:25;opacity:0;pointer-events:none;transition:.5s var(--ease)}
+.gencta.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.anglepresets{position:absolute;top:104px;left:50%;transform:translateX(-50%);z-index:24;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;width:min(720px,calc(100% - 40px))}.presetbtn{padding:8px 13px;border:1px solid var(--line);border-radius:999px;background:rgba(15,11,10,.84);color:var(--muted);font-size:11px;backdrop-filter:blur(8px);transition:.3s var(--ease)}.presetbtn:hover{border-color:var(--accent);color:var(--ink)}
+.consistency{position:absolute;top:148px;left:50%;transform:translateX(-50%);z-index:24;padding:7px 12px;border-radius:999px;background:rgba(8,6,6,.7);color:var(--muted);font-size:10px;white-space:nowrap;letter-spacing:.04em}
+
+/* result slide */
+.rslide .art{position:absolute;left:50%;top:50%;width:100%;height:100%;transform:translate(-50%,-50%) scale(var(--photo-scale));transform-origin:center;overflow:visible;transition:transform .35s var(--ease);background:transparent}
+.rslide .art img{position:absolute;inset:0;width:100%;height:100%}
+.rslide .art .artbg{inset:-10%;width:120%;height:120%;object-fit:cover;filter:blur(38px) brightness(.34) saturate(.82);opacity:.86}
+.rslide .art .artmain{inset:auto;left:50%;top:50%;width:auto;height:auto;max-width:100%;max-height:100%;transform:translate(-50%,-50%);object-fit:contain;z-index:1;-webkit-mask-image:linear-gradient(to right,transparent 0%,#000 4%,#000 96%,transparent 100%),linear-gradient(to bottom,transparent 0%,#000 4%,#000 96%,transparent 100%);-webkit-mask-composite:source-in;mask-image:linear-gradient(to right,transparent 0%,#000 4%,#000 96%,transparent 100%),linear-gradient(to bottom,transparent 0%,#000 4%,#000 96%,transparent 100%);mask-composite:intersect}
+.rslide .art::after{display:none}
+.rslide .vg{position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,6,6,.4),transparent 26%,transparent 52%,rgba(8,6,6,.95))}
+.rslide .no{position:absolute;left:26px;top:12vh;font-family:var(--serif);font-size:clamp(50px,13vw,92px);color:rgba(244,236,227,.13);font-weight:600;line-height:.8}
+.rslide .cap{position:absolute;left:26px;right:26px;bottom:22px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
+.rslide .cap h2{font-family:var(--serif);font-weight:500;font-size:clamp(30px,7vw,46px);letter-spacing:-.02em;line-height:.98}
+.rslide .cap .color{margin-top:10px;display:inline-flex;align-items:center;gap:9px;font-size:12.5px;color:var(--muted)}
+.rslide .cap .color i{width:18px;height:18px;border-radius:6px;box-shadow:0 0 0 1px rgba(244,236,227,.2)}
+.rslide .save{width:50px;height:50px;border-radius:50%;border:1.5px solid rgba(244,236,227,.4);background:rgba(8,6,6,.35);backdrop-filter:blur(6px);display:grid;place-items:center;font-size:18px;flex:none;transition:.35s}
+.rslide .save:hover{border-color:var(--accent)}
+.anglebadge{position:absolute;top:82px;right:26px;z-index:5;padding:8px 13px;border:1px solid rgba(244,236,227,.25);border-radius:999px;background:rgba(8,6,6,.46);font-size:11px;letter-spacing:.16em;color:var(--ink);backdrop-filter:blur(8px)}.dots.style-nav{gap:7px;padding:10px 0 66px}.dots.style-nav b{width:auto;height:28px;min-width:34px;padding:0 9px;border-radius:999px;display:grid;place-items:center;font-size:10px;color:var(--faint)}.dots.style-nav b.on{width:auto;background:var(--accent);color:#0b0808}.hairnext{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:25;padding:10px 20px;border-radius:999px;background:var(--ink);color:#0b0808;font-size:12px;font-weight:700;white-space:nowrap}.hairnext:hover{background:var(--accent)}
+
+/* LOOM % */
+#loom{gap:28px}
+.pct{font-family:var(--serif);font-size:clamp(64px,16vw,120px);font-weight:500;letter-spacing:-.03em;line-height:1}
+.pct small{font-size:.3em;color:var(--muted);margin-left:4px;vertical-align:super}
+.loomsub{font-size:11px;letter-spacing:.3em;color:var(--faint);text-transform:uppercase;margin-top:-6px}
+.loombar{width:220px;height:2px;background:var(--line);border-radius:2px;overflow:hidden}
+.loombar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--gold))}
+.loomthumb{display:flex;gap:8px;margin-top:8px}
+.loomthumb span{width:9px;height:9px;border-radius:50%;background:var(--line);transition:.4s}
+.loomthumb span.on{background:var(--accent)}
+.loomring{position:relative;width:200px;height:200px;display:grid;place-items:center;margin-bottom:6px}
+.loomring::before{content:"";position:absolute;inset:0;border-radius:50%;border:2px solid var(--line);border-top-color:var(--accent);animation:spin 1.1s linear infinite}
+.loomring::after{content:"";position:absolute;inset:14px;border-radius:50%;border:1px solid rgba(202,164,115,.18);border-bottom-color:rgba(202,164,115,.5);animation:spin 1.7s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* EDITOR */
+#editor{justify-content:flex-start;padding:78px 18px 40px}
+.ehead{width:100%;max-width:640px;margin:0 auto 14px;display:flex;align-items:baseline;justify-content:space-between}
+.ehead h2{font-family:var(--serif);font-weight:500;font-size:24px}
+.ehead .save{font-size:13px;color:var(--gold)}
+.egrid{width:100%;max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;overflow-y:auto}
+.ecard{position:relative;aspect-ratio:3/4;border-radius:12px;overflow:hidden;border:1px solid var(--line);cursor:pointer;filter:grayscale(.7) brightness(.45);transition:.3s var(--ease)}
+.ecard img{width:100%;height:100%;object-fit:cover;object-position:50% 16%}
+.ecard .nm{position:absolute;left:0;right:0;bottom:0;padding:9px 6px 7px;font-size:10.5px;text-align:center;background:linear-gradient(transparent,rgba(8,6,6,.9))}
+.ecard.on{filter:none;border-color:var(--accent)}
+.ecard .tick{position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:#0b0808;display:grid;place-items:center;font-size:10px;font-weight:800;opacity:0;transition:.3s}
+.ecard.on .tick{opacity:1}
+.editref{position:fixed;right:18px;bottom:16px;z-index:45;font-size:11px;letter-spacing:.08em;color:var(--faint);border:1px solid var(--line);border-radius:999px;padding:9px 15px;background:rgba(8,6,6,.6);backdrop-filter:blur(6px);transition:.35s var(--ease);display:none}
+.editref:hover{color:var(--ink);border-color:var(--accent)}
+
+.toast{position:fixed;bottom:80px;left:50%;transform:translate(-50%,16px);z-index:80;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:11px 22px;border-radius:999px;font-size:12.5px;opacity:0;transition:.5s var(--ease);white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <button class="back" id="back">← 뒤로</button>
+  <div class="brand"><b>HAIRLOOM</b><span>Design Book</span></div>
+  <div class="toptools"><div class="zoomctl" aria-label="사진 크기"><button id="zoomOut" title="사진 축소">−</button><span id="zoomText">90%</span><button id="zoomIn" title="사진 확대">＋</button></div><button class="gear" id="openCfg" title="이미지 API 연결 설정" aria-label="연결 설정">⚙</button></div>
+</div>
+
+<!-- GENDER -->
+<section class="stage active" id="gender">
+  <div class="gcol" data-g="female"><div class="en">Women</div></div>
+  <div class="gcol" data-g="male"><div class="en">Men</div></div>
+  <label class="admintoggle"><input type="checkbox" id="adminChk"> 기본 레퍼런스 수정 표시 (관리자)</label>
+</section>
+
+<!-- PERSONAL -->
+<section class="stage" id="personal">
+  <div class="pwrap">
+    <div class="ptit">원하는 <em>기준</em>만 정하세요</div>
+    <div class="field"><div class="flab">기장 · Length</div><div class="chips" id="lenChips"></div></div>
+    <div class="field"><div class="flab">컬감 · Texture</div><div class="chips" id="texChips">
+      <button class="chip sel" data-v="">전체</button><button class="chip" data-v="straight">스트레이트</button><button class="chip" data-v="wave">웨이브</button><button class="chip" data-v="curl">컬</button>
+    </div></div>
+    <div class="field"><div class="flab">색상 · Color</div><div class="palette" id="palette"></div></div>
+    <div class="pcount" id="pcount"></div>
+    <button class="cta" id="toAngles" style="align-self:center">사진 넣기 →</button>
+  </div>
+</section>
+
+<!-- ANGLES (front → side → back) -->
+<section class="stage" id="angles">
+  <div class="slider">
+    <div class="dcap">전면 · 측면 · 후면 (오른쪽 화살표로 순서대로 확인)</div>
+    <div class="anglepresets">
+      <button class="presetbtn" data-preset="neutral">기본 마네킹 3각</button>
+      <button class="presetbtn" data-preset="female">여성 마네킹 3각</button>
+      <button class="presetbtn" data-preset="realMale">실사 테스트 3각</button>
+      <button class="presetbtn" id="pickThree">내 사진 3장 선택</button>
+    </div>
+    <div class="consistency">DESIGN LOCK · 각 각도를 한 장씩 독립 생성</div>
+    <div class="viewport" id="aVp"><div class="track" id="aTrack"></div></div>
+    <button class="sarw l" id="aPrev">←</button><button class="sarw r" id="aNext">→</button>
+    <div class="dots" id="aDots"></div>
+  </div>
+  <button class="cta gencta" id="toGen">추천 생성 →</button>
+  <input type="file" id="file" accept="image/*">
+  <input type="file" id="threeFiles" accept="image/*" multiple>
+</section>
+
+<!-- LOOM % -->
+<section class="stage" id="loom">
+  <div class="loomring"><span class="pct"><span id="pctN">0</span><small>%</small></span></div>
+  <div class="loomsub">AI가 얼굴에 적용하는 중 · 약 40초~1분</div>
+  <div class="loombar"><i id="loomBar"></i></div>
+  <div class="loomthumb" id="loomThumb"></div>
+</section>
+
+<!-- RESULTS (arrows change angle, bottom changes hairstyle) -->
+<section class="stage" id="results">
+  <div class="slider">
+    <div class="viewport" id="rVp"><div class="track" id="rTrack"></div></div>
+    <button class="sarw l" id="rPrev" title="이전 각도">←</button><button class="sarw r" id="rNext" title="다음 각도">→</button>
+    <div class="dots style-nav" id="rDots"></div>
+    <button class="hairnext" id="rHairNext">다음 헤어 →</button>
+  </div>
+</section>
+
+<!-- ERROR -->
+<section class="stage" id="error">
+  <div class="errwrap">
+    <div class="erricon">⚠</div>
+    <h2>생성에 실패했어요</h2>
+    <p class="errmsg" id="errMsg">이미지 API 연결을 확인해 주세요.</p>
+    <div class="errbtns">
+      <button class="btn2" id="errCfg">연결 설정</button>
+      <button class="btn2 prime" id="errRetry">다시 시도</button>
+    </div>
+  </div>
+</section>
+<button class="editref" id="editRef">기본 레퍼런스 수정</button>
+
+<!-- EDITOR -->
+<section class="stage" id="editor">
+  <div class="ehead"><h2>기본 레퍼런스</h2><button class="save" id="eSave">완료</button></div>
+  <div class="egrid" id="egrid"></div>
+</section>
+
+<style>
+.gear{font-size:18px;color:var(--muted);opacity:.85;transition:.3s var(--ease)}
+.gear:hover{color:var(--accent);opacity:1}
+.cfgmask{position:fixed;inset:0;z-index:90;background:rgba(4,3,3,.72);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;padding:20px}
+.cfgmask.on{display:flex}
+.cfgcard{position:relative;width:min(420px,100%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:26px 24px;display:flex;flex-direction:column;gap:13px}
+.cfgcard h3{font-family:var(--serif);font-weight:500;font-size:22px}
+.cfghint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:-4px}
+.cfgcard label{display:flex;flex-direction:column;gap:6px;font-size:11px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
+.cfgcard input{font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;text-transform:none;letter-spacing:normal}
+.cfgcard input:focus{outline:none;border-color:var(--accent)}
+.cfgstat{font-size:12px;color:var(--muted);min-height:16px}
+.cfgstat.ok{color:#7fce9b}.cfgstat.off{color:var(--faint)}
+.cfgrow{display:flex;gap:9px;margin-top:4px}
+.btn2{flex:1;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);color:var(--ink);font-size:13px;font-weight:600;transition:.3s var(--ease)}
+.btn2:hover{border-color:var(--accent)}
+.btn2.prime{background:var(--ink);color:#0b0808;border-color:var(--ink)}
+.btn2.ghost{color:var(--muted)}
+.cfgx{position:absolute;top:14px;right:16px;font-size:16px;color:var(--faint)}
+.cfgx:hover{color:var(--ink)}
+.errwrap{display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center;padding:0 24px;max-width:440px}
+.erricon{width:64px;height:64px;border-radius:50%;border:1.5px solid var(--gold);color:var(--gold);display:grid;place-items:center;font-size:28px}
+.errwrap h2{font-family:var(--serif);font-weight:500;font-size:clamp(24px,5vw,34px)}
+.errmsg{color:var(--muted);font-size:14px;line-height:1.6}
+.errbtns{display:flex;gap:10px;margin-top:8px}
+.errbtns .btn2{flex:none;padding:12px 22px}
+</style>
+
+<div class="cfgmask" id="cfgMask">
+  <div class="cfgcard">
+    <button class="cfgx" id="cfgClose" aria-label="닫기">✕</button>
+    <h3>이미지 생성 API 연결</h3>
+    <p class="cfghint">OpenAI 호환 이미지 API(자신의 키)를 연결하세요. 입력값은 서버로 전송되지 않고 이 브라우저(localStorage)에만 저장됩니다. 미연결 시에는 생성되지 않고 오류 안내가 표시됩니다.</p>
+    <label>Base URL<input id="cfgBase" placeholder="https://api.openai.com/v1" autocomplete="off"></label>
+    <label>API Key<input id="cfgKey" type="password" placeholder="sk-..." autocomplete="off"></label>
+    <label>Model<input id="cfgModel" placeholder="gpt-image-1" autocomplete="off"></label>
+    <label>Size<input id="cfgSize" placeholder="1024x1024" autocomplete="off"></label>
+    <div class="cfgstat" id="cfgStat"></div>
+    <div class="cfgrow">
+      <button class="btn2 ghost" id="cfgClear">초기화</button>
+      <button class="btn2" id="cfgTest">연결 테스트</button>
+      <button class="btn2 prime" id="cfgSave">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="imagen.web.js"></script>
+<script>
+const A='docs/assets/samples/';
+const $=s=>document.querySelector(s);
+const delay=ms=>new Promise(r=>setTimeout(r,ms));
+const LENKO={short:'숏',medium:'미디엄',long:'롱'};
+const TEXKO={straight:'스트레이트',wave:'웨이브',curl:'컬'};
+
+/* dye colors (id = server dyePreference) */
+const COLORS=[
+  {id:'natural-black',ko:'내추럴 블랙',hex:'#1b1512'},{id:'dark-brown',ko:'다크 브라운',hex:'#3a2318'},
+  {id:'ash-brown',ko:'애쉬 브라운',hex:'#6f6258'},{id:'cacao-brown',ko:'카카오 브라운',hex:'#6d4631'},
+  {id:'honey-blonde',ko:'허니 블론드',hex:'#d39a35'},{id:'ash-blonde',ko:'애쉬 블론드',hex:'#c9c2aa'},
+  {id:'ash-gray',ko:'애쉬 그레이',hex:'#8b8f92'},{id:'rose-brown',ko:'로즈 브라운',hex:'#b5726f'},
+  {id:'lavender-ash',ko:'라벤더 애쉬',hex:'#a89ac7'},{id:'copper',ko:'코퍼',hex:'#c9662f'}
+];
+function nearestColor(hex){
+  const p=h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16));const [r,g,b]=p(hex);
+  let best=COLORS[0],bd=1e9;COLORS.forEach(c=>{const [R,G,B]=p(c.hex);const d=(R-r)**2+(G-g)**2+(B-b)**2;if(d<bd){bd=d;best=c}});return best;
+}
+
+/* custom dye colors persist (localStorage) */
+const CUSTOM_COLORS_KEY='HAIR_CUSTOM_COLORS';
+function loadCustomColors(){try{const v=JSON.parse(localStorage.getItem(CUSTOM_COLORS_KEY));return Array.isArray(v)?v:[]}catch(e){return []}}
+function saveCustomColors(list){localStorage.setItem(CUSTOM_COLORS_KEY,JSON.stringify(list))}
+function addCustomColor(hex){
+  hex=('#'+hex.replace('#','')).toLowerCase();
+  let c=COLORS.find(x=>x.hex.toLowerCase()===hex);
+  if(!c){c={id:'custom-'+hex.slice(1),ko:'커스텀 '+hex.toUpperCase(),hex,custom:true};COLORS.push(c);const list=loadCustomColors();list.push(c);saveCustomColors(list)}
+  return c;
+}
+loadCustomColors().forEach(c=>{if(c&&c.hex&&!COLORS.some(x=>x.id===c.id))COLORS.push(c)});
+
+/* base cuts (hs = server hairStyle tapeValue) */
+const CUTS=[
+  // FEMALE
+  {g:'female',ko:'소프트 단발',len:'short',tex:'straight',hs:'female-soft-bob',img:'hair-female-soft-bob-only.jpg'},
+  {g:'female',ko:'미니 보브',len:'short',tex:'straight',hs:'female-mini-bob',img:'hair-female-soft-bob-only.jpg'},
+  {g:'female',ko:'턱선 단발',len:'short',tex:'straight',hs:'female-chin-bob',img:'hair-female-soft-bob-only.jpg'},
+  {g:'female',ko:'픽시컷',len:'short',tex:'straight',hs:'female-pixie-cut',img:'hair-female-pixie-cut-only.jpg'},
+  {g:'female',ko:'샤기 픽시',len:'short',tex:'wave',hs:'female-shaggy-pixie',img:'hair-female-pixie-cut-only.jpg'},
+  {g:'female',ko:'웨이브 보브',len:'short',tex:'wave',hs:'female-wave-bob',img:'hair-female-soft-bob-only.jpg'},
+  {g:'female',ko:'러블리 숏',len:'short',tex:'wave',hs:'female-lovely-short',img:'hair-female-pixie-cut-only.jpg'},
+  {g:'female',ko:'컬리 보브',len:'short',tex:'curl',hs:'female-curly-bob',img:'hair-female-soft-bob-only.jpg'},
+  {g:'female',ko:'숏 컬펌',len:'short',tex:'curl',hs:'female-short-curl',img:'hair-female-pixie-cut-only.jpg'},
+  {g:'female',ko:'미디엄 일자컷',len:'medium',tex:'straight',hs:'female-medium-straight',img:'hair-female-sleek-long-only.jpg'},
+  {g:'female',ko:'원랭스 미디',len:'medium',tex:'straight',hs:'female-one-length-medi',img:'hair-female-long-c-curl-only.jpg'},
+  {g:'female',ko:'허쉬컷',len:'medium',tex:'wave',hs:'female-hush-cut',img:'hair-female-hush-cut-only.jpg'},
+  {g:'female',ko:'레이어드 미디',len:'medium',tex:'wave',hs:'female-layered-medi',img:'hair-female-hush-cut-only.jpg'},
+  {g:'female',ko:'커튼뱅',len:'medium',tex:'wave',hs:'female-curtain-bang',img:'hair-female-curtain-bang-only.jpg'},
+  {g:'female',ko:'빌드펌',len:'medium',tex:'wave',hs:'female-build-perm',img:'hair-female-medium-s-curl-only.jpg'},
+  {g:'female',ko:'미디엄 S컬',len:'medium',tex:'curl',hs:'female-medium-s-curl',img:'hair-female-medium-s-curl-only.jpg'},
+  {g:'female',ko:'물결펌',len:'medium',tex:'curl',hs:'female-wave-perm',img:'hair-female-medium-s-curl-only.jpg'},
+  {g:'female',ko:'히피펌 미디',len:'medium',tex:'curl',hs:'female-hippie-medi',img:'hair-female-hippie-wave-only.jpg'},
+  {g:'female',ko:'슬릭 롱',len:'long',tex:'straight',hs:'female-sleek-long',img:'hair-female-sleek-long-only.jpg'},
+  {g:'female',ko:'생머리 롱',len:'long',tex:'straight',hs:'female-natural-long',img:'hair-female-sleek-long-only.jpg'},
+  {g:'female',ko:'로우 포니테일',len:'long',tex:'straight',hs:'female-low-ponytail',img:'hair-female-low-ponytail-only.jpg'},
+  {g:'female',ko:'에어리 레이어드',len:'long',tex:'wave',hs:'female-airy-layered',img:'hair-female-airy-layered-only.jpg'},
+  {g:'female',ko:'히피 웨이브',len:'long',tex:'wave',hs:'female-hippie-wave',img:'hair-female-hippie-wave-only.jpg'},
+  {g:'female',ko:'롱 레이어드 웨이브',len:'long',tex:'wave',hs:'female-long-layered-wave',img:'hair-female-airy-layered-only.jpg'},
+  {g:'female',ko:'롱 C컬',len:'long',tex:'curl',hs:'female-long-c-curl',img:'hair-female-long-c-curl-only.jpg'},
+  {g:'female',ko:'롱 히피펌',len:'long',tex:'curl',hs:'female-long-hippie-perm',img:'hair-female-hippie-wave-only.jpg'},
+  {g:'female',ko:'바디펌 롱',len:'long',tex:'curl',hs:'female-long-body-perm',img:'hair-female-long-c-curl-only.jpg'},
+  // MALE
+  {g:'male',ko:'투블럭',len:'short',tex:'straight',hs:'male-soft-two-block',img:'hair-male-two-block-only.jpg'},
+  {g:'male',ko:'댄디 가르마',len:'short',tex:'straight',hs:'male-dandy-part',img:'hair-male-dandy-part-only.jpg'},
+  {g:'male',ko:'아이비리그',len:'short',tex:'straight',hs:'male-ivy-league',img:'hair-male-ivy-league-only.jpg'},
+  {g:'male',ko:'버즈컷',len:'short',tex:'straight',hs:'male-buzz-cut',img:'hair-male-buzz-cut-only.jpg'},
+  {g:'male',ko:'텍스처드 크롭',len:'short',tex:'wave',hs:'male-textured-crop',img:'hair-male-textured-crop-only.jpg'},
+  {g:'male',ko:'리프컷',len:'short',tex:'wave',hs:'male-leaf-cut',img:'hair-male-textured-crop-only.jpg'},
+  {g:'male',ko:'애즈펌 숏',len:'short',tex:'wave',hs:'male-short-as-perm',img:'hair-male-curly-short-only.jpg'},
+  {g:'male',ko:'쉼표머리',len:'short',tex:'curl',hs:'male-comma-hair',img:'hair-male-comma-only.jpg'},
+  {g:'male',ko:'컬리 숏',len:'short',tex:'curl',hs:'male-curly-short',img:'hair-male-curly-short-only.jpg'},
+  {g:'male',ko:'다운펌 숏',len:'short',tex:'curl',hs:'male-short-down-perm',img:'hair-male-comma-only.jpg'},
+  {g:'male',ko:'슬릭백',len:'medium',tex:'straight',hs:'male-slick-back',img:'hair-male-slick-back-only.jpg'},
+  {g:'male',ko:'미디엄 가르마',len:'medium',tex:'straight',hs:'male-medium-part',img:'hair-male-dandy-part-only.jpg'},
+  {g:'male',ko:'미디엄 웨이브',len:'medium',tex:'wave',hs:'male-wavy-medium',img:'hair-male-wavy-medium-only.jpg'},
+  {g:'male',ko:'울프컷',len:'medium',tex:'wave',hs:'male-wolf-cut',img:'hair-male-wolf-cut-only.jpg'},
+  {g:'male',ko:'리젠트 웨이브',len:'medium',tex:'wave',hs:'male-regent-wave',img:'hair-male-slick-back-only.jpg'},
+  {g:'male',ko:'애즈펌 미디',len:'medium',tex:'curl',hs:'male-medium-as-perm',img:'hair-male-wavy-medium-only.jpg'},
+  {g:'male',ko:'히피펌',len:'medium',tex:'curl',hs:'male-hippie-perm',img:'hair-male-wolf-cut-only.jpg'},
+  {g:'male',ko:'남성 롱 스트레이트',len:'long',tex:'straight',hs:'male-long-straight',img:'hair-male-wolf-cut-only.jpg'},
+  {g:'male',ko:'남성 웨이브 장발',len:'long',tex:'wave',hs:'male-long-wave',img:'hair-male-wolf-cut-only.jpg'},
+  {g:'male',ko:'남성 컬 장발',len:'long',tex:'curl',hs:'male-long-curl',img:'hair-male-wolf-cut-only.jpg'}
+];
+const DESIGN_LOCK_VERSION='HL-DESIGN-2026-07-B';
+const STYLE_BLUEPRINTS={
+  'female-soft-bob':'center or soft side part; smooth jaw-length bob; one continuous rounded perimeter; subtle inward bend; nape fully covered',
+  'female-mini-bob':'compact ear-to-chin mini bob; clean dense perimeter; minimal layers; nape line high and neat',
+  'female-chin-bob':'exact chin-level blunt bob; straight perimeter parallel to jaw; no shoulder-length strands',
+  'female-pixie-cut':'short tapered pixie; cropped nape and sides; slightly longer textured crown; ears exposed',
+  'female-shaggy-pixie':'tapered pixie base; feathered irregular crown layers; piecey fringe; exposed ears and nape',
+  'female-wave-bob':'jaw-length bob; large uniform S waves; rounded side volume; continuous chin-level perimeter',
+  'female-lovely-short':'soft short crop; airy side-swept fringe; rounded crown; tapered neck; no long tail',
+  'female-curly-bob':'chin-length rounded bob; consistent medium curls; full sides; compact nape',
+  'female-short-curl':'short tapered silhouette; small-to-medium curls with equal diameter; cropped nape',
+  'female-medium-straight':'straight shoulder-to-collarbone cut; low layering; horizontal dense perimeter',
+  'female-one-length-medi':'single-length collarbone cut; zero visible graduation; straight dense ends',
+  'female-hush-cut':'collarbone hush cut; light crown layers; feathered face frame; thin tapered ends',
+  'female-layered-medi':'collarbone perimeter; blended medium layers starting below cheekbone; balanced side and back volume',
+  'female-curtain-bang':'collarbone layered cut; symmetrical curtain fringe split at center; shortest fringe at cheekbone',
+  'female-build-perm':'collarbone layered build perm; smooth crown; large C and S bends concentrated below jaw',
+  'female-medium-s-curl':'collarbone cut; repeated large S curls with equal wavelength; stable rounded perimeter',
+  'female-wave-perm':'shoulder-to-collarbone cut; even water-wave pattern from cheek level to ends',
+  'female-hippie-medi':'collarbone cut; dense small curls from near roots; equal curl diameter; full rounded silhouette',
+  'female-sleek-long':'center part; pin-straight chest-length hair; flat smooth crown; dense U-shaped perimeter',
+  'female-natural-long':'natural straight chest-length hair; minimal long layers; soft U perimeter; moderate crown volume',
+  'female-low-ponytail':'clean low ponytail fixed at nape center; smooth crown; one straight chest-length tail',
+  'female-airy-layered':'chest-length airy layers; face frame from jaw; light crown lift; long tapered U perimeter',
+  'female-hippie-wave':'chest-length dense small waves from roots; uniform wave spacing; full side and back volume',
+  'female-long-layered-wave':'chest-length cut; long blended layers; large waves beginning below jaw; U-shaped ends',
+  'female-long-c-curl':'chest-length straight upper section; uniform inward C curl only at lower ends; dense U perimeter',
+  'female-long-hippie-perm':'chest-length dense small curls from roots to ends; constant curl diameter and volume',
+  'female-long-body-perm':'chest-length long layers; broad body waves below cheekbone; smooth crown; thick ends',
+  'male-soft-two-block':'soft two-block; short tapered sides and nape; longer straight top; natural side part; no disconnected long tail',
+  'male-dandy-part':'clean short dandy cut; 6:4 side part; smooth curved fringe; tidy tapered sides and nape',
+  'male-ivy-league':'short Ivy League; neat side part; front slightly longer and brushed up; tapered sides and clean nape',
+  'male-buzz-cut':'uniform very short buzz; consistent clipper length; softly tapered temple and nape',
+  'male-textured-crop':'short textured crop; blunt piecey forward fringe; choppy top; faded or tapered sides',
+  'male-leaf-cut':'leaf-shaped layered top; center or 6:4 split fringe curving around temples; compact tapered nape',
+  'male-short-as-perm':'short two-block base; soft S bend on top and fringe; compressed sides; clean nape',
+  'male-comma-hair':'short side-part cut; one defined comma-shaped fringe curl; smooth opposite side; tapered nape',
+  'male-curly-short':'short rounded curly top; equal medium curl diameter; tight sides and clean neckline',
+  'male-short-down-perm':'short straight top; sides pressed flat downward; subtle fringe bend; tight clean nape',
+  'male-slick-back':'medium straight hair brushed fully backward; visible forehead; controlled crown; tapered lower sides and nape',
+  'male-medium-part':'ear-covering medium cut; centered or 6:4 part; symmetric face-framing panels; neck-length back',
+  'male-wavy-medium':'ear-to-neck medium layers; large uniform waves; soft center part; balanced side and back fullness',
+  'male-wolf-cut':'medium wolf cut; short crown layers; ear-covering sides; distinct but blended neck-length back tail',
+  'male-regent-wave':'medium regent; lifted backward front wave; structured crown; compact sides; neat neck-length back',
+  'male-medium-as-perm':'medium center-part cut; repeated soft S bends on fringe and sides; neck-length layered back',
+  'male-hippie-perm':'medium dense small curls from roots; rounded crown; ear-covering sides; curly neck-length back',
+  'male-long-straight':'center-part straight long hair; length below collarbone; equal side and back length; U perimeter',
+  'male-long-wave':'center-part long hair below collarbone; large uniform waves below cheek; continuous U perimeter',
+  'male-long-curl':'long hair below collarbone; consistent medium curls from jaw to ends; full continuous back length'
+};
+function styleBlueprint(cut){return STYLE_BLUEPRINTS[cut.hs]||`${cut.ko}; ${cut.len} length; ${cut.tex} texture; one stable silhouette across every camera angle`}
+const LIB=CUTS.length;   // 실제 서로 다른 컷 수
+
+const ANGLES=[{k:'front',ko:'전면',req:true},{k:'side',ko:'측면'},{k:'back',ko:'후면'}];
+const PRESETS={
+  neutral:'docs/assets/test-mannequin',
+  female:'docs/assets/test-mannequin-female',
+  realMale:'docs/assets/test-subjects/real-male-01'
+};
+const S={gender:null,length:null,tex:'',color:COLORS[2],photos:{front:null,side:null,back:null},results:[],adminEdit:false,history:[{id:'gender'}]};
+const PHOTO_SCALE_KEY='HAIRLOOM_PHOTO_SCALE';
+let photoScale=Math.max(70,Math.min(100,Number(localStorage.getItem(PHOTO_SCALE_KEY))||90));
+function applyPhotoScale(){document.documentElement.style.zoom='';document.documentElement.style.setProperty('--photo-scale',photoScale/100);$('#zoomText').textContent=photoScale+'%';localStorage.setItem(PHOTO_SCALE_KEY,String(photoScale))}
+$('#zoomOut').addEventListener('click',()=>{photoScale=Math.max(70,photoScale-10);applyPhotoScale()});
+$('#zoomIn').addEventListener('click',()=>{photoScale=Math.min(100,photoScale+10);applyPhotoScale()});
+applyPhotoScale();
+
+function show(id){document.querySelectorAll('.stage').forEach(s=>s.classList.remove('active'));$('#'+id).classList.add('active');$('#back').classList.toggle('on',id!=='gender');$('#editRef').style.display=(id==='results'&&S.adminEdit)?'block':'none';if(id!=='loom')stopPct()}
+$('#adminChk').addEventListener('change',e=>{S.adminEdit=e.target.checked});
+function goto(id){S.history.push({id});show(id)}
+$('#back').addEventListener('click',()=>{S.history.pop();show((S.history[S.history.length-1]||{id:'gender'}).id)});
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._);t._=setTimeout(()=>t.classList.remove('show'),1700)}
+
+/* allowed cuts per gender */
+function refKey(g){return 'hairCuts_'+g}
+const CUT_KOS=new Set(CUTS.map(c=>c.ko));
+function allowedCuts(g){try{const v=JSON.parse(localStorage.getItem(refKey(g)));if(Array.isArray(v)){const valid=v.filter(k=>CUT_KOS.has(k));if(valid.length)return new Set(valid)}}catch(e){}return null}
+function setAllowed(g,a){localStorage.setItem(refKey(g),JSON.stringify(a))}
+
+/* ---- image API config (per-user, localStorage) ---- */
+const CFG_KEY='HAIR_IMAGEN_CFG';
+function getImagenCfg(){
+  try{const v=JSON.parse(localStorage.getItem(CFG_KEY));if(v&&v.baseURL&&v.apiKey)return v}catch(e){}
+  return (window.HAIR_IMAGEN&&window.HAIR_IMAGEN.baseURL&&window.HAIR_IMAGEN.apiKey)?window.HAIR_IMAGEN:null;
+}
+function refreshCfgStat(){
+  const c=getImagenCfg();const el=$('#cfgStat');if(!el)return;
+  if(c&&c.baseURL&&c.apiKey){el.textContent='● 연결됨: '+c.baseURL+' ('+(c.model||'gpt-image-1')+')';el.className='cfgstat ok'}
+  else{el.textContent='○ 미연결 — 생성이 실행되지 않습니다. API를 등록하세요.';el.className='cfgstat off'}
+}
+function fillCfgForm(){
+  const c=getImagenCfg()||{};
+  $('#cfgBase').value=c.baseURL||'';$('#cfgKey').value=c.apiKey||'';
+  $('#cfgModel').value=c.model||'gpt-image-1';$('#cfgSize').value=c.size||'1024x1024';
+  refreshCfgStat();
+}
+function openCfg(){fillCfgForm();$('#cfgMask').classList.add('on')}
+function closeCfg(){$('#cfgMask').classList.remove('on')}
+$('#openCfg').addEventListener('click',openCfg);
+$('#cfgClose').addEventListener('click',closeCfg);
+$('#cfgMask').addEventListener('click',e=>{if(e.target===$('#cfgMask'))closeCfg()});
+$('#cfgSave').addEventListener('click',()=>{
+  const cfg={baseURL:$('#cfgBase').value.trim().replace(/\/+$/,''),apiKey:$('#cfgKey').value.trim(),model:$('#cfgModel').value.trim()||'gpt-image-1',size:$('#cfgSize').value.trim()||'1024x1024'};
+  if(!cfg.baseURL||!cfg.apiKey){toast('Base URL과 API Key를 입력하세요');return}
+  localStorage.setItem(CFG_KEY,JSON.stringify(cfg));refreshCfgStat();toast('연결 정보를 저장했어요');
+});
+$('#cfgClear').addEventListener('click',()=>{localStorage.removeItem(CFG_KEY);fillCfgForm();toast('연결 정보를 초기화했어요')});
+$('#cfgTest').addEventListener('click',async()=>{
+  const base=$('#cfgBase').value.trim().replace(/\/+$/,''),key=$('#cfgKey').value.trim(),model=$('#cfgModel').value.trim()||'gpt-image-1';
+  if(!base||!key){toast('Base URL과 API Key를 입력하세요');return}
+  const el=$('#cfgStat');el.textContent='… 연결 테스트 중';el.className='cfgstat';
+  try{
+    const r=await fetchTimeout(base+'/images/generations',{method:'POST',headers:{'content-type':'application/json',Authorization:'Bearer '+key},body:JSON.stringify({model,prompt:'a small gray circle on white background',size:'1024x1024'})},60000);
+    if(r.ok){el.textContent='● 연결 성공';el.className='cfgstat ok'}
+    else{el.textContent='× 실패 (HTTP '+r.status+')';el.className='cfgstat off'}
+  }catch(e){el.textContent='× 실패 ('+((e&&e.name)||'error')+')';el.className='cfgstat off'}
+});
+
+/* GENDER */
+document.querySelectorAll('#gender .gcol').forEach(c=>c.addEventListener('click',()=>{S.gender=c.dataset.g;buildPersonal();goto('personal')}));
+
+/* PERSONAL */
+function poolCuts(){const allow=allowedCuts(S.gender);return CUTS.filter(c=>c.g===S.gender&&c.len===S.length&&(!S.tex||c.tex===S.tex)&&(!allow||allow.has(c.ko)))}
+function updateCount(){$('#pcount').textContent=`전체 ${LIB}개 스타일 · 조건 매칭 ${poolCuts().length}컷 · 6개 자동 추천`}
+function sel(w,el){document.querySelectorAll(w+' .chip, '+w+' .sw').forEach(x=>x.classList.remove('sel'));el.classList.add('sel')}
+function buildPersonal(){
+  const lens=[...new Set(CUTS.filter(c=>c.g===S.gender).map(c=>c.len))].sort((a,b)=>['short','medium','long'].indexOf(a)-['short','medium','long'].indexOf(b));
+  if(!lens.includes(S.length))S.length=lens[0];
+  $('#lenChips').innerHTML=lens.map(v=>`<button class="chip ${v===S.length?'sel':''}" data-v="${v}">${LENKO[v]}</button>`).join('');
+  $('#lenChips').querySelectorAll('.chip').forEach(ch=>ch.addEventListener('click',()=>{S.length=ch.dataset.v;sel('#lenChips',ch);updateCount()}));
+  $('#texChips').querySelectorAll('.chip').forEach(ch=>{ch.classList.toggle('sel',ch.dataset.v===S.tex);ch.onclick=()=>{S.tex=ch.dataset.v;sel('#texChips',ch);updateCount()}});
+  renderPalette();
+  updateCount();
+}
+
+function renderPalette(){
+  $('#palette').innerHTML=COLORS.map((c,i)=>`<div class="sw ${c.id===S.color.id?'sel':''}" data-i="${i}" style="background:${c.hex}"><span class="nm">${c.ko}</span></div>`).join('')+`<label class="pcustom">＋<input type="color" id="pc" value="${S.color.hex}"></label>`;
+  $('#palette').querySelectorAll('.sw').forEach(sw=>sw.addEventListener('click',()=>{S.color=COLORS[+sw.dataset.i];sel('#palette',sw)}));
+  $('#pc').addEventListener('change',e=>{S.color=addCustomColor(e.target.value);renderPalette()});
+}
+$('#toAngles').addEventListener('click',()=>{buildAngles();goto('angles')});
+
+/* ANGLES swipe: front → side → back */
+let aSlider;
+function buildAngles(){
+  $('#aTrack').innerHTML=ANGLES.map(a=>`
+    <div class="slide"><label class="adrop ${S.photos[a.k]?'filled':''}" data-k="${a.k}"><div class="ic">＋</div><small>${a.ko}${a.req?' · 필수':''}</small><img src="${S.photos[a.k]||''}"></label></div>`).join('');
+  aSlider=makeSlider($('#aVp'),$('#aTrack'),$('#aDots'));
+  document.querySelectorAll('#aTrack .adrop').forEach(d=>{
+    d.addEventListener('click',()=>{if(aSlider.moved)return;pendingKey=d.dataset.k;$('#file').click()});
+    ['dragover','dragenter'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault();d.classList.add('hover')}));
+    ['dragleave','drop'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault();d.classList.remove('hover')}));
+    d.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f){pendingKey=d.dataset.k;readPhoto(f)}});
+  });
+  $('#toGen').classList.toggle('on',!!S.photos.front);
+}
+let pendingKey='front';
+function fileData(f){return new Promise((res,rej)=>{const rd=new FileReader();rd.onload=()=>res(rd.result);rd.onerror=rej;rd.readAsDataURL(f)})}
+function setPhoto(k,data,advance=false){
+  S.photos[k]=data;
+  const d=document.querySelector(`#aTrack .adrop[data-k="${k}"]`);
+  if(d){d.querySelector('img').src=data;d.classList.add('filled')}
+  $('#toGen').classList.toggle('on',!!S.photos.front);
+  if(advance){const i=ANGLES.findIndex(a=>a.k===k);if(i<ANGLES.length-1)setTimeout(()=>aSlider&&aSlider.go(i+1),220)}
+}
+async function readPhoto(f){if(!f||!f.type.startsWith('image/'))return;setPhoto(pendingKey,await fileData(f),true)}
+async function loadPreset(name){
+  const base=PRESETS[name];if(!base)return;
+  try{const data=await Promise.all(ANGLES.map(async a=>{const r=await fetch(`${base}/${a.k}.png`);if(!r.ok)throw new Error(a.k);return fileData(new File([await r.blob()],`${a.k}.png`,{type:'image/png'}))}));ANGLES.forEach((a,i)=>setPhoto(a.k,data[i]));aSlider&&aSlider.go(0);toast('전면 · 측면 · 후면 3장을 연결했어요')}catch(e){toast('테스트 이미지 세트를 불러오지 못했어요')}
+}
+$('#file').addEventListener('change',e=>{const f=e.target.files[0];if(f)readPhoto(f);e.target.value=''});
+$('#pickThree').addEventListener('click',()=>$('#threeFiles').click());
+$('#threeFiles').addEventListener('change',async e=>{const files=[...e.target.files].filter(f=>f.type.startsWith('image/')).slice(0,3);if(files.length<3){toast('전면 · 측면 · 후면 3장을 선택해 주세요');return}const byName={};files.forEach(f=>{const n=f.name.toLowerCase();if(/front|전면/.test(n))byName.front=f;else if(/side|측면/.test(n))byName.side=f;else if(/back|후면/.test(n))byName.back=f});const ordered=ANGLES.map((a,i)=>byName[a.k]||files[i]);const data=await Promise.all(ordered.map(fileData));ANGLES.forEach((a,i)=>setPhoto(a.k,data[i]));aSlider&&aSlider.go(0);toast('실사 3장을 전면 · 측면 · 후면으로 연결했어요');e.target.value=''});
+document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>loadPreset(b.dataset.preset)));
+$('#aPrev').addEventListener('click',()=>aSlider&&aSlider.prev());$('#aNext').addEventListener('click',()=>aSlider&&aSlider.next());
+$('#toGen').addEventListener('click',()=>{if(S.photos.front)generate()});
+
+/* ERROR stage */
+function showError(msg){$('#errMsg').textContent=msg||'이미지 API 연결을 확인해 주세요.';goto('error')}
+$('#errCfg').addEventListener('click',openCfg);
+$('#errRetry').addEventListener('click',()=>{if(S.photos.front)generate();else show('angles')});
+
+/* recommend 6 distinct cuts */
+function recommend(){
+  let pool=poolCuts();
+  if(pool.length<1)pool=CUTS.filter(c=>c.g===S.gender&&c.len===S.length);
+  if(pool.length<1)pool=CUTS.filter(c=>c.g===S.gender);
+  // 같은 스타일(hs) 중복 제거 → 시각적으로 동일한 컷 반복 방지
+  const seen=new Set();
+  const uniq=[...pool].sort(()=>Math.random()-.5).filter(c=>{if(seen.has(c.hs))return false;seen.add(c.hs);return true});
+  // 6개보다 부족하면 같은 성별 풀에서 중복 없이 보충
+  if(uniq.length<6){
+    for(const c of [...CUTS.filter(x=>x.g===S.gender)].sort(()=>Math.random()-.5)){
+      if(uniq.length>=6)break;
+      if(!seen.has(c.hs)){seen.add(c.hs);uniq.push(c)}
+    }
+  }
+  return uniq.slice(0,6);
+}
+
+/* ---- EDIT: each hairstyle is rendered as front · side · back views ---- */
+function frontPhoto(){return S.photos.front||S.photos.side||S.photos.back}
+const LENGTH_RULES={
+  short:'숏 기장 고정: 끝선은 귀 주변부터 최대 턱선까지. 목덜미와 어깨를 덮지 말고, 어떤 각도에서도 어깨에 닿는 길이로 늘리지 마.',
+  medium:'미디엄 기장 고정: 끝선은 턱 아래부터 쇄골 사이. 가장 긴 모발도 쇄골 아래로 내려가지 않고, 측면과 후면에서 같은 높이의 외곽선을 유지해.',
+  long:'롱 기장 고정: 끝선은 반드시 쇄골 아래로 내려가고 최소 가슴 윗선까지 이어져야 해. 측면과 후면에서 어깨 위나 턱선 길이로 짧아지지 마.'
+};
+const TEXTURE_RULES={straight:'전체 각도에서 같은 매끈한 스트레이트 결을 유지해.',wave:'전체 각도에서 같은 굵기와 간격의 자연스러운 웨이브를 유지해.',curl:'전체 각도에서 같은 컬 직경·밀도·방향을 유지해.'};
+function hairPrompt(cut,angleKey='front'){
+  const angle={front:'FRONT VIEW, straight-on camera',side:'LEFT SIDE PROFILE VIEW, exactly 90-degree profile camera',back:'BACK VIEW, exactly rear-facing camera'}[angleKey]||angleKey;
+  const angleRule={front:'Preserve the original front-facing head pose and facial geometry.',side:'Preserve the source profile pose, ear position, nose line, jaw line and neck angle.',back:'Preserve the source rear pose, head center, ear symmetry, neck and shoulder geometry.'}[angleKey];
+  return [
+    'TASK: edit only the hair in the single uploaded source photograph.',
+    'OUTPUT CONTRACT: return exactly ONE normal full-frame portrait image containing ONE person and ONE camera view.',
+    'NEVER create a collage, contact sheet, split screen, diptych, triptych, before-and-after, inset, duplicate person, reference panel, multiple angle layout, frame or border.',
+    `CAMERA LOCK: ${angle}. ${angleRule}`,
+    `DESIGN LOCK VERSION: ${DESIGN_LOCK_VERSION}`,
+    `DESIGN LOCK ID: ${cut.hs}`,
+    `DESIGN BLUEPRINT: ${styleBlueprint(cut)}`,
+    `STYLE NAME: ${cut.ko}. Do not substitute, hybridize or reinterpret it as another haircut.`,
+    LENGTH_RULES[S.length]||`기장: ${LENKO[S.length]||S.length}로 고정.`,
+    TEXTURE_RULES[cut.tex]||'',
+    `COLOR LOCK: ${S.color.ko}. Keep identical hue, brightness and saturation for this design.`,
+    'GEOMETRY LOCK: preserve the exact part position, fringe direction, crown height, temple volume, ear clearance, side perimeter, nape line, layer start height, end-line height, curl diameter and hair density described above.',
+    'ANGLE CONSISTENCY: camera angle must reveal the same locked 3D haircut, never a new interpretation. Do not shorten or lengthen hair because of perspective.',
+    'IDENTITY LOCK: preserve the person, face, skin, expression, body, clothing, background and lighting. Change hair shape and hair color only.',
+    'No text, logo, watermark or decorative graphic.'
+  ].filter(Boolean).join('\n');
+}
+async function toPngBlob(dataUrl,max=1024){
+  const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=dataUrl});
+  let w=img.naturalWidth,h=img.naturalHeight;const s=Math.min(1,max/Math.max(w,h));w=Math.round(w*s);h=Math.round(h*s);
+  const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+  return await new Promise(res=>c.toBlob(res,'image/png'));
+}
+function fetchTimeout(url,opts,ms){
+  const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),ms||90000);
+  return fetch(url,{...opts,signal:ctl.signal}).finally(()=>clearTimeout(t));
+}
+async function callEdit(cut,angleKey='front'){
+  const photo=S.photos[angleKey]||frontPhoto();
+  const cfg=getImagenCfg();
+  console.log('[callEdit]',cut.ko,'| lock:',DESIGN_LOCK_VERSION,'| hs:',cut.hs,'| length:',S.length,'| color:',S.color.id,'| angle:',angleKey,'| singleImage:true');
+  if(cfg&&cfg.apiKey&&cfg.baseURL){
+    try{
+      const form=new FormData();
+      form.append('model',cfg.model||'gpt-image-1');
+      form.append('prompt',hairPrompt(cut,angleKey));
+      form.append('size',cfg.size||'1024x1024');
+      form.append('image',await toPngBlob(photo,1024),`${cut.hs}-${angleKey}.png`);
+      const r=await fetch(cfg.baseURL.replace(/\/+$/,'')+'/images/edits',{method:'POST',headers:{Authorization:'Bearer '+cfg.apiKey},body:form});
+      if(r.ok){const j=await r.json();const b=j&&j.data&&j.data[0]&&j.data[0].b64_json;if(b)return 'data:image/png;base64,'+b;if(j&&j.data&&j.data[0]&&j.data[0].url)return j.data[0].url;}
+      else console.warn('[callEdit] proxy status',r.status,cut.ko,angleKey);
+    }catch(e){console.warn('[callEdit] proxy fail',cut.ko,angleKey,e&&e.name);}
+  }
+  try{
+    const r=await fetch('/api/image-edit',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({imageDataUrl:photo,moduleId:'hairstyle',answers:{referenceGender:S.gender,length:S.length,dyePreference:S.color.id},tapeState:{hairStyle:cut.hs},photoName:`salon-${angleKey}.jpg`})});
+    if(r.ok){const j=await r.json();if(j&&j.imageDataUrl)return j.imageDataUrl;}
+  }catch(e){console.warn('[callEdit] bridge fail',cut.ko,angleKey,e&&e.name);}
+  console.warn('[callEdit] failed, no fallback:',cut.ko,angleKey);
+  return null;
+}
+
+/* percent loader */
+let pctRAF=null,pctShown=0,pctDone=0,pctTotal=6,pctStart=0,pctExpected=45000;
+function setBar(v){$('#pctN').textContent=Math.round(v);$('#loomBar').style.width=v.toFixed(1)+'%'}
+function startPct(total){
+  pctShown=0;pctDone=0;pctTotal=total||6;pctStart=Date.now();
+  pctExpected=Math.max(30000,pctTotal*8000);   // 대략 예상 시간
+  setBar(0);cancelAnimationFrame(pctRAF);
+  (function loop(){
+    const elapsed=Date.now()-pctStart;
+    const timePct=Math.min(93,(elapsed/pctExpected)*93);   // 시간 기반: 항상 조금씩 전진
+    const donePct=(pctDone/pctTotal)*100;                  // 완료 기반: 실제 도착분
+    let target=Math.max(timePct,donePct);
+    if(pctDone>=pctTotal)target=100;
+    pctShown+=(target-pctShown)*0.05;
+    if(pctDone>=pctTotal&&pctShown>99.3)pctShown=100;
+    setBar(pctShown);
+    pctRAF=requestAnimationFrame(loop);
+  })();
+}
+function markDone(){pctDone++}
+function stopPct(){cancelAnimationFrame(pctRAF);pctRAF=null}
+
+function generate(){
+  const recs=recommend();
+  const angleKeys=ANGLES.filter(a=>S.photos[a.k]).map(a=>a.k);
+  S.results=recs.map(c=>({cut:c,views:{}}));
+  const jobs=recs.flatMap((cut,resultIndex)=>angleKeys.map(angleKey=>({cut,resultIndex,angleKey})));
+  const perStyleDone=Array(recs.length).fill(0);
+  $('#loomThumb').innerHTML=recs.map(()=>`<span></span>`).join('');
+  $('.loomsub').textContent=`DESIGN LOCK으로 ${jobs.length}개 단일 이미지를 동시에 생성 중 · ${recs.length}개 헤어 × ${angleKeys.length}각`;
+  goto('loom');startPct(jobs.length);
+  let done=0;const total=jobs.length;
+  const finishOne=(job,url)=>{
+    if(url)S.results[job.resultIndex].views[job.angleKey]=url;
+    done++;perStyleDone[job.resultIndex]++;markDone();
+    if(perStyleDone[job.resultIndex]>=angleKeys.length)$('#loomThumb').children[job.resultIndex]?.classList.add('on');
+    if(done>=total){setTimeout(()=>{
+      stopPct();
+      const ok=S.results.filter(r=>Object.keys(r.views).length);
+      if(!ok.length){showError(getImagenCfg()?'이미지 생성에 모두 실패했어요. 잠시 후 다시 시도하거나 연결 설정을 확인해 주세요.':'이미지 API가 연결되어 있지 않습니다. 우측 상단 ⚙ 연결 설정에서 API를 등록해 주세요.');return}
+      S.results=ok;buildResults();show('results');
+    },900)}
+  };
+  const runJob=async job=>{let url=null;try{url=await callEdit(job.cut,job.angleKey)}catch(e){url=null}finishOne(job,url)};
+  jobs.forEach(job=>runJob(job));
+}
+
+/* RESULTS: arrows rotate angle, bottom controls rotate hairstyle */
+let resultStyleIndex=0,resultAngleIndex=0;
+function availableResultAngles(result){return ANGLES.filter(a=>result&&result.views[a.k])}
+function renderStyleNav(){
+  $('#rDots').innerHTML=S.results.map((r,i)=>`<b class="${i===resultStyleIndex?'on':''}" data-i="${i}" title="${r.cut.ko}">${String(i+1).padStart(2,'0')}</b>`).join('');
+  $('#rDots').querySelectorAll('b').forEach(b=>b.addEventListener('click',()=>{resultStyleIndex=+b.dataset.i;resultAngleIndex=0;renderResult()}));
+  const next=S.results[(resultStyleIndex+1)%S.results.length];$('#rHairNext').textContent=`다음 헤어 · ${next.cut.ko} →`;
+}
+function renderResult(){
+  const result=S.results[resultStyleIndex];if(!result)return;
+  const angles=availableResultAngles(result);resultAngleIndex=(resultAngleIndex+angles.length)%angles.length;
+  const angle=angles[resultAngleIndex],url=result.views[angle.k],c=result.cut;
+  $('#rTrack').innerHTML=`<div class="slide rslide" data-i="${resultStyleIndex}"><div class="art"><img class="artbg" src="${url}" aria-hidden="true"><img class="artmain" src="${url}"></div><div class="vg"></div><div class="no">${String(resultStyleIndex+1).padStart(2,'0')}</div><div class="anglebadge">${angle.ko} · ${resultAngleIndex+1}/${angles.length}</div><div class="cap"><div><h2>${c.ko}</h2><div class="color"><i style="background:${S.color.hex}"></i>${S.color.ko}</div></div><button class="save">♥</button></div></div>`;
+  $('#rTrack .save').addEventListener('click',e=>{e.stopPropagation();e.currentTarget.textContent='✓';e.currentTarget.style.background='var(--accent)';e.currentTarget.style.color='#0b0808';toast(`${c.ko} · ${angle.ko} · ${S.color.ko} 저장`)});
+  renderStyleNav();
+}
+function stepResultAngle(delta){
+  if(!S.results.length)return;
+  const angles=availableResultAngles(S.results[resultStyleIndex]);if(!angles.length)return;
+  if(delta>0){
+    if(resultAngleIndex<angles.length-1)resultAngleIndex++;
+    else{resultStyleIndex=(resultStyleIndex+1)%S.results.length;resultAngleIndex=0}
+  }else{
+    if(resultAngleIndex>0)resultAngleIndex--;
+    else{resultStyleIndex=(resultStyleIndex-1+S.results.length)%S.results.length;resultAngleIndex=Math.max(0,availableResultAngles(S.results[resultStyleIndex]).length-1)}
+  }
+  renderResult();
+}
+function stepResultStyle(delta){const n=S.results.length;if(!n)return;resultStyleIndex=(resultStyleIndex+delta+n)%n;resultAngleIndex=0;renderResult()}
+function buildResults(){resultStyleIndex=0;resultAngleIndex=0;renderResult()}
+$('#rPrev').addEventListener('click',()=>stepResultAngle(-1));$('#rNext').addEventListener('click',()=>stepResultAngle(1));$('#rHairNext').addEventListener('click',()=>stepResultStyle(1));
+
+/* EDITOR */
+$('#editRef').addEventListener('click',()=>{
+  const cur=allowedCuts(S.gender);const list=CUTS.filter(c=>c.g===S.gender);
+  $('#egrid').innerHTML=list.map(c=>{const on=!cur||cur.has(c.ko);return `<div class="ecard ${on?'on':''}" data-ko="${c.ko}"><img src="${A}${c.img}"><div class="tick">✓</div><div class="nm">${c.ko}</div></div>`}).join('');
+  document.querySelectorAll('#egrid .ecard').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('on')));
+  goto('editor');
+});
+$('#eSave').addEventListener('click',()=>{const kos=[...document.querySelectorAll('#egrid .ecard.on')].map(c=>c.dataset.ko);if(!kos.length){toast('최소 1개는 선택해주세요');return}setAllowed(S.gender,kos);S.history.pop();if(S.photos.front)generate();else show('angles');toast('기본 레퍼런스를 저장했어요')});
+
+/* generic horizontal slider with dots */
+function makeSlider(vp,track,dotsEl){
+  let x=0,idx=0,drag=false,sx=0,base=0;const api={moved:false};
+  const W=()=>vp.clientWidth;
+  function renderDots(){dotsEl.innerHTML=[...track.children].map((_,i)=>`<b class="${i===idx?'on':''}" data-i="${i}"></b>`).join('');dotsEl.querySelectorAll('b').forEach(b=>b.addEventListener('click',()=>go(+b.dataset.i)))}
+  function place(anim){track.style.transition=anim?'transform .5s cubic-bezier(.16,1,.3,1)':'none';track.style.transform=`translateX(${x}px)`}
+  function go(i){idx=Math.max(0,Math.min(track.children.length-1,i));x=-idx*W();place(true);dotsEl.querySelectorAll('b').forEach((b,j)=>b.classList.toggle('on',j===idx))}
+  api.next=()=>go(idx+1);api.prev=()=>go(idx-1);api.go=go;
+  vp.addEventListener('pointerdown',e=>{drag=true;api.moved=false;sx=e.clientX;base=x});
+  vp.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-sx;if(Math.abs(dx)>8){if(!api.moved){api.moved=true;try{vp.setPointerCapture(e.pointerId)}catch(_){}}}x=base+dx;place(false)});
+  vp.addEventListener('pointerup',e=>{if(!drag)return;drag=false;try{vp.releasePointerCapture(e.pointerId)}catch(_){}const dx=e.clientX-sx;if(dx<-40)go(idx+1);else if(dx>40)go(idx-1);else go(idx);setTimeout(()=>api.moved=false,30)});
+  window.addEventListener('resize',()=>go(idx));
+  renderDots();go(0);
+  return api;
+}
+window.addEventListener('keydown',e=>{
+  if($('#angles').classList.contains('active')&&aSlider){if(e.key==='ArrowRight')aSlider.next();if(e.key==='ArrowLeft')aSlider.prev()}
+  if($('#results').classList.contains('active')){if(e.key==='ArrowRight')stepResultAngle(1);if(e.key==='ArrowLeft')stepResultAngle(-1);if(e.key==='ArrowDown'||e.key==='Enter')stepResultStyle(1);if(e.key==='ArrowUp')stepResultStyle(-1)}
+});
+</script>
+</body>
+</html>
