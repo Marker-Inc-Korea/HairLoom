@@ -6,11 +6,13 @@
   "scripts": {
     "start": "node server.mjs",
     "dev": "node server.mjs",
-    "check": "node --check server.mjs && node --check scripts/generateHairDesignCatalog.mjs && node -e \"const fs=require('fs');const html=fs.readFileSync('index.html','utf8');const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)];for(const [,source] of scripts)new Function(source);console.log('HTML scripts parsed:',scripts.length)\"",
+    "check": "node --check server.mjs && node --check scripts/generateHairDesignCatalog.mjs && node --check scripts/generateHairMasterCatalog.mjs && node -e \"const fs=require('fs');const html=fs.readFileSync('index.html','utf8');const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)];for(const [,source] of scripts)new Function(source);console.log('HTML scripts parsed:',scripts.length)\"",
     "catalog": "node scripts/generateHairDesignCatalog.mjs",
     "catalog:check": "node scripts/generateHairDesignCatalog.mjs --check",
+    "master-catalog": "node scripts/generateHairMasterCatalog.mjs",
+    "master-catalog:check": "node scripts/generateHairMasterCatalog.mjs --check",
     "test": "node --test server.test.mjs",
-    "verify": "npm run check && npm run catalog:check && npm test"
+    "verify": "npm run check && npm run catalog:check && npm run master-catalog:check && npm test"
   },
   "engines": {
     "node": ">=20"
