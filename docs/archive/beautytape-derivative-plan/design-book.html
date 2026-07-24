@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>HAIR · Design Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@latest/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --bg:#080606;--bg2:#0f0b0a;--panel:#161010;--line:#241b18;
+  --ink:#f4ece3;--muted:#9c8a7d;--faint:#5f5048;
+  --accent:#d98aa0;--gold:#caa473;
+  --serif:"Playfair Display","Gowun Batang",Georgia,serif;
+  --sans:"Pretendard",ui-sans-serif,system-ui,-apple-system,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:var(--sans);color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;user-select:none}
+img{display:block;-webkit-user-drag:none}
+button{font-family:inherit;cursor:pointer;border:0;background:none;color:inherit}
+input[type=file]{display:none}
+
+.top{position:fixed;top:0;left:0;right:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:20px 24px}
+.brand{display:flex;align-items:baseline;gap:9px;opacity:.9}
+.brand b{font-family:var(--serif);font-size:17px;font-weight:600}
+.brand span{font-size:8px;letter-spacing:.34em;color:var(--faint);text-transform:uppercase}
+.back{font-size:13px;color:var(--muted);opacity:0;pointer-events:none;transition:.4s var(--ease)}
+.back.on{opacity:1;pointer-events:auto}.back:hover{color:var(--ink)}
+
+.stage{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  opacity:0;visibility:hidden;transform:translateY(10px);transition:opacity .55s var(--ease),transform .55s var(--ease),visibility .55s}
+.stage.active{opacity:1;visibility:visible;transform:none}
+.cta{display:inline-flex;align-items:center;gap:12px;padding:15px 38px;border-radius:999px;background:var(--ink);color:#0b0808;font-size:15px;font-weight:700;transition:.4s var(--ease);box-shadow:0 18px 44px rgba(0,0,0,.5)}
+.cta:hover{background:var(--accent)}
+
+/* GENDER */
+#gender{flex-direction:row;padding:0}
+.gcol{flex:1;height:100%;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;transition:flex .7s var(--ease)}
+.gcol:before{content:"";position:absolute;inset:0;background:radial-gradient(70% 60% at 50% 40%,rgba(217,138,160,.12),transparent 60%);opacity:0;transition:.6s var(--ease)}
+.gcol:hover:before{opacity:1}.gcol:hover{flex:1.25}
+.gcol+.gcol{border-left:1px solid var(--line)}
+.gcol .en{font-family:var(--serif);font-size:clamp(40px,7vw,84px);font-weight:500;letter-spacing:-.02em;transition:.5s var(--ease)}
+.gcol:hover .en{color:var(--accent)}
+
+/* PERSONAL */
+#personal{padding:0 24px}
+.pwrap{width:min(560px,100%);display:flex;flex-direction:column;gap:30px}
+.ptit{font-family:var(--serif);font-weight:500;font-size:clamp(24px,4.4vw,38px);letter-spacing:-.02em;text-align:center;margin-bottom:4px}
+.ptit em{font-style:italic;color:var(--accent)}
+.field .flab{font-size:11px;letter-spacing:.26em;color:var(--faint);text-transform:uppercase;margin-bottom:13px}
+.chips{display:flex;gap:10px;flex-wrap:wrap}
+.chip{padding:11px 20px;border-radius:999px;border:1px solid var(--line);background:var(--panel);font-size:14px;font-weight:600;color:var(--muted);transition:.35s var(--ease)}
+.chip:hover{border-color:var(--faint);color:var(--ink)}
+.chip.sel{background:var(--ink);color:#0b0808;border-color:var(--ink)}
+.palette{display:flex;gap:11px;flex-wrap:wrap;align-items:center}
+.sw{width:38px;height:38px;border-radius:11px;cursor:pointer;border:1px solid rgba(244,236,227,.14);transition:.3s var(--ease);position:relative}
+.sw:hover{transform:scale(1.08)}
+.sw.sel{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--accent)}
+.sw .nm{position:absolute;left:50%;bottom:-19px;transform:translateX(-50%);font-size:9px;color:var(--faint);white-space:nowrap;opacity:0;transition:.3s}
+.sw.sel .nm,.sw:hover .nm{opacity:1}
+.pcustom{width:38px;height:38px;border-radius:11px;border:1px dashed var(--faint);display:grid;place-items:center;color:var(--gold);font-size:16px;position:relative;overflow:hidden}
+.pcustom input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.pcount{font-size:12px;color:var(--gold)}
+
+/* SLIDER shell (angles + results) */
+.slider{position:absolute;inset:0;display:flex;flex-direction:column}
+.viewport{position:relative;flex:1;overflow:hidden;touch-action:pan-y}
+.track{display:flex;height:100%;will-change:transform}
+.slide{flex:0 0 100%;height:100%;position:relative;display:flex;align-items:center;justify-content:center}
+.sarw{position:absolute;top:44%;transform:translateY(-50%);z-index:20;width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:rgba(8,6,6,.5);backdrop-filter:blur(8px);display:grid;place-items:center;font-size:16px;transition:.4s var(--ease)}
+.sarw:hover{border-color:var(--accent)}.sarw.l{left:14px}.sarw.r{right:14px}
+.dots{flex:none;display:flex;gap:8px;justify-content:center;align-items:center;padding:20px 0 26px}
+.dots b{width:7px;height:7px;border-radius:50%;background:var(--line);transition:.4s var(--ease);cursor:pointer}
+.dots b.on{background:var(--accent);width:22px;border-radius:999px}
+.dcap{position:absolute;left:0;right:0;top:78px;text-align:center;font-size:11px;letter-spacing:.28em;color:var(--muted);text-transform:uppercase}
+
+/* angle drop */
+.adrop{width:min(320px,80vw);aspect-ratio:4/5;border-radius:24px;border:1.5px dashed #3a2b26;background:var(--panel);position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:.4s var(--ease)}
+.adrop.hover{border-color:var(--accent)}
+.adrop .ic{width:66px;height:66px;border-radius:50%;border:1.4px solid var(--gold);display:grid;place-items:center;color:var(--gold);font-size:26px}
+.adrop small{font-size:12px;color:var(--faint)}
+.adrop img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:.5s}
+.adrop.filled img{opacity:1}.adrop.filled .ic,.adrop.filled small{opacity:0}
+.gencta{position:absolute;left:50%;bottom:86px;transform:translate(-50%,8px);z-index:25;opacity:0;pointer-events:none;transition:.5s var(--ease)}
+.gencta.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+
+/* result slide */
+.rslide .art{position:absolute;inset:0}
+.rslide .art img{width:100%;height:100%;object-fit:cover;object-position:50% 18%}
+.rslide .cw{position:absolute;inset:0;mix-blend-mode:soft-light;opacity:.92}
+.rslide .vg{position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,6,6,.4),transparent 26%,transparent 52%,rgba(8,6,6,.95))}
+.rslide .no{position:absolute;left:26px;top:12vh;font-family:var(--serif);font-size:clamp(50px,13vw,92px);color:rgba(244,236,227,.13);font-weight:600;line-height:.8}
+.rslide .cap{position:absolute;left:26px;right:26px;bottom:22px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px}
+.rslide .cap h2{font-family:var(--serif);font-weight:500;font-size:clamp(30px,7vw,46px);letter-spacing:-.02em;line-height:.98}
+.rslide .cap .color{margin-top:10px;display:inline-flex;align-items:center;gap:9px;font-size:12.5px;color:var(--muted)}
+.rslide .cap .color i{width:18px;height:18px;border-radius:6px;box-shadow:0 0 0 1px rgba(244,236,227,.2)}
+.rslide .save{width:50px;height:50px;border-radius:50%;border:1.5px solid rgba(244,236,227,.4);background:rgba(8,6,6,.35);backdrop-filter:blur(6px);display:grid;place-items:center;font-size:18px;flex:none;transition:.35s}
+.rslide .save:hover{border-color:var(--accent)}
+
+/* LOOM % */
+#loom{gap:28px}
+.pct{font-family:var(--serif);font-size:clamp(64px,16vw,120px);font-weight:500;letter-spacing:-.03em;line-height:1}
+.pct small{font-size:.3em;color:var(--muted);margin-left:4px;vertical-align:super}
+.loomsub{font-size:11px;letter-spacing:.3em;color:var(--faint);text-transform:uppercase;margin-top:-6px}
+.loombar{width:220px;height:2px;background:var(--line);border-radius:2px;overflow:hidden}
+.loombar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--gold))}
+.loomthumb{display:flex;gap:8px;margin-top:8px}
+.loomthumb span{width:9px;height:9px;border-radius:50%;background:var(--line);transition:.4s}
+.loomthumb span.on{background:var(--accent)}
+
+/* EDITOR */
+#editor{justify-content:flex-start;padding:78px 18px 40px}
+.ehead{width:100%;max-width:640px;margin:0 auto 14px;display:flex;align-items:baseline;justify-content:space-between}
+.ehead h2{font-family:var(--serif);font-weight:500;font-size:24px}
+.ehead .save{font-size:13px;color:var(--gold)}
+.egrid{width:100%;max-width:640px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;overflow-y:auto}
+.ecard{position:relative;aspect-ratio:3/4;border-radius:12px;overflow:hidden;border:1px solid var(--line);cursor:pointer;filter:grayscale(.7) brightness(.45);transition:.3s var(--ease)}
+.ecard img{width:100%;height:100%;object-fit:cover;object-position:50% 16%}
+.ecard .nm{position:absolute;left:0;right:0;bottom:0;padding:9px 6px 7px;font-size:10.5px;text-align:center;background:linear-gradient(transparent,rgba(8,6,6,.9))}
+.ecard.on{filter:none;border-color:var(--accent)}
+.ecard .tick{position:absolute;top:6px;right:6px;width:18px;height:18px;border-radius:50%;background:var(--accent);color:#0b0808;display:grid;place-items:center;font-size:10px;font-weight:800;opacity:0;transition:.3s}
+.ecard.on .tick{opacity:1}
+.editref{position:fixed;right:18px;bottom:16px;z-index:45;font-size:11px;letter-spacing:.08em;color:var(--faint);border:1px solid var(--line);border-radius:999px;padding:9px 15px;background:rgba(8,6,6,.6);backdrop-filter:blur(6px);transition:.35s var(--ease);display:none}
+.editref:hover{color:var(--ink);border-color:var(--accent)}
+
+.toast{position:fixed;bottom:80px;left:50%;transform:translate(-50%,16px);z-index:80;background:var(--panel);border:1px solid var(--line);color:var(--ink);padding:11px 22px;border-radius:999px;font-size:12.5px;opacity:0;transition:.5s var(--ease);white-space:nowrap}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <button class="back" id="back">← 뒤로</button>
+  <div class="brand"><b>HAIR</b><span>Design Book</span></div>
+</div>
+
+<!-- GENDER -->
+<section class="stage active" id="gender">
+  <div class="gcol" data-g="female"><div class="en">Women</div></div>
+  <div class="gcol" data-g="male"><div class="en">Men</div></div>
+</section>
+
+<!-- PERSONAL -->
+<section class="stage" id="personal">
+  <div class="pwrap">
+    <div class="ptit">원하는 <em>기준</em>만 정하세요</div>
+    <div class="field"><div class="flab">기장 · Length</div><div class="chips" id="lenChips"></div></div>
+    <div class="field"><div class="flab">컬감 · Texture</div><div class="chips" id="texChips">
+      <button class="chip sel" data-v="">전체</button><button class="chip" data-v="straight">스트레이트</button><button class="chip" data-v="wave">웨이브</button><button class="chip" data-v="curl">컬</button>
+    </div></div>
+    <div class="field"><div class="flab">색상 · Color</div><div class="palette" id="palette"></div></div>
+    <div class="pcount" id="pcount"></div>
+    <button class="cta" id="toAngles" style="align-self:center">사진 넣기 →</button>
+  </div>
+</section>
+
+<!-- ANGLES (horizontal swipe) -->
+<section class="stage" id="angles">
+  <div class="slider">
+    <div class="dcap">전면 · 측면 · 후면 (전면만 넣어도 됩니다)</div>
+    <div class="viewport" id="aVp"><div class="track" id="aTrack"></div></div>
+    <button class="sarw l" id="aPrev">←</button><button class="sarw r" id="aNext">→</button>
+    <div class="dots" id="aDots"></div>
+  </div>
+  <button class="cta gencta" id="toGen">추천 생성 →</button>
+  <input type="file" id="file" accept="image/*">
+</section>
+
+<!-- LOOM % -->
+<section class="stage" id="loom">
+  <div class="pct"><span id="pctN">0</span><small>%</small></div>
+  <div class="loomsub">AI가 얼굴에 적용하는 중</div>
+  <div class="loombar"><i id="loomBar"></i></div>
+  <div class="loomthumb" id="loomThumb"></div>
+</section>
+
+<!-- RESULTS (horizontal slide + dots) -->
+<section class="stage" id="results">
+  <div class="slider">
+    <div class="viewport" id="rVp"><div class="track" id="rTrack"></div></div>
+    <button class="sarw l" id="rPrev">←</button><button class="sarw r" id="rNext">→</button>
+    <div class="dots" id="rDots"></div>
+  </div>
+</section>
+<button class="editref" id="editRef">기본 레퍼런스 수정</button>
+
+<!-- EDITOR -->
+<section class="stage" id="editor">
+  <div class="ehead"><h2>기본 레퍼런스</h2><button class="save" id="eSave">완료</button></div>
+  <div class="egrid" id="egrid"></div>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const A='../../docs/assets/samples/';
+const $=s=>document.querySelector(s);
+const delay=ms=>new Promise(r=>setTimeout(r,ms));
+const LENKO={short:'숏',medium:'미디엄',long:'롱'};
+const TEXKO={straight:'스트레이트',wave:'웨이브',curl:'컬'};
+
+/* dye colors (id = server dyePreference) */
+const COLORS=[
+  {id:'natural-black',ko:'내추럴 블랙',hex:'#1b1512'},{id:'dark-brown',ko:'다크 브라운',hex:'#3a2318'},
+  {id:'ash-brown',ko:'애쉬 브라운',hex:'#6f6258'},{id:'cacao-brown',ko:'카카오 브라운',hex:'#6d4631'},
+  {id:'honey-blonde',ko:'허니 블론드',hex:'#d39a35'},{id:'ash-blonde',ko:'애쉬 블론드',hex:'#c9c2aa'},
+  {id:'ash-gray',ko:'애쉬 그레이',hex:'#8b8f92'},{id:'rose-brown',ko:'로즈 브라운',hex:'#b5726f'},
+  {id:'lavender-ash',ko:'라벤더 애쉬',hex:'#a89ac7'},{id:'copper',ko:'코퍼',hex:'#c9662f'}
+];
+function nearestColor(hex){
+  const p=h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16));const [r,g,b]=p(hex);
+  let best=COLORS[0],bd=1e9;COLORS.forEach(c=>{const [R,G,B]=p(c.hex);const d=(R-r)**2+(G-g)**2+(B-b)**2;if(d<bd){bd=d;best=c}});return best;
+}
+
+/* base cuts (hs = server hairStyle tapeValue) */
+const CUTS=[
+  {g:'female',ko:'소프트 단발',len:'short',tex:'straight',hs:'female-soft-bob',img:'hair-female-soft-bob-only.jpg'},
+  {g:'female',ko:'미니 보브',len:'short',tex:'straight',hs:'female-soft-bob',img:'hair-female-soft-bob-only.jpg'},
+  {g:'female',ko:'픽시컷',len:'short',tex:'straight',hs:'female-pixie-cut',img:'hair-female-pixie-cut-only.jpg'},
+  {g:'female',ko:'샤기 픽시',len:'short',tex:'wave',hs:'female-pixie-cut',img:'hair-female-pixie-cut-only.jpg'},
+  {g:'female',ko:'허쉬컷',len:'medium',tex:'wave',hs:'female-hush-cut',img:'hair-female-hush-cut-only.jpg'},
+  {g:'female',ko:'미디엄 S컬',len:'medium',tex:'curl',hs:'female-medium-s-curl',img:'hair-female-medium-s-curl-only.jpg'},
+  {g:'female',ko:'커튼뱅',len:'medium',tex:'wave',hs:'female-curtain-bang',img:'hair-female-curtain-bang-only.jpg'},
+  {g:'female',ko:'물결펌',len:'medium',tex:'curl',hs:'female-medium-s-curl',img:'hair-female-medium-s-curl-only.jpg'},
+  {g:'female',ko:'레이어드 미디',len:'medium',tex:'wave',hs:'female-hush-cut',img:'hair-female-hush-cut-only.jpg'},
+  {g:'female',ko:'에어리 레이어드',len:'long',tex:'wave',hs:'female-airy-layered',img:'hair-female-airy-layered-only.jpg'},
+  {g:'female',ko:'롱 C컬',len:'long',tex:'curl',hs:'female-long-c-curl',img:'hair-female-long-c-curl-only.jpg'},
+  {g:'female',ko:'슬릭 롱',len:'long',tex:'straight',hs:'female-sleek-long',img:'hair-female-sleek-long-only.jpg'},
+  {g:'female',ko:'히피 웨이브',len:'long',tex:'wave',hs:'female-hippie-wave',img:'hair-female-hippie-wave-only.jpg'},
+  {g:'female',ko:'로우 포니테일',len:'long',tex:'straight',hs:'female-low-ponytail',img:'hair-female-low-ponytail-only.jpg'},
+  {g:'male',ko:'텍스처드 크롭',len:'short',tex:'wave',hs:'male-textured-crop',img:'hair-male-textured-crop-only.jpg'},
+  {g:'male',ko:'투블럭',len:'short',tex:'straight',hs:'male-soft-two-block',img:'hair-male-two-block-only.jpg'},
+  {g:'male',ko:'쉼표머리',len:'short',tex:'curl',hs:'male-comma-hair',img:'hair-male-comma-only.jpg'},
+  {g:'male',ko:'댄디 가르마',len:'short',tex:'straight',hs:'male-dandy-part',img:'hair-male-dandy-part-only.jpg'},
+  {g:'male',ko:'아이비리그',len:'short',tex:'straight',hs:'male-ivy-league',img:'hair-male-ivy-league-only.jpg'},
+  {g:'male',ko:'컬리 숏',len:'short',tex:'curl',hs:'male-curly-short',img:'hair-male-curly-short-only.jpg'},
+  {g:'male',ko:'버즈컷',len:'short',tex:'straight',hs:'male-buzz-cut',img:'hair-male-buzz-cut-only.jpg'},
+  {g:'male',ko:'슬릭백',len:'medium',tex:'straight',hs:'male-slick-back',img:'hair-male-slick-back-only.jpg'},
+  {g:'male',ko:'미디엄 웨이브',len:'medium',tex:'wave',hs:'male-wavy-medium',img:'hair-male-wavy-medium-only.jpg'},
+  {g:'male',ko:'울프컷',len:'medium',tex:'wave',hs:'male-wolf-cut',img:'hair-male-wolf-cut-only.jpg'}
+];
+const LIB=CUTS.length*COLORS.length;   // 전체 스타일 규모(≈240)
+
+const ANGLES=[{k:'front',ko:'전면',req:true},{k:'side',ko:'측면'},{k:'back',ko:'후면'}];
+const S={gender:null,length:null,tex:'',color:COLORS[2],photos:{front:null,side:null,back:null},results:[],history:[{id:'gender'}]};
+
+function show(id){document.querySelectorAll('.stage').forEach(s=>s.classList.remove('active'));$('#'+id).classList.add('active');$('#back').classList.toggle('on',id!=='gender');$('#editRef').style.display=id==='results'?'block':'none';if(id!=='loom')stopPct()}
+function goto(id){S.history.push({id});show(id)}
+$('#back').addEventListener('click',()=>{S.history.pop();show((S.history[S.history.length-1]||{id:'gender'}).id)});
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._);t._=setTimeout(()=>t.classList.remove('show'),1700)}
+
+/* allowed cuts per gender */
+function refKey(g){return 'hairCuts_'+g}
+function allowedCuts(g){try{const v=JSON.parse(localStorage.getItem(refKey(g)));if(Array.isArray(v)&&v.length)return new Set(v)}catch(e){}return null}
+function setAllowed(g,a){localStorage.setItem(refKey(g),JSON.stringify(a))}
+
+/* GENDER */
+document.querySelectorAll('#gender .gcol').forEach(c=>c.addEventListener('click',()=>{S.gender=c.dataset.g;buildPersonal();goto('personal')}));
+
+/* PERSONAL */
+function poolCuts(){const allow=allowedCuts(S.gender);return CUTS.filter(c=>c.g===S.gender&&c.len===S.length&&(!S.tex||c.tex===S.tex)&&(!allow||allow.has(c.ko)))}
+function updateCount(){$('#pcount').textContent=`전체 ${LIB}개 스타일 · 조건 매칭 ${poolCuts().length}컷 · 6개 자동 추천`}
+function sel(w,el){document.querySelectorAll(w+' .chip, '+w+' .sw').forEach(x=>x.classList.remove('sel'));el.classList.add('sel')}
+function buildPersonal(){
+  const lens=[...new Set(CUTS.filter(c=>c.g===S.gender).map(c=>c.len))].sort((a,b)=>['short','medium','long'].indexOf(a)-['short','medium','long'].indexOf(b));
+  if(!lens.includes(S.length))S.length=lens[0];
+  $('#lenChips').innerHTML=lens.map(v=>`<button class="chip ${v===S.length?'sel':''}" data-v="${v}">${LENKO[v]}</button>`).join('');
+  $('#lenChips').querySelectorAll('.chip').forEach(ch=>ch.addEventListener('click',()=>{S.length=ch.dataset.v;sel('#lenChips',ch);updateCount()}));
+  $('#texChips').querySelectorAll('.chip').forEach(ch=>{ch.classList.toggle('sel',ch.dataset.v===S.tex);ch.onclick=()=>{S.tex=ch.dataset.v;sel('#texChips',ch);updateCount()}});
+  $('#palette').innerHTML=COLORS.map((c,i)=>`<div class="sw ${c.id===S.color.id?'sel':''}" data-i="${i}" style="background:${c.hex}"><span class="nm">${c.ko}</span></div>`).join('')+`<label class="pcustom">＋<input type="color" id="pc" value="${S.color.hex}"></label>`;
+  $('#palette').querySelectorAll('.sw').forEach(sw=>sw.addEventListener('click',()=>{S.color=COLORS[+sw.dataset.i];sel('#palette',sw)}));
+  $('#pc').addEventListener('input',e=>{S.color=nearestColor(e.target.value);$('#palette').querySelectorAll('.sw').forEach(x=>x.classList.remove('sel'))});
+  updateCount();
+}
+$('#toAngles').addEventListener('click',()=>{buildAngles();goto('angles')});
+
+/* ANGLES swipe */
+let aSlider;
+function buildAngles(){
+  $('#aTrack').innerHTML=ANGLES.map(a=>`
+    <div class="slide"><label class="adrop" data-k="${a.k}"><div class="ic">＋</div><small>${a.ko}${a.req?' · 필수':''}</small><img></label></div>`).join('');
+  aSlider=makeSlider($('#aVp'),$('#aTrack'),$('#aDots'));
+  document.querySelectorAll('#aTrack .adrop').forEach(d=>{
+    d.addEventListener('click',()=>{if(aSlider.moved)return;pendingKey=d.dataset.k;$('#file').click()});
+    ['dragover','dragenter'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault();d.classList.add('hover')}));
+    ['dragleave','drop'].forEach(ev=>d.addEventListener(ev,e=>{e.preventDefault();d.classList.remove('hover')}));
+    d.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f){pendingKey=d.dataset.k;readPhoto(f)}});
+  });
+}
+let pendingKey='front';
+$('#file').addEventListener('change',e=>{const f=e.target.files[0];if(f)readPhoto(f);e.target.value=''});
+function readPhoto(f){if(!f||!f.type.startsWith('image/'))return;const rd=new FileReader();rd.onload=()=>{S.photos[pendingKey]=rd.result;const d=document.querySelector(`#aTrack .adrop[data-k="${pendingKey}"]`);d.querySelector('img').src=rd.result;d.classList.add('filled');$('#toGen').classList.toggle('on',!!S.photos.front)};rd.readAsDataURL(f)}
+$('#aPrev').addEventListener('click',()=>aSlider&&aSlider.prev());$('#aNext').addEventListener('click',()=>aSlider&&aSlider.next());
+$('#rPrev').addEventListener('click',()=>rSlider&&rSlider.prev());$('#rNext').addEventListener('click',()=>rSlider&&rSlider.next());
+$('#toGen').addEventListener('click',()=>{if(S.photos.front)generate()});
+
+/* recommend 6 distinct cuts */
+function recommend(){
+  let pool=poolCuts();
+  if(pool.length<1)pool=CUTS.filter(c=>c.g===S.gender&&c.len===S.length);
+  if(pool.length<1)pool=CUTS.filter(c=>c.g===S.gender);
+  const cuts=[...pool].sort(()=>Math.random()-.5);
+  const res=[];for(let i=0;i<6;i++)res.push(cuts[i%cuts.length]);
+  return res;
+}
+
+/* ---- REAL EDIT: POST /api/image-edit (god-tibo-imagen) ---- */
+function frontPhoto(){return S.photos.front||S.photos.side||S.photos.back}
+async function callEdit(cut){
+  const payload={imageDataUrl:frontPhoto(),moduleId:'hairstyle',
+    answers:{referenceGender:S.gender,length:S.length,dyePreference:S.color.id},
+    tapeState:{hairStyle:cut.hs},photoName:'salon.jpg'};
+  try{
+    const r=await fetch('/api/image-edit',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+    if(!r.ok)throw 0;const j=await r.json();if(j&&j.imageDataUrl)return j.imageDataUrl;throw 0;
+  }catch(e){
+    await delay(900+Math.random()*2000);   // file://·오프라인 폴백(프리뷰)
+    return A+cut.img;
+  }
+}
+
+/* percent loader */
+let pctRAF=null,pctShown=0,pctTarget=0;
+function setBar(v){$('#pctN').textContent=Math.round(v);$('#loomBar').style.width=v+'%'}
+function startPct(){pctShown=0;pctTarget=6;setBar(0);cancelAnimationFrame(pctRAF);(function loop(){pctShown+=(pctTarget-pctShown)*0.08;setBar(pctShown);pctRAF=requestAnimationFrame(loop)})()}
+function stopPct(){cancelAnimationFrame(pctRAF);pctRAF=null}
+
+function generate(){
+  const recs=recommend();
+  S.results=recs.map(c=>({cut:c,url:null}));
+  $('#loomThumb').innerHTML=recs.map(()=>`<span></span>`).join('');
+  goto('loom');startPct();
+  let done=0;const total=recs.length;
+  recs.forEach((c,i)=>{
+    callEdit(c).then(url=>{
+      S.results[i].url=url;done++;
+      $('#loomThumb').children[i]?.classList.add('on');
+      pctTarget=done/total*100;
+      if(done===total){pctTarget=100;setTimeout(()=>{stopPct();buildResults();show('results')},700)}
+    });
+  });
+}
+
+/* RESULTS slider */
+let rSlider;
+function buildResults(){
+  $('#rTrack').innerHTML=S.results.map(({cut:c,url},i)=>`
+    <div class="slide rslide" data-i="${i}">
+      <div class="art"><img src="${url}"></div>
+      <div class="cw" style="background:linear-gradient(180deg,${S.color.hex} 0%,${S.color.hex}55 32%,transparent 60%)"></div>
+      <div class="vg"></div><div class="no">${String(i+1).padStart(2,'0')}</div>
+      <div class="cap"><div><h2>${c.ko}</h2><div class="color"><i style="background:${S.color.hex}"></i>${S.color.ko}</div></div>
+        <button class="save" data-i="${i}">♥</button></div>
+    </div>`).join('');
+  rSlider=makeSlider($('#rVp'),$('#rTrack'),$('#rDots'));
+  document.querySelectorAll('#rTrack .save').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();b.textContent='✓';b.style.background='var(--accent)';b.style.color='#0b0808';toast(`${S.results[+b.dataset.i].cut.ko} · ${S.color.ko} 저장`)}));
+}
+
+/* EDITOR */
+$('#editRef').addEventListener('click',()=>{
+  const cur=allowedCuts(S.gender);const list=CUTS.filter(c=>c.g===S.gender);
+  $('#egrid').innerHTML=list.map(c=>{const on=!cur||cur.has(c.ko);return `<div class="ecard ${on?'on':''}" data-ko="${c.ko}"><img src="${A}${c.img}"><div class="tick">✓</div><div class="nm">${c.ko}</div></div>`}).join('');
+  document.querySelectorAll('#egrid .ecard').forEach(c=>c.addEventListener('click',()=>c.classList.toggle('on')));
+  goto('editor');
+});
+$('#eSave').addEventListener('click',()=>{const kos=[...document.querySelectorAll('#egrid .ecard.on')].map(c=>c.dataset.ko);if(!kos.length){toast('최소 1개는 선택해주세요');return}setAllowed(S.gender,kos);S.history.pop();if(S.photos.front)generate();else show('angles');toast('기본 레퍼런스를 저장했어요')});
+
+/* generic horizontal slider with dots */
+function makeSlider(vp,track,dotsEl){
+  let x=0,idx=0,drag=false,sx=0,base=0;const api={moved:false};
+  const W=()=>vp.clientWidth;
+  function renderDots(){dotsEl.innerHTML=[...track.children].map((_,i)=>`<b class="${i===idx?'on':''}" data-i="${i}"></b>`).join('');dotsEl.querySelectorAll('b').forEach(b=>b.addEventListener('click',()=>go(+b.dataset.i)))}
+  function place(anim){track.style.transition=anim?'transform .5s cubic-bezier(.16,1,.3,1)':'none';track.style.transform=`translateX(${x}px)`}
+  function go(i){idx=Math.max(0,Math.min(track.children.length-1,i));x=-idx*W();place(true);dotsEl.querySelectorAll('b').forEach((b,j)=>b.classList.toggle('on',j===idx))}
+  api.next=()=>go(idx+1);api.prev=()=>go(idx-1);api.go=go;
+  vp.addEventListener('pointerdown',e=>{drag=true;api.moved=false;sx=e.clientX;base=x});
+  vp.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-sx;if(Math.abs(dx)>8){if(!api.moved){api.moved=true;try{vp.setPointerCapture(e.pointerId)}catch(_){}}}x=base+dx;place(false)});
+  vp.addEventListener('pointerup',e=>{if(!drag)return;drag=false;try{vp.releasePointerCapture(e.pointerId)}catch(_){}const dx=e.clientX-sx;if(dx<-40)go(idx+1);else if(dx>40)go(idx-1);else go(idx);setTimeout(()=>api.moved=false,30)});
+  window.addEventListener('resize',()=>go(idx));
+  renderDots();go(0);
+  return api;
+}
+window.addEventListener('keydown',e=>{
+  if($('#angles').classList.contains('active')&&aSlider){if(e.key==='ArrowRight')aSlider.next();if(e.key==='ArrowLeft')aSlider.prev()}
+  if($('#results').classList.contains('active')&&rSlider){if(e.key==='ArrowRight')rSlider.next();if(e.key==='ArrowLeft')rSlider.prev()}
+});
+</script>
+</body>
+</html>

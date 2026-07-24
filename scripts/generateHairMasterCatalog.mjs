@@ -5,6 +5,11 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const outputDir = resolve(root, 'docs/hair-design-master');
 const checkOnly = process.argv.includes('--check');
+const schemaVersion = 1;
+const catalogVersion = 'HLM-MASTER-2026-07-EXPLORE-1';
+const promptVersion = 'HLM-EXPLORE-PROMPT-2026-07-1';
+const catalogSizeLimitBytes = 2_500_000;
+const indexSizeLimitBytes = 900_000;
 const b = (name, feature, tags = []) => ({ name, feature, tags });
 
 const genders = [
@@ -230,7 +235,7 @@ for (const gender of genders) {
           const name = `${gender.name} ${length.name} ${base.name} · ${frontName} · ${finish.name}`;
           const feature = `${gender.name} ${length.name}. ${length.landmark}. ${base.feature}. ${frontFeature}. ${finish.feature}.`;
           const signature = `CORE|${gender.id}|${length.id}|${baseIndex + 1}|${frontId}|${finish.id}`;
-          core.push({ id, name, gender: gender.name, length: length.name, landmark: length.landmark, base: base.name, front: frontName, finish: finish.name, finishType: finish.type, diameter: diameter ? `${diameter}mm` : '해당 없음', hairType: finish.hairType, feature, signature });
+          core.push({ id, name, gender: gender.name, genderId: gender.id, length: length.name, lengthId: length.id, landmark: length.landmark, base: base.name, baseIndex: baseIndex + 1, front: frontName, frontId, finish: finish.name, finishId: finish.id, finishType: finish.type, diameter: diameter ? `${diameter}mm` : '해당 없음', diameterMm: diameter, hairType: finish.hairType, feature, signature });
         });
       });
     });
@@ -273,6 +278,64 @@ const uniqueFeatures = assertUnique('특징 문장', designs.map((design) => nor
 const bannedColorTerms = /(블랙|브라운|블론드|레드|핑크|블루|그린|퍼플|애쉬|코퍼|염색 컬러)/;
 const colorMentions = designs.filter((design) => bannedColorTerms.test(design.name) || bannedColorTerms.test(design.feature));
 if (colorMentions.length) throw new Error(`색상 차원 혼입 ${colorMentions.length}개`);
+
+const lengthOrders = { US: 0, S: 1, MD: 2, L: 3, XL: 4 };
+const damageCodes = { low: 0, medium: 1, high: 2 };
+const thicknessMask = (hairType) => (/가는/.test(hairType) ? 1 : 0) | (/보통/.test(hairType) ? 2 : 0) | (/굵은|고밀도/.test(hairType) ? 4 : 0) || 7;
+const permIntensity = (finishId) => ['NS', 'NW', 'NC', 'NK'].includes(finishId) ? 0 : ['CL', 'CT', 'BW'].includes(finishId) ? 1 : ['SL', 'ST', 'WW', 'SP'].includes(finishId) ? 2 : 3;
+const textureBucket = (finishId) => finishId === 'NS' ? 0 : ['NW', 'CL', 'CT', 'BW'].includes(finishId) ? 1 : ['NC', 'SL', 'ST', 'WW'].includes(finishId) ? 2 : ['NK', 'SP'].includes(finishId) ? 3 : 4;
+const coreDamage = (finishId) => ['NS', 'NW', 'NC', 'NK'].includes(finishId) ? 'low' : ['CL', 'CT', 'BW'].includes(finishId) ? 'medium' : 'high';
+const specialFamilyBuckets = new Map([['BR', 0], ['UP', 1], ['TR', 2], ['BA', 3], ['ED', 4]]);
+const specialProfile = (design) => {
+  if (design.familyId === 'BA') return { target: 0, ceiling: 'low', extension: false, risk: 1, editorial: 0, texture: 0 };
+  if (design.familyId === 'UP') return { target: 3, ceiling: 'low', extension: false, risk: 2, editorial: 1, texture: design.variant === '슬릭' ? 0 : 2 };
+  if (design.familyId === 'BR') return { target: 4, ceiling: 'medium', extension: true, risk: 2, editorial: 1, texture: 4 };
+  if (design.familyId === 'TR') {
+    const extension = /대수|변발|어여|관발|봉황|장식|의례|박물관/.test(`${design.archetype} ${design.variant}`);
+    return { target: 3, ceiling: 'medium', extension, risk: 3, editorial: design.variant.includes('에디토리얼') ? 3 : 2, texture: 3 };
+  }
+  return { target: 2, ceiling: 'high', extension: /구조|볼륨|실루엣|익스트림|쿠튀르|스컬프처럴/.test(`${design.archetype} ${design.variant}`), risk: 3, editorial: design.variant === '미니멀' ? 2 : 3, texture: 4 };
+};
+const dictionary = (values) => [...new Set(values)];
+const dictionaries = {
+  bases: dictionary(core.map((design) => design.base)),
+  fronts: dictionary(core.map((design) => design.front)),
+  finishes: dictionary(core.map((design) => design.finish)),
+  finishTypes: dictionary(core.map((design) => design.finishType)),
+  hairTypes: dictionary(core.map((design) => design.hairType)),
+  lengths: lengths.map((length) => length.name),
+  landmarks: lengths.map((length) => length.landmark),
+  families: specialFamilies.map((family) => family.title),
+  files: specialFamilies.map((family) => family.file),
+  archetypes: dictionary(special.map((design) => design.archetype)),
+  variants: dictionary(special.map((design) => design.variant))
+};
+const dictionaryMaps = Object.fromEntries(Object.entries(dictionaries).map(([key, values]) => [key, new Map(values.map((value, index) => [value, index]))]));
+const baseBuckets = new Map(dictionaries.bases.map((value, index) => [value, index]));
+const frontBuckets = new Map(dictionary([...core.map((design) => `${design.genderId}|${design.lengthId}|${design.frontId}`)]).map((value, index) => [value, index]));
+const finishBuckets = new Map(dictionary([...core.map((design) => design.finishId), ...special.map((design) => `${design.familyId}|${design.variant}`)]).map((value, index) => [value, index]));
+const compactFeasibility = (feasibility) => [feasibility.lengthOrderMin, feasibility.lengthOrderMax, feasibility.targetLengthOrder, feasibility.maxLengthJumpFromCurrent, feasibility.thicknessMask, damageCodes[feasibility.damageCeiling], feasibility.requiresPerm ? 1 : 0, feasibility.permIntensity, feasibility.requiresExtensionOrPiece ? 1 : 0, feasibility.specialFamilyRisk, feasibility.hardDenyWhenExtensionsDenied ? 1 : 0];
+const compactVector = (vector) => [vector.length, vector.kind, vector.gender, vector.baseBucket, vector.frontBucket, vector.finishBucket, vector.textureBucket, vector.permBucket, vector.specialFamilyBucket, vector.editorialRisk];
+const runtimeRecords = designs.map((design) => {
+  if (design.id.startsWith('HLM-C-')) {
+    const target = lengthOrders[design.lengthId];
+    const intensity = permIntensity(design.finishId);
+    const requiresPerm = intensity > 0;
+    const requiresExtensionOrPiece = false;
+    const feasibility = { lengthOrderMin: target === 0 ? 0 : target - 1, lengthOrderMax: Math.min(4, target + 1), targetLengthOrder: target, maxLengthJumpFromCurrent: intensity === 0 ? 2 : 1, thicknessMask: thicknessMask(design.hairType), damageCeiling: coreDamage(design.finishId), requiresPerm, permIntensity: intensity, requiresExtensionOrPiece, specialFamilyRisk: 0, hardDenyWhenExtensionsDenied: false };
+    const vector = { length: target, kind: 0, gender: design.genderId === 'F' ? 1 : 2, baseBucket: baseBuckets.get(design.base), frontBucket: frontBuckets.get(`${design.genderId}|${design.lengthId}|${design.frontId}`), finishBucket: finishBuckets.get(design.finishId), textureBucket: textureBucket(design.finishId), permBucket: intensity, specialFamilyBucket: 5, editorialRisk: feasibility.damageCeiling === 'high' ? 1 : 0 };
+    return [design.id, 0, design.genderId, design.lengthId, dictionaryMaps.bases.get(design.base), dictionaryMaps.fronts.get(design.front), dictionaryMaps.finishes.get(design.finish), dictionaryMaps.finishTypes.get(design.finishType), design.diameterMm ?? -1, dictionaryMaps.hairTypes.get(design.hairType), design.signature, ...compactFeasibility(feasibility), ...compactVector(vector)];
+  }
+  const profile = specialProfile(design);
+  const feasibility = { lengthOrderMin: Math.max(0, profile.target - 1), lengthOrderMax: Math.min(4, profile.target + 1), targetLengthOrder: profile.target, maxLengthJumpFromCurrent: profile.extension ? 1 : 2, thicknessMask: 7, damageCeiling: profile.ceiling, requiresPerm: false, permIntensity: 0, requiresExtensionOrPiece: profile.extension, specialFamilyRisk: profile.risk, hardDenyWhenExtensionsDenied: profile.extension };
+  const vector = { length: profile.target, kind: 1, gender: 0, baseBucket: specialFamilyBuckets.get(design.familyId), frontBucket: 0, finishBucket: finishBuckets.get(`${design.familyId}|${design.variant}`), textureBucket: profile.texture, permBucket: 0, specialFamilyBucket: specialFamilyBuckets.get(design.familyId), editorialRisk: profile.editorial };
+  return [design.id, 1, design.familyId, dictionaryMaps.files.get(design.file), dictionaryMaps.archetypes.get(design.archetype), dictionaryMaps.variants.get(design.variant), design.signature, ...compactFeasibility(feasibility), ...compactVector(vector)];
+});
+const indexRecords = runtimeRecords.map((tuple) => tuple[1] === 0 ? [tuple[0], 0, tuple[10], ...tuple.slice(11)] : [tuple[0], 1, tuple[6], ...tuple.slice(7)]);
+const catalogJson = `${JSON.stringify({ schemaVersion, catalogVersion, promptVersion, generatedAtPolicy: 'deterministic-no-timestamp', encoding: 'HLM-DICT-TUPLE-1', counts: { total: 6500, core: 6000, special: 500 }, dictionaries, records: runtimeRecords })}\n`;
+const catalogIndexJson = `${JSON.stringify({ schemaVersion, catalogVersion, promptVersion, generatedAtPolicy: 'deterministic-no-timestamp', encoding: 'HLM-INDEX-TUPLE-1', facets: { lengthIds: ['US', 'S', 'MD', 'L', 'XL'], thickness: ['fine', 'normal', 'thick'], damageCondition: ['low', 'medium', 'high'], specialFamilies: ['BR', 'UP', 'TR', 'BA', 'ED'] }, records: indexRecords })}\n`;
+if (Buffer.byteLength(catalogJson) > catalogSizeLimitBytes) throw new Error(`catalog.json 크기 초과: ${Buffer.byteLength(catalogJson)} bytes`);
+if (Buffer.byteLength(catalogIndexJson) > indexSizeLimitBytes) throw new Error(`catalog-index.json 크기 초과: ${Buffer.byteLength(catalogIndexJson)} bytes`);
 
 const expectedFiles = new Map();
 const masterLines = [
@@ -336,6 +399,8 @@ for (const family of specialFamilies) {
 
 masterLines.push('', '## 설계 원칙', '', '- 색상은 분류 차원에서 제외한다.', '- 동일 이름에 번호만 붙여 늘리지 않는다.', '- 모든 코어 항목은 성별, 기장, 기본형, 프런트, 모질·펌의 고유 조합을 가진다.', '- 전통 헤어는 문화권과 시대 명칭을 유지하고 임의 혼합하지 않는다.', '- 브레이드·로크·코일은 일반 펌과 다른 독립 구조로 분류한다.', '- 카탈로그는 생성기 기반이며 새로운 사용자 세그먼트에 맞춰 차원을 추가할 수 있다.');
 expectedFiles.set('README.md', `${masterLines.join('\n').trimEnd()}\n`);
+expectedFiles.set('catalog.json', catalogJson);
+expectedFiles.set('catalog-index.json', catalogIndexJson);
 
 const validationLines = [
   '# Hairloom 마스터 카탈로그 검증 보고서', '',
@@ -359,7 +424,7 @@ for (const family of specialFamilies) {
 expectedFiles.set('VALIDATION.md', `${validationLines.join('\n').trimEnd()}\n`);
 
 if (checkOnly) {
-  const actualFiles = readdirSync(outputDir).filter((name) => name.endsWith('.md')).sort();
+  const actualFiles = readdirSync(outputDir).filter((name) => name.endsWith('.md') || name.endsWith('.json')).sort();
   const wantedFiles = [...expectedFiles.keys()].sort();
   if (JSON.stringify(actualFiles) !== JSON.stringify(wantedFiles)) throw new Error(`마스터 문서 파일 목록 불일치`);
   for (const [name, content] of expectedFiles) {

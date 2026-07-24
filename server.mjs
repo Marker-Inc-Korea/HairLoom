@@ -6,10 +6,15 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('.', import.meta.url));
 const host = '127.0.0.1';
 const port = Number(process.env.PORT || 4180);
+const localUrlBase = `http://${host}`;
+const trustedHostnames = new Set([host, 'localhost', '[::1]']);
 
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
@@ -26,19 +31,68 @@ function resolveStaticPath(pathname) {
 
   const allowed =
     decoded === '/index.html' ||
+    decoded === '/consultation/' ||
+    decoded === '/consultation/index.html' ||
+    decoded === '/consultation/styles.css' ||
+    decoded === '/consultation/app.mjs' ||
     decoded === '/imagen.web.js' ||
     decoded === '/imagen.web.example.js' ||
+    decoded === '/src/exploreCore.mjs' ||
+    decoded === '/src/consultationCore.mjs' ||
+    decoded === '/docs/hair-design-master/catalog.json' ||
+    decoded === '/docs/hair-design-master/catalog-index.json' ||
     /^\/docs\/assets\/(?:samples|test-mannequin|test-mannequin-female)\/[a-z0-9._-]+\.(?:jpg|jpeg|png|webp)$/i.test(decoded) ||
     /^\/docs\/assets\/test-subjects\/[a-z0-9._-]+\/[a-z0-9._-]+\.(?:jpg|jpeg|png|webp)$/i.test(decoded);
 
   if (!allowed) return null;
+  if (decoded === '/consultation/') decoded = '/consultation/index.html';
   const filePath = resolve(root, `.${decoded}`);
   return filePath.startsWith(root) ? filePath : null;
 }
 
+function isTrustedHostHeader(value) {
+  if (!value) return true;
+  if (Array.isArray(value)) return false;
+  if (/[/\\@\s]/.test(value)) return false;
+
+  let parsed;
+  try {
+    parsed = new URL(`http://${value}`);
+  } catch {
+    return false;
+  }
+
+  return parsed.host.toLowerCase() === value.toLowerCase() && trustedHostnames.has(parsed.hostname);
+}
+
+function parseRequestUrl(target) {
+  let parsed;
+  try {
+    parsed = new URL(target || '/', localUrlBase);
+  } catch {
+    return null;
+  }
+
+  return parsed.origin === localUrlBase ? parsed : null;
+}
+
+function rejectBadRequest(response) {
+  response.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' });
+  response.end('Bad request');
+}
+
 export function createHairloomServer() {
   return createServer((request, response) => {
-    const url = new URL(request.url || '/', `http://${request.headers.host || `${host}:${port}`}`);
+    if (!isTrustedHostHeader(request.headers.host)) {
+      rejectBadRequest(response);
+      return;
+    }
+
+    const url = parseRequestUrl(request.url);
+    if (!url) {
+      rejectBadRequest(response);
+      return;
+    }
 
     if (url.pathname === '/healthz') {
       response.writeHead(200, {
