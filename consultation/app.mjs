@@ -517,27 +517,34 @@ async function hairOnlyMask(viewKey) {
   const context = canvas.getContext('2d');
   context.fillStyle = '#000';
   context.fillRect(0, 0, canvas.width, canvas.height);
-  const regions = {
-    front: [0.5, 0.28, 0.34, 0.31],
-    side: [0.5, 0.3, 0.35, 0.32],
-    back: [0.5, 0.3, 0.36, 0.34],
-    crown: [0.5, 0.42, 0.38, 0.36],
-    nape: [0.5, 0.36, 0.35, 0.4],
-    detail: [0.5, 0.5, 0.4, 0.42]
+  const editableRegions = {
+    front: [[0.5, 0.13, 0.31, 0.16], [0.24, 0.29, 0.1, 0.2], [0.76, 0.29, 0.1, 0.2]],
+    side: [[0.5, 0.14, 0.33, 0.17], [0.24, 0.3, 0.11, 0.22], [0.76, 0.3, 0.11, 0.22]],
+    back: [[0.5, 0.25, 0.37, 0.31]],
+    crown: [[0.5, 0.42, 0.38, 0.36]],
+    nape: [[0.5, 0.29, 0.36, 0.34]],
+    detail: [[0.5, 0.5, 0.4, 0.42]]
   };
-  const [x, y, rx, ry] = regions[viewKey] ?? regions.front;
-  context.globalCompositeOperation = 'destination-out';
-  context.beginPath();
-  context.ellipse(canvas.width * x, canvas.height * y, canvas.width * rx, canvas.height * ry, 0, 0, Math.PI * 2);
-  context.fill();
-  const protectedFace = viewKey === 'front' ? [0.5, 0.37, 0.17, 0.21] : viewKey === 'side' ? [0.5, 0.39, 0.21, 0.23] : null;
-  if (protectedFace) {
-    context.globalCompositeOperation = 'source-over';
+  const protectedRegions = {
+    front: [[0.5, 0.45, 0.32, 0.38], [0.5, 0.24, 0.3, 0.17]],
+    side: [[0.5, 0.47, 0.36, 0.4], [0.5, 0.25, 0.32, 0.18]],
+    back: [[0.5, 0.67, 0.17, 0.24]],
+    nape: [[0.5, 0.68, 0.18, 0.25]]
+  };
+  const paintRegions = (regions, operation, feather) => {
+    context.save();
+    context.globalCompositeOperation = operation;
     context.fillStyle = '#000';
-    context.beginPath();
-    context.ellipse(canvas.width * protectedFace[0], canvas.height * protectedFace[1], canvas.width * protectedFace[2], canvas.height * protectedFace[3], 0, 0, Math.PI * 2);
-    context.fill();
-  }
+    context.filter = feather ? `blur(${Math.max(2, Math.round(Math.min(canvas.width, canvas.height) * feather))}px)` : 'none';
+    for (const [x, y, rx, ry] of regions) {
+      context.beginPath();
+      context.ellipse(canvas.width * x, canvas.height * y, canvas.width * rx, canvas.height * ry, 0, 0, Math.PI * 2);
+      context.fill();
+    }
+    context.restore();
+  };
+  paintRegions(editableRegions[viewKey] ?? editableRegions.front, 'destination-out', 0.012);
+  paintRegions(protectedRegions[viewKey] ?? [], 'source-over', 0.008);
   const mask = await new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Mask encode failed')), 'image/png'));
   state.sourceViewMasks.set(viewKey, mask);
   return mask;
@@ -707,6 +714,8 @@ function consultationPrompt(record, viewKey) {
     'OUTPUT CONTRACT: exactly ONE full-frame image and ONE person.',
     'PIXEL LOCK: every non-hair pixel must remain unchanged. Do not redraw, regenerate, beautify, retouch or reinterpret the face, facial shape, skin, eyes, eyebrows, nose, lips, jaw, ears, body, clothing, background, lighting or camera geometry.',
     'FACE LOCK: preserve exact identity, proportions, expression, gaze, skin texture and pixel alignment. No face slimming, eye enlargement, skin smoothing or symmetry correction.',
+    'HAIRLINE LOCK: preserve the exact forehead, temples and visible hairline boundary. Never generate hair across protected skin.',
+    'FACIAL HAIR LOCK: beard, mustache, sideburn boundary and eyebrows are not hairstyle edit targets and must remain exact source pixels.',
     'MASK CONTRACT: modify transparent mask pixels only. Opaque mask pixels are immutable source pixels.',
     viewRule,
     'PRESERVE SOURCE FRAME: no crop, zoom, enlargement, reframing, collage, split screen, duplicate person, inset or border.',

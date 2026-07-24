@@ -90,8 +90,8 @@ test('serves only consultation route and allowlisted consultation assets', async
       assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
       assert.match(response.headers.get('cache-control') || '', /no-store/);
       const html = await response.text();
-      assert.match(html, /styles\.css\?v=20260724-mixed-source-mask/);
-      assert.match(html, /app\.mjs\?v=20260724-mixed-source-mask/);
+      assert.match(html, /styles\.css\?v=20260724-face-safe-inpaint/);
+      assert.match(html, /app\.mjs\?v=20260724-face-safe-inpaint/);
     }
     for (const [path, mime] of [['/consultation/styles.css', /^text\/css/], ['/consultation/app.mjs', /^text\/javascript/], ['/src/consultationCore.mjs', /^text\/javascript/]]) {
       const response = await fetch(`http://127.0.0.1:${port}${path}`);
@@ -117,6 +117,11 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /compositeHairOnlyResult/);
     assert.match(appSource, /destination-out/);
     assert.match(appSource, /'image\/png'/);
+    assert.match(appSource, /editableRegions/);
+    assert.match(appSource, /protectedRegions/);
+    assert.match(appSource, /HAIRLINE LOCK/);
+    assert.match(appSource, /FACIAL HAIR LOCK/);
+    assert.doesNotMatch(appSource, /const protectedFace =/);
     assert.match(appSource, /id=\"currentLength\"/);
     assert.match(appSource, /매우 짧음/);
     assert.match(appSource, /장발/);
