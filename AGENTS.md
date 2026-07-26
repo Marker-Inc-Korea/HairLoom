@@ -5,14 +5,14 @@ This is the machine-operable guide for work in the standalone Hairloom repositor
 ## Repository contract
 
 - Project root: `/Users/kwon/vscode/hairloom`
-- Repository: `https://github.com/Hyunwook-Kwon/hairloom`
+- Repository: `https://github.com/Marker-Inc-Korea/HairLoom`
 - Runtime: Node.js 20+
 - Module system: native ESM
 - Build step: none
 - App URL: `http://127.0.0.1:4180/`
 - Health URL: `http://127.0.0.1:4180/healthz`
 - Main verification: `npm run verify`
-- Expected baseline: 26 tests passing
+- Expected baseline: 45 tests passing
 
 ## Hard project boundary
 
@@ -31,7 +31,7 @@ pwd
 # must be /Users/kwon/vscode/hairloom
 
 git remote get-url origin
-# must be https://github.com/Hyunwook-Kwon/hairloom.git
+# must be https://github.com/Marker-Inc-Korea/HairLoom.git
 ```
 
 ## Bootstrap and verification
@@ -42,7 +42,7 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-`npm run verify` must cover syntax checks, both catalog drift checks, Explore/catalog/server tests, and the 26-test baseline.
+`npm run verify` must cover syntax checks, both catalog drift checks, Explore/catalog/consultation/server tests, and the 45-test baseline.
 
 ## Product invariants
 

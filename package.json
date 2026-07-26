@@ -17,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Hyunwook-Kwon/hairloom.git"
+    "url": "git+https://github.com/Marker-Inc-Korea/HairLoom.git"
   },
   "engines": {
     "node": ">=20"
