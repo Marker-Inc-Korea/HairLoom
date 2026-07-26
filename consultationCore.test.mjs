@@ -7,21 +7,34 @@ import {
   CONSULTATION_HANDOFF_STORAGE_KEY,
   CONSULTATION_INITIAL_ACTIVE,
   CONSULTATION_HARD_MAX_ACTIVE,
+  CONSULTATION_HANDOFF_SCHEMA_VERSION,
+  CONSULTATION_GENERATION_AXES_VERSION,
+  HAIR_COLOR_TONES,
+  PRESERVE_CURRENT_TONE_ID,
   TREND_STRUCTURE_BASES,
   buildConsultationHandoff,
   createConsultationBatch,
   assignConsultationSourceViews,
+  allocateConsultationDiversity,
+  buildConsultationCandidatePool,
+  canonicalStructureKey,
+  deriveAllowedHairColorTones,
+  evaluateHairColorFeasibility,
   evaluateVariation,
   expandStructureGroup,
   groupCoreCatalog,
   normalizeDiagnosis,
+  normalizeHairColorProfile,
   rankVariationsByMood,
   selectConsultationDesignIds,
   selectConsultationStructureDesignIds,
+  scoreConsultationSuitability,
   startConsultationQueuedItems,
   applyConsultationCompletion,
   supersedeConsultationBatch,
   validateConsultationHandoffPayload,
+  validateConsultationGenerationAxes,
+  validateStableTaxonomyIds,
   summarizeStructureFeasibility
 } from './src/consultationCore.mjs';
 
@@ -131,16 +144,16 @@ test('structure preview selection returns 100 unique feasible groups', () => {
   }), true);
 });
 
-test('structure previews prioritize trend bases and the customer natural texture', () => {
-  const byId = new Map(catalog.records.map((record) => [record.id, record]));
-  for (const profileGender of ['F', 'M']) {
-    const profileGroups = groups.filter((group) => group.genderId === profileGender);
-    const current = diagnosis({ profileGender, actualLengthCm: 80, naturalTexture: '직모', damage: 'low' });
-    const selected = selectConsultationStructureDesignIds(profileGroups, current);
-    const records = selected.designIds.map((id) => byId.get(id));
-    assert.equal(records.every((record) => TREND_STRUCTURE_BASES.includes(record.baseKo)), true, profileGender);
-    assert.equal(records.every((record) => record.finishKo === '내추럴 스트레이트'), true, profileGender);
-  }
+test('structure previews balance restrained finish families and keep high suitability', () => {
+  const profileGroups = groups.filter((group) => group.genderId === 'F');
+  const current = diagnosis({ profileGender: 'F', actualLengthCm: 80, naturalTexture: '직모', damage: 'low' });
+  const selected = selectConsultationStructureDesignIds(profileGroups, current);
+  const finishCounts = selected.generationAxes.reduce((counts, axes) => ({ ...counts, [axes.finishFamily]: (counts[axes.finishFamily] ?? 0) + 1 }), {});
+  assert.equal(selected.designIds.length, 100);
+  assert.equal(selected.generationAxes.every((axes) => axes.suitabilityScore >= 60), true);
+  assert.ok(finishCounts['natural-soft'] >= 45 && finishCounts['natural-soft'] <= 60);
+  assert.ok(finishCounts['salon-soft'] >= 25 && finishCounts['salon-soft'] <= 40);
+  assert.ok(finishCounts.expressive <= 15);
 });
 
 test('consultation selection returns deterministic 100 unique IDs', () => {
@@ -151,6 +164,63 @@ test('consultation selection returns deterministic 100 unique IDs', () => {
   assert.equal(new Set(first.designIds).size, 100);
   assert.deepEqual(first.designIds, second.designIds);
   assert.equal(first.originalPhotoLineage.memoryOnly, true);
+});
+
+test('stable taxonomy keys are ID-based and migrate legacy labels', () => {
+  assert.deepEqual(validateStableTaxonomyIds(catalog.records), { coreCount: 6000, structureCount: 500, tupleCount: 6000 });
+  const record = femaleLong.finishRecords[0];
+  assert.match(canonicalStructureKey(record), /^F\|L\|F-L-\d{2}\|[A-Z]{2}$/);
+  assert.equal(femaleLong.key, canonicalStructureKey(record));
+  assert.equal(femaleLong.legacyKey.includes(record.baseKo), true);
+});
+
+test('natural color profile bounds black to adjacent tones and requires per-view masks', () => {
+  const current = diagnosis({ damage: 'low' });
+  const profile = normalizeHairColorProfile({ currentToneId: 'natural-black', selectedToneIds: ['natural-black', 'dark-brown'], sourceViewMasks: { front: { revision: 1, confirmed: true }, side: { revision: 1, confirmed: false } } });
+  assert.deepEqual(deriveAllowedHairColorTones(profile, current).map((tone) => tone.id), ['natural-black', 'soft-black', 'dark-brown']);
+  assert.equal(evaluateHairColorFeasibility('dark-brown', profile, current, 'front').status, 'possible');
+  assert.equal(evaluateHairColorFeasibility('dark-brown', profile, current, 'side').status, 'impossible');
+  assert.equal(evaluateHairColorFeasibility('warm-brown', profile, current, 'front').status, 'impossible');
+  const legacy = normalizeHairColorProfile({});
+  assert.equal(legacy.currentToneId, 'unknown');
+  assert.deepEqual(legacy.selectedToneIds, [PRESERVE_CURRENT_TONE_ID]);
+  assert.equal(HAIR_COLOR_TONES.length, 7);
+});
+
+test('suitability is auditable, hair-only, and reaches 100 for an exact preference match', () => {
+  const group = groups.find((item) => item.baseKo === '에어리 레이어드' && item.genderId === 'F' && item.lengthId === 'L');
+  const record = group.finishRecords.find((item) => item.finishKo === '내추럴 스트레이트');
+  const candidate = { ...record, designId: record.id, structureKey: group.key, mood: '자연스러운', intensity: '균형 있게', finishRecord: record };
+  const score = scoreConsultationSuitability(candidate, diagnosis({ actualLengthCm: 80 }), { mood: '자연', maintenance: 'low' });
+  assert.equal(score.total, 100);
+  assert.deepEqual(score.components, { lengthStructure: 30, texture: 20, damageChemical: 15, density: 10, preference: 10, maintenance: 10, trend: 5 });
+  assert.equal(Object.keys(score.components).some((key) => /face|beauty|attract/i.test(key)), false);
+});
+
+test('diversity axes balance views, mirrors, colors, and retain retry ownership', () => {
+  const profileGroups = groups.filter((group) => group.genderId === 'F');
+  const current = diagnosis({ actualLengthCm: 80, damage: 'low' });
+  const sourceViewMasks = Object.fromEntries(['front', 'side', 'back'].map((key) => [key, { revision: 1, confirmed: true }]));
+  const hairColorProfile = { currentToneId: 'natural-black', selectedToneIds: ['natural-black', 'dark-brown'], sourceViewMasks };
+  const pool = buildConsultationCandidatePool(profileGroups, current, { mood: '자연', maintenance: 'medium' });
+  const allocation = allocateConsultationDiversity(pool, { count: 100, diagnosis: current, sourceViewKeys: ['front', 'side', 'back'], hairColorProfile, seedInput: 'axes' });
+  const validation = validateConsultationGenerationAxes(allocation.generationAxes, { count: 100 });
+  assert.equal(validation.signatures, 100);
+  assert.equal(Math.max(...Object.values(validation.viewCounts)) - Math.min(...Object.values(validation.viewCounts)) <= 1, true);
+  for (const counts of Object.values(validation.mirrorCounts)) assert.equal(Math.abs(counts.mirrored - counts.original) <= 1, true);
+  const toneCounts = allocation.generationAxes.reduce((counts, axes) => ({ ...counts, [axes.colorToneId]: (counts[axes.colorToneId] ?? 0) + 1 }), {});
+  assert.deepEqual(toneCounts, { 'dark-brown': 80, 'natural-black': 20 });
+  assert.equal(new Set(allocation.structureKeys).size, 100);
+  let batch = createConsultationBatch({ batchId: 'axes-retry', designIds: allocation.designIds, generationAxes: allocation.generationAxes, sourcePhotoKey: 'source', settings: {} });
+  batch = startConsultationQueuedItems(batch);
+  const originalAxes = batch.slots[0].generationAxes;
+  const pressured = applyConsultationCompletion(batch, { batchId: batch.batchId, sourcePhotoKey: batch.sourcePhotoKey, slotIndex: 0, designId: batch.slots[0].designId, generation: batch.slots[0].generation, sourceViewKey: batch.slots[0].sourceViewKey, mirrored: originalAxes.mirrored, colorToneId: originalAxes.colorToneId, ok: false, statusCode: 429 });
+  const activeOthers = pressured.batch.slots.filter((slot) => slot.status === 'active');
+  let drained = pressured.batch;
+  for (const slot of activeOthers) drained = applyConsultationCompletion(drained, { batchId: drained.batchId, sourcePhotoKey: drained.sourcePhotoKey, slotIndex: slot.slotIndex, designId: slot.designId, generation: slot.generation, ok: true }).batch;
+  const retried = startConsultationQueuedItems(drained).slots[0];
+  assert.deepEqual(retried.generationAxes, originalAxes);
+  assert.equal(retried.sourceViewKey, originalAxes.sourceViewKey);
 });
 
 test('consultation source views are deterministic and balanced across supplied originals', () => {
@@ -245,10 +315,18 @@ test('handoff validates exact versioned payload and rejects unknown or generated
     catalogVersion,
     promptVersion
   });
-  assert.deepEqual(Object.keys(handoff), ['originalFrontDataUrl', 'currentDesignIds', 'sourceViews', 'settings', 'diagnosis', 'decision', 'catalogVersion', 'promptVersion']);
+  assert.deepEqual(Object.keys(handoff), ['schemaVersion', 'generationAxesVersion', 'sourceTransformVersion', 'originalFrontDataUrl', 'currentDesignIds', 'sourceViews', 'settings', 'diagnosis', 'hairColorProfile', 'decision', 'catalogVersion', 'promptVersion']);
+  assert.equal(handoff.schemaVersion, CONSULTATION_HANDOFF_SCHEMA_VERSION);
+  assert.equal(handoff.generationAxesVersion, CONSULTATION_GENERATION_AXES_VERSION);
+  assert.equal(handoff.hairColorProfile.currentToneId, 'unknown');
   assert.equal(handoff.sourceViews.front, handoff.originalFrontDataUrl);
   assert.match(handoff.sourceViews.side, /^data:image\//);
   assert.equal(validateConsultationHandoffPayload(handoff).catalogVersion, catalogVersion);
+  const legacy = Object.fromEntries(Object.entries(handoff).filter(([key]) => !['schemaVersion', 'generationAxesVersion', 'sourceTransformVersion', 'hairColorProfile'].includes(key)));
+  const migrated = validateConsultationHandoffPayload(legacy);
+  assert.equal(migrated.schemaVersion, CONSULTATION_HANDOFF_SCHEMA_VERSION);
+  assert.equal(migrated.hairColorProfile.currentToneId, 'unknown');
+  assert.deepEqual(migrated.hairColorProfile.selectedToneIds, [PRESERVE_CURRENT_TONE_ID]);
   assert.throws(() => validateConsultationHandoffPayload({ ...handoff, catalogVersion: 'stale' }), /version mismatch/);
   assert.throws(() => validateConsultationHandoffPayload({ ...handoff, promptVersion: '' }), /versions are required/);
   assert.throws(() => validateConsultationHandoffPayload({ ...handoff, unexpected: true }), /Unexpected/);
