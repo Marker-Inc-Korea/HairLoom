@@ -7,6 +7,7 @@ import {
   CONSULTATION_HANDOFF_STORAGE_KEY,
   CONSULTATION_INITIAL_ACTIVE,
   CONSULTATION_HARD_MAX_ACTIVE,
+  TREND_STRUCTURE_BASES,
   buildConsultationHandoff,
   createConsultationBatch,
   assignConsultationSourceViews,
@@ -128,6 +129,18 @@ test('structure preview selection returns 100 unique feasible groups', () => {
     const record = byId.get(id);
     return evaluateVariation({ ...record, designId: id, finishRecord: record, mood: '자연스러운', intensity: '균형 있게' }, current).status !== 'impossible';
   }), true);
+});
+
+test('structure previews prioritize trend bases and the customer natural texture', () => {
+  const byId = new Map(catalog.records.map((record) => [record.id, record]));
+  for (const profileGender of ['F', 'M']) {
+    const profileGroups = groups.filter((group) => group.genderId === profileGender);
+    const current = diagnosis({ profileGender, actualLengthCm: 80, naturalTexture: '직모', damage: 'low' });
+    const selected = selectConsultationStructureDesignIds(profileGroups, current);
+    const records = selected.designIds.map((id) => byId.get(id));
+    assert.equal(records.every((record) => TREND_STRUCTURE_BASES.includes(record.baseKo)), true, profileGender);
+    assert.equal(records.every((record) => record.finishKo === '내추럴 스트레이트'), true, profileGender);
+  }
 });
 
 test('consultation selection returns deterministic 100 unique IDs', () => {

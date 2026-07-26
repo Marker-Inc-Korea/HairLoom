@@ -31,6 +31,14 @@ export const FINISH_SHRINKAGE = Object.freeze({
   '히피 펌': 0.18
 });
 export const CONSULTATION_MOODS = Object.freeze(['자연스러운', '부드러운', '단정한', '우아한', '시크한', '로맨틱한', '경쾌한', '과감한']);
+export const TREND_STRUCTURE_BASES = Object.freeze([
+  '에어리 레이어드', '버터플라이 레이어', '롱 허쉬', '허쉬 미디', '페이스프레임 미디', '레이어드 미디', '버터플라이 로브', '블런트 로브', '샤기 보브', '미니 보브', '프렌치 보브', '울프 미디', '턱선 블런트 보브', '그래듀에이티드 보브', '이탈리안 보브', '원랭스 미디', '옥토퍼스 미디', 'U라인 롱', '롱 샤그', '블런트 롱',
+  '텍스처드 크롭', '프렌치 크롭', '리프컷', '소프트 투블럭', '쉼표머리', '미디엄 커튼', '브로 플로우', '미디엄 테이퍼', '소프트 멀릿', '울프컷', '텍스처드 퀴프', '아이비리그', '템플 페이드 크롭', '버스트 크롭', '댄디컷', '숏 모드컷', '미디엄 슬릭백', '미디엄 샤그', '레이어드 장발', '서퍼 롱'
+]);
+const TREND_STRUCTURE_RANK = new Map(TREND_STRUCTURE_BASES.map((name, index) => [name, index]));
+const STRUCTURE_FINISH_PRIORITY = new Map([
+  ['내추럴 스트레이트', 0], ['내추럴 웨이브', 1], ['루트 볼륨 펌', 2], ['루즈 C컬 펌', 3], ['루즈 S컬 펌', 4], ['바디 웨이브 펌', 5], ['내추럴 컬', 6], ['타이트 C컬 펌', 7], ['워터 웨이브 펌', 8], ['타이트 S컬 펌', 9], ['스파이럴 펌', 10], ['내추럴 코일', 11], ['히피 펌', 12]
+]);
 export const CONSULTATION_INTENSITIES = Object.freeze(['은은하게', '균형 있게', '확실하게']);
 
 const GENDERS = new Set(['F', 'M']);
@@ -233,18 +241,26 @@ export function selectConsultationStructureDesignIds(groups, rawDiagnosis, limit
   const diagnosis = normalizeDiagnosis(rawDiagnosis);
   const target = Math.max(1, Math.min(CONSULTATION_SLOT_COUNT, Math.trunc(Number(limit) || CONSULTATION_SLOT_COUNT)));
   const order = { possible: 0, conditional: 1, impossible: 2 };
-  const selected = [];
+  const finishRank = (record) => record.finishKo === diagnosis.naturalTexture ? -1 : (STRUCTURE_FINISH_PRIORITY.get(record.finishKo) ?? Number.MAX_SAFE_INTEGER);
+  const candidates = [];
   for (const group of groups) {
-    const record = [...(group.finishRecords ?? [])]
-      .sort((a, b) => {
-        const aStatus = evaluateVariation({ ...a, designId: a.id, finishRecord: a, mood: CONSULTATION_MOODS[0], intensity: CONSULTATION_INTENSITIES[1] }, diagnosis).status;
-        const bStatus = evaluateVariation({ ...b, designId: b.id, finishRecord: b, mood: CONSULTATION_MOODS[0], intensity: CONSULTATION_INTENSITIES[1] }, diagnosis).status;
-        return order[aStatus] - order[bStatus] || a.id.localeCompare(b.id);
-      })
-      .find((candidate) => evaluateVariation({ ...candidate, designId: candidate.id, finishRecord: candidate, mood: CONSULTATION_MOODS[0], intensity: CONSULTATION_INTENSITIES[1] }, diagnosis).status !== 'impossible');
-    if (record) selected.push({ designId: record.id, structureKey: group.key });
-    if (selected.length === target) break;
+    const rankedRecords = [...(group.finishRecords ?? [])]
+      .map((record) => ({
+        record,
+        status: evaluateVariation({ ...record, designId: record.id, finishRecord: record, mood: CONSULTATION_MOODS[0], intensity: CONSULTATION_INTENSITIES[1] }, diagnosis).status
+      }))
+      .sort((a, b) => order[a.status] - order[b.status] || finishRank(a.record) - finishRank(b.record) || a.record.id.localeCompare(b.record.id));
+    const representative = rankedRecords.find((candidate) => candidate.status !== 'impossible');
+    if (!representative) continue;
+    candidates.push({
+      designId: representative.record.id,
+      structureKey: group.key,
+      status: representative.status,
+      trendRank: TREND_STRUCTURE_RANK.get(group.baseKo) ?? Number.MAX_SAFE_INTEGER
+    });
   }
+  candidates.sort((a, b) => order[a.status] - order[b.status] || a.trendRank - b.trendRank || a.structureKey.localeCompare(b.structureKey));
+  const selected = candidates.slice(0, target);
   if (selected.length !== target) throw new TypeError(`Consultation structure preview requires ${target} feasible groups, got ${selected.length}`);
   return { designIds: selected.map((item) => item.designId), structureKeys: selected.map((item) => item.structureKey) };
 }

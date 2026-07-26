@@ -48,7 +48,11 @@ test('serves Hairloom page and isolated static assets', async () => {
   try {
     const rootResponse = await fetch(`http://127.0.0.1:${port}/`);
     assert.equal(rootResponse.status, 200);
-    assert.match(await rootResponse.text(), /HAIRLOOM · Design Book/);
+    const rootHtml = await rootResponse.text();
+    assert.match(rootHtml, /HAIRLOOM · Design Book/);
+    assert.match(rootHtml, /미니 단발/);
+    assert.match(rootHtml, /웨이브 단발/);
+    assert.doesNotMatch(rootHtml, /ko:'미니 보브'/);
     assert.equal(rootResponse.headers.get('x-content-type-options'), 'nosniff');
     assert.match(rootResponse.headers.get('cache-control') || '', /no-store/);
 
@@ -90,8 +94,8 @@ test('serves only consultation route and allowlisted consultation assets', async
       assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
       assert.match(response.headers.get('cache-control') || '', /no-store/);
       const html = await response.text();
-      assert.match(html, /styles\.css\?v=20260724-face-safe-inpaint/);
-      assert.match(html, /app\.mjs\?v=20260724-face-safe-inpaint/);
+      assert.match(html, /styles\.css\?v=20260726-upload-button/);
+      assert.match(html, /app\.mjs\?v=20260726-upload-button/);
     }
     for (const [path, mime] of [['/consultation/styles.css', /^text\/css/], ['/consultation/app.mjs', /^text\/javascript/], ['/src/consultationCore.mjs', /^text\/javascript/]]) {
       const response = await fetch(`http://127.0.0.1:${port}${path}`);
@@ -106,7 +110,10 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /metadata: \{ purpose: 'structure' \}/);
     assert.match(appSource, /id="backToList"/);
     assert.match(appSource, /state\.stage = state\.structureSlots\.length \? 2 : 0/);
-    assert.match(appSource, /class="single-view-upload/);
+    assert.match(appSource, /<button class=\"single-view-upload/);
+    assert.match(appSource, /data-upload-view=/);
+    assert.match(appSource, /#view-\$\{button\.dataset\.uploadView\}/);
+    assert.doesNotMatch(appSource, /<label class=\"single-view-upload/);
     assert.match(appSource, /class="source-view-dots"/);
     assert.match(appSource, /required} \/ 1 REQUIRED/);
     assert.match(appSource, /state\.sourceViewIndex === 0 \? 'REQUIRED' : 'OPTIONAL'/);
@@ -122,6 +129,13 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /HAIRLINE LOCK/);
     assert.match(appSource, /FACIAL HAIR LOCK/);
     assert.doesNotMatch(appSource, /const protectedFace =/);
+    assert.match(appSource, /preserveScroll/);
+    assert.match(appSource, /STRUCTURE_TILE_RATIOS/);
+    assert.match(appSource, /--tile-ratio/);
+    assert.match(appSource, /textureControlPrompt/);
+    assert.match(appSource, /no micro-crimping/);
+    assert.match(appSource, /태슬 단발/);
+    assert.match(appSource, /TREND ·/);
     assert.match(appSource, /id=\"currentLength\"/);
     assert.match(appSource, /매우 짧음/);
     assert.match(appSource, /장발/);
@@ -133,7 +147,10 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(consultationCss, /\.structure-board\{/);
     assert.match(consultationCss, /filter:blur\(18px\)/);
     assert.match(consultationCss, /\.single-view-upload\{/);
+    assert.match(consultationCss, /\.single-view-upload:focus-visible/);
     assert.match(consultationCss, /\.source-view-dots\{/);
+    assert.match(consultationCss, /stable varied result masonry/);
+    assert.match(consultationCss, /aspect-ratio:var\(--tile-ratio/);
 
     for (const path of ['/consultation.html', '/consultation/prototype.html', '/consultation/deleted-prototype.html', '/docs/ux-segments/stylist-consultation/prototype.html', '/consultation/../package.json', '/consultation/notes.md', '/src/modules.mjs']) {
       assert.equal((await fetch(`http://127.0.0.1:${port}${path}`)).status, 404, path);

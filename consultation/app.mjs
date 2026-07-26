@@ -4,6 +4,7 @@ import {
   CONSULTATION_HANDOFF_QUERY_TRIGGER,
   CONSULTATION_INITIAL_ACTIVE,
   CONSULTATION_HARD_MAX_ACTIVE,
+  TREND_STRUCTURE_BASES,
   normalizeDiagnosis,
   buildConsultationGroups,
   expandConsultationGroup,
@@ -72,6 +73,21 @@ const statusClass = (s) => s === 'possible' ? 'ok' : s === 'conditional' ? 'cond
 const densityToThickness = { low: 'fine', normal: 'normal', high: 'thick' };
 const damageMap = { low: 'low', medium: 'medium', high: 'high' };
 let moodRankTimer = 0;
+const TREND_BASE_SET = new Set(TREND_STRUCTURE_BASES);
+const STYLE_NAME_REPLACEMENTS = [
+  ['턱선 블런트 보브', '태슬 단발'],
+  ['그래듀에이티드 보브', 'A라인 단발'],
+  ['샤기 보브', '허쉬 단발'],
+  ['라운드 보브', '볼륨 단발'],
+  ['애시메트릭 보브', '비대칭 단발'],
+  ['프렌치 보브', '프렌치 단발'],
+  ['미니 보브', '미니 단발'],
+  ['이탈리안 보브', '이탈리안 단발'],
+  ['보브', '단발']
+];
+function familiarStyleName(value) {
+  return STYLE_NAME_REPLACEMENTS.reduce((name, [source, target]) => name.replaceAll(source, target), String(value ?? ''));
+}
 const DIAGNOSIS_DEFINITIONS = [
   { id: 'naturalTexture', label: 'TEXTURE', labels: ['STRAIGHT', 'WAVY', 'CURL', 'COIL'], values: ['내추럴 스트레이트', '내추럴 웨이브', '내추럴 컬', '내추럴 코일'], defaultIndex: 0 },
   { id: 'density', label: 'DENSITY', labels: ['LOW', 'MEDIUM', 'HIGH'], values: ['low', 'normal', 'high'], defaultIndex: 1 },
@@ -110,6 +126,9 @@ function stageEnabled(index) {
 }
 
 function render() {
+  const currentContent = app.querySelector('.content');
+  const preserveScroll = currentContent?.dataset.stage === String(state.stage);
+  const scrollTop = preserveScroll ? currentContent.scrollTop : 0;
   const step = state.stage + 1;
   app.innerHTML = h`<div class="workspace">
     <aside class="rail">
@@ -117,13 +136,18 @@ function render() {
       <nav class="stages" aria-label="Progress">${stages.map((label, index) => `<button class="stage" aria-label="${label}" aria-current="${state.stage === index}" data-stage="${index}" ${stageEnabled(index) ? '' : 'disabled'}><i></i></button>`).join('')}</nav>
       <div class="rail-count"><b>${String(step).padStart(2, '0')}</b><span>/ 06</span></div>
     </aside>
-    <main class="content">
+    <main class="content" data-stage="${state.stage}">
       <header class="content-head"><b>HAIRLOOM PRO</b><span>${String(step).padStart(2, '0')} / 06 · ${stages[state.stage]}</span></header>
       ${state.error ? `<div class="status-banner error" role="alert">${esc(state.error)}</div>` : currentStageStatus() ? `<div class="status-banner" role="status">${esc(currentStageStatus())}</div>` : ''}
       ${[renderSource, renderProfile, renderStructure, renderVariations, renderCompare, renderAgreement][state.stage]()}
     </main>
   </div>`;
   bind();
+  const nextContent = app.querySelector('.content');
+  if (preserveScroll && nextContent) {
+    nextContent.scrollTop = scrollTop;
+    requestAnimationFrame(() => { if (nextContent.isConnected) nextContent.scrollTop = scrollTop; });
+  }
 }
 
 function diagnosisValue(definition) {
@@ -182,7 +206,7 @@ function renderSource() {
   const view = BOARD_VIEWS[state.sourceViewIndex] ?? BOARD_VIEWS[0];
   const source = sourceViewSource(view);
   const required = state.originalJpegDataUrl ? 1 : 0;
-  return `<section class="source-step single-source"><div class="source-view-head"><b>VIEWS</b><span>${required} / 1 REQUIRED</span></div><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><label class="single-view-upload ${source ? 'filled' : ''}" for="view-${view.id}">${source ? `<img src="${esc(source)}" alt="${view.label}">` : `<span>＋</span><small>ADD ${view.label}</small>`}</label><input id="view-${view.id}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label}"><div class="source-view-nav"><button type="button" data-source-step="-1" aria-label="Previous view">←</button><nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => `<button type="button" data-source-view="${index}" class="${index === state.sourceViewIndex ? 'on' : ''} ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav><button type="button" data-source-step="1" aria-label="Next view">→</button></div></div><div class="source-footer"><div class="profile-switch" aria-label="Profile"><button data-gender="F" class="${gender === 'F' ? 'on' : ''}">FEMALE</button><button data-gender="M" class="${gender === 'M' ? 'on' : ''}">MALE</button></div><button class="next-button" id="toProfile" ${requiredSourceViewsReady() ? '' : 'disabled'}>NEXT</button></div></section>`;
+  return `<section class="source-step single-source"><div class="source-view-head"><b>VIEWS</b><span>${required} / 1 REQUIRED</span></div><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><button class="single-view-upload ${source ? 'filled' : ''}" type="button" data-upload-view="${view.id}" aria-label="${source ? 'Replace' : 'Add'} ${view.label} photo">${source ? `<img src="${esc(source)}" alt="${view.label}">` : `<span>＋</span><small>ADD ${view.label}</small>`}</button><input id="view-${view.id}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label}"><div class="source-view-nav"><button type="button" data-source-step="-1" aria-label="Previous view">←</button><nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => `<button type="button" data-source-view="${index}" class="${index === state.sourceViewIndex ? 'on' : ''} ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav><button type="button" data-source-step="1" aria-label="Next view">→</button></div></div><div class="source-footer"><div class="profile-switch" aria-label="Profile"><button data-gender="F" class="${gender === 'F' ? 'on' : ''}">FEMALE</button><button data-gender="M" class="${gender === 'M' ? 'on' : ''}">MALE</button></div><button class="next-button" id="toProfile" ${requiredSourceViewsReady() ? '' : 'disabled'}>NEXT</button></div></section>`;
 }
 
 function renderProfile() {
@@ -208,16 +232,22 @@ function renderStructure() {
   return panel('STRUCTURE', `<div class="toolbar"><div class="stats"><span class="pill">ALL 500</span><span class="pill">PROFILE ${state.filteredGroups.length}</span><span class="pill">100 PICKS</span><span class="pill">ACTIVE ${state.structureActiveLimit}</span><span class="pill">RUN ${running}</span><span class="pill ok">DONE ${done}</span><span class="pill impossible">FAIL ${failed}</span></div><button class="next-button" id="toVariations" ${state.selectedGroup ? '' : 'disabled'}>NEXT</button></div><div class="structure-board">${slots.map(structureTile).join('')}</div>`);
 }
 
+const STRUCTURE_TILE_RATIOS = [0.66, 0.82, 0.6, 0.74, 0.9, 0.69, 0.57, 0.78, 0.63, 0.86, 0.71, 0.55, 0.8, 0.65, 0.76];
+function structureTileRatio(slotIndex) {
+  return STRUCTURE_TILE_RATIOS[(Math.imul(Number(slotIndex) + 5, 11) + 7) % STRUCTURE_TILE_RATIOS.length];
+}
+
 function structureTile(slot) {
   const record = state.recordsById.get(slot.designId);
   const group = record ? state.groupsByKey.get(recordGroupKey(record)) : null;
   const source = slot.previewUrl || sourceViewPreview(slot.sourceViewKey);
   const selected = group && state.selectedGroup?.key === group.key;
   const ready = slot.status === 'done' && group;
-  return `<button class="structure-tile ${slot.status} ${selected ? 'selected' : ''}" data-structure-slot="${slot.slotIndex}" ${ready ? '' : 'disabled'}><img src="${esc(source)}" alt="${ready ? esc(groupLabel(group)) : ''}"><span class="structure-meta"><b>${ready ? esc(groupLabel(group)) : String(slot.slotIndex + 1).padStart(2, '0')}</b><small>${esc((slot.sourceViewKey || 'front').toUpperCase())} · ${statusKo(slot.status)}</small></span></button>`;
+  const trend = group && TREND_BASE_SET.has(group.baseKo) ? 'TREND · ' : '';
+  return `<button class="structure-tile ${slot.status} ${selected ? 'selected' : ''}" data-structure-slot="${slot.slotIndex}" style="--tile-ratio:${structureTileRatio(slot.slotIndex)}" ${ready ? '' : 'disabled'}><img src="${esc(source)}" alt="${ready ? esc(groupLabel(group)) : ''}"><span class="structure-meta"><b>${ready ? esc(groupLabel(group)) : String(slot.slotIndex + 1).padStart(2, '0')}</b><small>${trend}${esc((slot.sourceViewKey || 'front').toUpperCase())} · ${statusKo(slot.status)}</small></span></button>`;
 }
 
-function groupLabel(group) { return `${group.lengthKo} · ${group.baseKo} · ${group.frontKo}`; }
+function groupLabel(group) { return `${group.lengthKo} · ${familiarStyleName(group.baseKo)} · ${group.frontKo}`; }
 function groupStatus(sum) { return sum.impossible === sum.total ? 'impossible' : sum.possible > 0 ? 'possible' : 'conditional'; }
 function recordGroupKey(record) { return [record.genderId, record.lengthId, record.baseKo, record.frontKo].join('|'); }
 function variationFromRecord(record) { return { id: record.id, designId: record.id, genderId: record.genderId, lengthId: record.lengthId, baseKo: record.baseKo, frontKo: record.frontKo, finishKo: record.finishKo, mood: '균형 있게', intensity: '균형 있게', finishRecord: record }; }
@@ -273,6 +303,7 @@ function bind() {
   document.querySelector('#backToList')?.addEventListener('click', () => { state.stage = state.structureSlots.length ? 2 : 0; render(); });
   document.querySelectorAll('[data-stage]').forEach((button) => button.addEventListener('click', () => { const next = Number(button.dataset.stage); if (stageEnabled(next)) { state.stage = next; render(); } }));
   document.querySelectorAll('[data-view]').forEach((input) => input.addEventListener('change', loadBoardView));
+  document.querySelectorAll('[data-upload-view]').forEach((button) => button.addEventListener('click', () => document.querySelector(`#view-${button.dataset.uploadView}`)?.click()));
   document.querySelectorAll('[data-source-view]').forEach((button) => button.addEventListener('click', () => { state.sourceViewIndex = Number(button.dataset.sourceView); render(); }));
   document.querySelectorAll('[data-source-step]').forEach((button) => button.addEventListener('click', () => { state.sourceViewIndex = Math.max(0, Math.min(BOARD_VIEWS.length - 1, state.sourceViewIndex + Number(button.dataset.sourceStep))); render(); }));
   document.querySelectorAll('[data-gender]').forEach((button) => button.addEventListener('click', () => { state.diagnosis.profileGender = button.dataset.gender; invalidateGeneratedSurfaces('profile-change'); render(); }));
@@ -698,6 +729,16 @@ function withPreview(batch, slotIndex, url) {
   return { ...batch, slots: batch.slots.map((slot) => slot.slotIndex === slotIndex ? { ...slot, previewUrl: url } : slot) };
 }
 
+function textureControlPrompt(record) {
+  const finish = String(record.promptAtoms?.finishKo || record.finishKo || '');
+  if (/내추럴 컬|내추럴 코일/.test(finish)) {
+    return 'TEXTURE CONTROL: preserve the customer’s natural curl family and density. Refine the silhouette without multiplying curls, adding frizz, wet clumps or artificial strand separation.';
+  }
+  if (/타이트|스파이럴|히피|워터 웨이브|젤리|코일/.test(finish)) {
+    return 'TEXTURE CONTROL: translate the named finish into a restrained current salon version with broader, softer and less frequent bends. Keep the roots calm and the silhouette readable; no micro-crimping, noodle curls, wet clumps, frizz halo or uniformly repeated texture.';
+  }
+  return 'TEXTURE CONTROL: keep texture natural, soft and low-amplitude. Use a few readable bends and cohesive hair masses; no wiry strands, crispy separation, wet look, excessive curl frequency or over-styled volume.';
+}
 function consultationPrompt(record, viewKey) {
   const selected = state.selectedVariation;
   const viewRule = {
@@ -719,9 +760,10 @@ function consultationPrompt(record, viewKey) {
     'MASK CONTRACT: modify transparent mask pixels only. Opaque mask pixels are immutable source pixels.',
     viewRule,
     'PRESERVE SOURCE FRAME: no crop, zoom, enlargement, reframing, collage, split screen, duplicate person, inset or border.',
+    textureControlPrompt(record),
     `DESIGN ID: ${record.id}`,
-    `STYLE: ${record.promptAtoms?.titleKo || record.nameKo}`,
-    `STRUCTURE: ${record.promptAtoms?.structureKo || record.baseKo}`,
+    `STYLE: ${familiarStyleName(record.promptAtoms?.titleKo || record.nameKo)}`,
+    `STRUCTURE: ${familiarStyleName(record.promptAtoms?.structureKo || record.baseKo)}`,
     record.promptAtoms?.frontKo ? `FRONT DESIGN: ${record.promptAtoms.frontKo}` : '',
     record.promptAtoms?.finishKo ? `FINISH: ${record.promptAtoms.finishKo}` : '',
     selected?.mood ? `MOOD: ${selected.mood}` : '',
