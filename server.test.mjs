@@ -94,8 +94,8 @@ test('serves only consultation route and allowlisted consultation assets', async
       assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
       assert.match(response.headers.get('cache-control') || '', /no-store/);
       const html = await response.text();
-      assert.match(html, /styles\.css\?v=20260726-upload-button/);
-      assert.match(html, /app\.mjs\?v=20260726-upload-button/);
+      assert.match(html, /styles\.css\?v=20260726-color-diversity-v2/);
+      assert.match(html, /app\.mjs\?v=20260726-color-diversity-v2/);
     }
     for (const [path, mime] of [['/consultation/styles.css', /^text\/css/], ['/consultation/app.mjs', /^text\/javascript/], ['/src/consultationCore.mjs', /^text\/javascript/]]) {
       const response = await fetch(`http://127.0.0.1:${port}${path}`);
@@ -107,7 +107,7 @@ test('serves only consultation route and allowlisted consultation assets', async
     const appSource = await (await fetch(`http://127.0.0.1:${port}/consultation/app.mjs`)).text();
     assert.match(appSource, /\['SOURCE', 'PROFILE', 'STRUCTURE', 'VARIATION', 'COMPARE', 'LOCK'\]/);
     assert.match(appSource, /FRONT REQUIRED/);
-    assert.match(appSource, /metadata: \{ purpose: 'structure' \}/);
+    assert.match(appSource, /purpose: 'structure'/);
     assert.match(appSource, /id="backToList"/);
     assert.match(appSource, /state\.stage = state\.structureSlots\.length \? 2 : 0/);
     assert.match(appSource, /<button class=\"single-view-upload/);
@@ -118,16 +118,34 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /required} \/ 1 REQUIRED/);
     assert.match(appSource, /state\.sourceViewIndex === 0 \? 'REQUIRED' : 'OPTIONAL'/);
     assert.match(appSource, /assignConsultationSourceViews/);
+    assert.match(appSource, /assignConsultationGenerationAxes/);
     assert.match(appSource, /sourceViewBlobs/);
+    assert.match(appSource, /sourceViewMasks/);
+    assert.match(appSource, /profileStep/);
+    assert.match(appSource, /PROFILE 1\/2/);
+    assert.match(appSource, /COLOR 2\/2/);
+    assert.match(appSource, /HAIR_COLOR_TONES/);
+    assert.match(appSource, /deriveAllowedHairColorTones/);
+    assert.match(appSource, /data-current-tone/);
+    assert.match(appSource, /data-target-tone/);
+    assert.match(appSource, /data-mask-tool/);
+    assert.match(appSource, /HAIR MASK CONFIRMATION REQUIRED/);
+    assert.match(appSource, /providerInputsForItem/);
+    assert.match(appSource, /flipBlobHorizontally/);
+    assert.match(appSource, /sourceTransformVersion/);
+    assert.match(appSource, /mirrored: item\.generationAxes/);
+    assert.match(appSource, /colorToneId: item\.generationAxes/);
     assert.match(appSource, /form\.append\('mask'/);
     assert.match(appSource, /every non-hair pixel must remain unchanged/);
     assert.match(appSource, /compositeHairOnlyResult/);
     assert.match(appSource, /destination-out/);
+    assert.match(appSource, /setTransform\(1, 0, 0, 1, 0, 0\)/);
     assert.match(appSource, /'image\/png'/);
     assert.match(appSource, /editableRegions/);
     assert.match(appSource, /protectedRegions/);
     assert.match(appSource, /HAIRLINE LOCK/);
-    assert.match(appSource, /FACIAL HAIR LOCK/);
+    assert.match(appSource, /never recolor face, eyebrows, facial hair, ears, neck, body, clothing, background/);
+    assert.match(appSource, /No global color grading/);
     assert.doesNotMatch(appSource, /const protectedFace =/);
     assert.match(appSource, /preserveScroll/);
     assert.match(appSource, /STRUCTURE_TILE_RATIOS/);
@@ -136,10 +154,13 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /no micro-crimping/);
     assert.match(appSource, /태슬 단발/);
     assert.match(appSource, /TREND ·/);
-    assert.match(appSource, /id=\"currentLength\"/);
-    assert.match(appSource, /매우 짧음/);
+    assert.match(appSource, /id="currentLength"/);
+    assert.match(appSource, /짧은 머리/);
+    assert.match(appSource, /중간/);
     assert.match(appSource, /장발/);
-    assert.doesNotMatch(appSource, /id=\"currentCm\"/);
+    assert.doesNotMatch(appSource, /매우 짧음/);
+    assert.doesNotMatch(appSource, /긴 머리/);
+    assert.doesNotMatch(appSource, /id="currentCm"/);
     assert.doesNotMatch(appSource, /advanceSourceView\(role\)/);
     assert.doesNotMatch(appSource, /source-board source-board-intake/);
     assert.doesNotMatch(appSource, /'SOURCE', 'PROFILE', 'BOARD'/);
@@ -151,6 +172,10 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(consultationCss, /\.source-view-dots\{/);
     assert.match(consultationCss, /stable varied result masonry/);
     assert.match(consultationCss, /aspect-ratio:var\(--tile-ratio/);
+    assert.match(consultationCss, /color profile and protected hair-mask editor/);
+    assert.match(consultationCss, /\.tone-grid\{/);
+    assert.match(consultationCss, /\.mask-canvas-stage canvas\{/);
+    assert.match(consultationCss, /touch-action:none/);
 
     for (const path of ['/consultation.html', '/consultation/prototype.html', '/consultation/deleted-prototype.html', '/docs/ux-segments/stylist-consultation/prototype.html', '/consultation/../package.json', '/consultation/notes.md', '/src/modules.mjs']) {
       assert.equal((await fetch(`http://127.0.0.1:${port}${path}`)).status, 404, path);

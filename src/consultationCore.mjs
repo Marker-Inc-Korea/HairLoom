@@ -59,6 +59,7 @@ export const PRESERVE_CURRENT_TONE_ID = 'preserve-current';
 const HAIR_COLOR_TONE_BY_ID = new Map(HAIR_COLOR_TONES.map((tone) => [tone.id, tone]));
 const SOURCE_VIEW_KEYS = Object.freeze(['front', 'side', 'back', 'crown', 'nape', 'detail']);
 const CORE_ID_PATTERN = /^HLM-C-([FM])-(US|S|MD|L|XL)-(\d{2})-([A-Z]{2})-([A-Z]{2})$/;
+const SPECIAL_ID_PATTERN = /^HLM-S-([A-Z]{2})-(\d{2})-([A-Z]{2})$/;
 const SUITABILITY_FLOOR = 60;
 
 const GENDERS = new Set(['F', 'M']);
@@ -82,10 +83,18 @@ function coreTaxonomy(record = {}) {
   if (record.baseId && record.frontId && record.finishId) {
     return { genderId: record.genderId, lengthId: record.lengthId, baseId: record.baseId, frontId: record.frontId, finishId: record.finishId };
   }
-  const match = CORE_ID_PATTERN.exec(String(record.id ?? ''));
-  if (!match) throw new TypeError(`Invalid core design ID: ${record.id ?? ''}`);
-  const [, genderId, lengthId, baseIndex, frontId, finishId] = match;
-  return { genderId, lengthId, baseId: `${genderId}-${lengthId}-${baseIndex}`, frontId, finishId };
+  const id = String(record.id ?? '');
+  const coreMatch = CORE_ID_PATTERN.exec(id);
+  if (coreMatch) {
+    const [, genderId, lengthId, baseIndex, frontId, finishId] = coreMatch;
+    return { genderId, lengthId, baseId: `${genderId}-${lengthId}-${baseIndex}`, frontId, finishId };
+  }
+  const specialMatch = SPECIAL_ID_PATTERN.exec(id);
+  if (specialMatch) {
+    const [, familyId, archetypeIndex, variantId] = specialMatch;
+    return { genderId: 'U', lengthId: 'SP', baseId: `S-${familyId}-${archetypeIndex}`, frontId: 'NA', finishId: variantId };
+  }
+  throw new TypeError(`Invalid Hairloom design ID: ${id}`);
 }
 
 export function canonicalStructureKey(record) {
@@ -527,7 +536,7 @@ export function assignConsultationGenerationAxes(candidates, options = {}) {
         finishFamily: candidate.finishFamily ?? finishFamily(candidate),
         intensity: candidate.intensity === '은은하게' ? 'subtle' : 'balanced',
         colorToneId,
-        suitabilityScore: candidate.suitability?.total ?? scoreConsultationSuitability(candidate, diagnosis, options.preferences).total
+        suitabilityScore: candidate.suitability?.total ?? (candidate.kind === 'special' ? SUITABILITY_FLOOR : scoreConsultationSuitability(candidate, diagnosis, options.preferences).total)
       })
     };
   });

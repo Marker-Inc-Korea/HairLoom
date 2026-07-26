@@ -4,8 +4,15 @@ import {
   CONSULTATION_HANDOFF_QUERY_TRIGGER,
   CONSULTATION_INITIAL_ACTIVE,
   CONSULTATION_HARD_MAX_ACTIVE,
+  CONSULTATION_GENERATION_AXES_VERSION,
+  CONSULTATION_SOURCE_TRANSFORM_VERSION,
+  HAIR_COLOR_TONES,
+  PRESERVE_CURRENT_TONE_ID,
   TREND_STRUCTURE_BASES,
   normalizeDiagnosis,
+  normalizeHairColorProfile,
+  deriveAllowedHairColorTones,
+  canonicalStructureKey,
   buildConsultationGroups,
   expandConsultationGroup,
   evaluateVariation,
@@ -13,6 +20,7 @@ import {
   selectConsultationStructureDesignIds,
   rankConsultationVariations,
   selectConsultationDesignIds,
+  assignConsultationGenerationAxes,
   createConsultationBatch,
   assignConsultationSourceViews,
   startConsultationQueuedItems,
@@ -25,6 +33,7 @@ const app = document.querySelector('#app');
 const stages = ['SOURCE', 'PROFILE', 'STRUCTURE', 'VARIATION', 'COMPARE', 'LOCK'];
 const state = {
   stage: 0,
+  profileStep: 0,
   originalFile: null,
   originalDataUrl: '',
   originalJpegDataUrl: '',
@@ -33,6 +42,10 @@ const state = {
   sourceViewBlobs: { front: null, side: null, back: null, crown: null, nape: null, detail: null },
   sourceViewMasks: new Map(),
   sourceViewIndex: 0,
+  maskViewKey: 'front',
+  maskTool: 'add',
+  maskBrushSize: 36,
+  providerInputCache: new Map(),
   sourceKey: '',
   catalog: null,
   catalogPromise: null,
@@ -51,6 +64,7 @@ const state = {
   ranked: [],
   selectedVariation: null,
   diagnosis: {},
+  hairColorProfile: normalizeHairColorProfile({}),
   settings: normalizeSettings({}),
   mood: '',
   batch: null,
@@ -105,10 +119,8 @@ const BOARD_VIEWS = [
   { id: 'detail', label: 'DETAIL' }
 ];
 const LENGTH_OPTIONS = [
-  { label: '매우 짧음', actualLengthCm: 4, currentLength: 0 },
   { label: '짧은 머리', actualLengthCm: 10, currentLength: 1 },
   { label: '중간', actualLengthCm: 20, currentLength: 2 },
-  { label: '긴 머리', actualLengthCm: 35, currentLength: 3 },
   { label: '장발', actualLengthCm: 60, currentLength: 4 }
 ];
 
@@ -125,11 +137,17 @@ function stageEnabled(index) {
     || (index === 5 && state.shortlist.size > 0);
 }
 
+function currentStageLabel() {
+  if (state.stage === 1) return state.profileStep === 0 ? 'PROFILE 1/2' : 'COLOR 2/2';
+  return stages[state.stage];
+}
+
 function render() {
   const currentContent = app.querySelector('.content');
   const preserveScroll = currentContent?.dataset.stage === String(state.stage);
   const scrollTop = preserveScroll ? currentContent.scrollTop : 0;
   const step = state.stage + 1;
+  const stageMarkup = [renderSource, renderProfile, renderStructure, renderVariations, renderCompare, renderAgreement][state.stage]();
   app.innerHTML = h`<div class="workspace">
     <aside class="rail">
       <button class="brand" id="backToList" type="button" aria-label="Back to structure list">H</button>
@@ -137,9 +155,9 @@ function render() {
       <div class="rail-count"><b>${String(step).padStart(2, '0')}</b><span>/ 06</span></div>
     </aside>
     <main class="content" data-stage="${state.stage}">
-      <header class="content-head"><b>HAIRLOOM PRO</b><span>${String(step).padStart(2, '0')} / 06 · ${stages[state.stage]}</span></header>
+      <header class="content-head"><b>HAIRLOOM PRO</b><span>${String(step).padStart(2, '0')} / 06 · ${currentStageLabel()}</span></header>
       ${state.error ? `<div class="status-banner error" role="alert">${esc(state.error)}</div>` : currentStageStatus() ? `<div class="status-banner" role="status">${esc(currentStageStatus())}</div>` : ''}
-      ${[renderSource, renderProfile, renderStructure, renderVariations, renderCompare, renderAgreement][state.stage]()}
+      ${stageMarkup}
     </main>
   </div>`;
   bind();
@@ -169,7 +187,8 @@ function rangeSetting(definition) {
 
 function currentLengthOptionIndex() {
   const setting = Number(state.settings.currentLength);
-  if (Number.isInteger(setting) && setting >= 0 && setting < LENGTH_OPTIONS.length) return setting;
+  const bySetting = LENGTH_OPTIONS.findIndex((option) => option.currentLength === setting);
+  if (bySetting >= 0) return bySetting;
   const cm = Number(state.diagnosis.actualLengthCm ?? 10);
   return LENGTH_OPTIONS.reduce((best, option, index) => Math.abs(option.actualLengthCm - cm) < Math.abs(LENGTH_OPTIONS[best].actualLengthCm - cm) ? index : best, 0);
 }
@@ -209,13 +228,54 @@ function renderSource() {
   return `<section class="source-step single-source"><div class="source-view-head"><b>VIEWS</b><span>${required} / 1 REQUIRED</span></div><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><button class="single-view-upload ${source ? 'filled' : ''}" type="button" data-upload-view="${view.id}" aria-label="${source ? 'Replace' : 'Add'} ${view.label} photo">${source ? `<img src="${esc(source)}" alt="${view.label}">` : `<span>＋</span><small>ADD ${view.label}</small>`}</button><input id="view-${view.id}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label}"><div class="source-view-nav"><button type="button" data-source-step="-1" aria-label="Previous view">←</button><nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => `<button type="button" data-source-view="${index}" class="${index === state.sourceViewIndex ? 'on' : ''} ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav><button type="button" data-source-step="1" aria-label="Next view">→</button></div></div><div class="source-footer"><div class="profile-switch" aria-label="Profile"><button data-gender="F" class="${gender === 'F' ? 'on' : ''}">FEMALE</button><button data-gender="M" class="${gender === 'M' ? 'on' : ''}">MALE</button></div><button class="next-button" id="toProfile" ${requiredSourceViewsReady() ? '' : 'disabled'}>NEXT</button></div></section>`;
 }
 
-function renderProfile() {
-  return `<section class="profile-step">
+function toneLabel(toneId) {
+  if (toneId === PRESERVE_CURRENT_TONE_ID) return '현재 색상 유지';
+  return HAIR_COLOR_TONES.find((tone) => tone.id === toneId)?.labelKo || toneId || '미선택';
+}
+
+function selectedTargetToneIds() {
+  const current = state.hairColorProfile.currentToneId;
+  return [...new Set(state.hairColorProfile.selectedToneIds.map((toneId) => toneId === PRESERVE_CURRENT_TONE_ID ? current : toneId).filter((toneId) => toneId && toneId !== 'unknown'))];
+}
+
+function colorChangeRequired() {
+  const current = state.hairColorProfile.currentToneId;
+  return current !== 'unknown' && selectedTargetToneIds().some((toneId) => toneId !== current);
+}
+
+function requiredColorMasksReady() {
+  if (!colorChangeRequired()) return true;
+  const profiles = state.hairColorProfile.sourceViewMasks;
+  return availableSourceViewKeys().every((viewKey) => profiles[viewKey]?.confirmed);
+}
+
+function renderDiagnosisProfile() {
+  return `<section class="profile-step"><div class="profile-page-head"><b>PROFILE</b><span>1 / 2</span></div>
     <div class="settings-grid">${currentLengthSetting()}${DIAGNOSIS_DEFINITIONS.map(rangeSetting).join('')}</div>
     <label class="mood-field" for="mood"><span>MOOD</span><textarea id="mood" placeholder="SOFT · CLEAN">${esc(state.mood)}</textarea></label>
     <details class="provider"><summary>API</summary><div class="cfg"><input id="baseURL" aria-label="API URL" placeholder="API URL" value="${esc(state.cfg.baseURL)}"><input id="model" aria-label="Model" placeholder="MODEL" value="${esc(state.cfg.model)}"><input id="size" aria-label="Size" placeholder="SIZE" value="${esc(state.cfg.size)}"><input id="apiKey" aria-label="API key" placeholder="API KEY" type="password" value="${esc(state.cfg.apiKey)}"></div></details>
-    <div class="actions"><button class="next-button" id="toStructures">NEXT</button></div>
+    <div class="actions"><button class="next-button" id="toColor">NEXT</button></div>
   </section>`;
+}
+
+function renderMaskEditor() {
+  const views = availableSourceViewKeys();
+  const viewKey = views.includes(state.maskViewKey) ? state.maskViewKey : views[0];
+  const profile = state.hairColorProfile.sourceViewMasks[viewKey] || { revision: 0, confirmed: false };
+  const confirmed = views.filter((key) => state.hairColorProfile.sourceViewMasks[key]?.confirmed).length;
+  return `<section class="mask-editor"><div class="color-section-head"><div><b>HAIR MASK</b><small>${confirmed} / ${views.length} CONFIRMED</small></div><span>분홍 영역만 변경</span></div><nav class="mask-view-tabs" aria-label="Mask source views">${views.map((key) => `<button type="button" data-mask-view="${key}" class="${key === viewKey ? 'on' : ''} ${state.hairColorProfile.sourceViewMasks[key]?.confirmed ? 'done' : ''}">${key.toUpperCase()}</button>`).join('')}</nav><div class="mask-workspace"><div class="mask-canvas-stage"><img src="${esc(sourceViewPreview(viewKey))}" alt="${esc(viewKey)} source"><canvas id="hairMaskCanvas" data-mask-canvas="${viewKey}" aria-label="${esc(viewKey)} hair mask editor"></canvas></div><div class="mask-controls"><div class="mask-tools"><button type="button" data-mask-tool="add" class="${state.maskTool === 'add' ? 'on' : ''}">ADD HAIR</button><button type="button" data-mask-tool="protect" class="${state.maskTool === 'protect' ? 'on' : ''}">PROTECT</button></div><label>BRUSH <input id="maskBrushSize" type="range" min="8" max="96" step="4" value="${state.maskBrushSize}"></label><div class="mask-actions"><button type="button" class="secondary" id="resetMask">RESET</button><button type="button" class="next-button" id="confirmMask">${profile.confirmed ? 'CONFIRMED' : 'CONFIRM'}</button></div></div></div></section>`;
+}
+
+function renderColorProfile() {
+  const profile = state.hairColorProfile;
+  const allowed = deriveAllowedHairColorTones(profile, state.diagnosis);
+  const selected = new Set(selectedTargetToneIds());
+  const canContinue = profile.currentToneId !== 'unknown' && requiredColorMasksReady();
+  return `<section class="profile-step color-step"><div class="profile-page-head"><b>COLOR</b><span>2 / 2</span></div><section class="color-section"><div class="color-section-head"><div><b>CURRENT</b><small>직접 선택</small></div><span>${esc(toneLabel(profile.currentToneId))}</span></div><div class="tone-grid current-tones">${HAIR_COLOR_TONES.map((tone) => `<button type="button" data-current-tone="${tone.id}" class="tone-chip ${profile.currentToneId === tone.id ? 'on' : ''}"><i style="--tone-level:${tone.level}"></i><span>${esc(tone.labelKo)}</span></button>`).join('')}</div></section>${profile.currentToneId === 'unknown' ? '<div class="color-empty">현재 머리색을 선택하세요.</div>' : `<section class="color-section"><div class="color-section-head"><div><b>TARGET</b><small>복수 선택</small></div><span>${profile.intensity === 'balanced' ? 'BALANCED' : 'SUBTLE'}</span></div><div class="tone-grid target-tones">${allowed.map((tone) => `<button type="button" data-target-tone="${tone.id}" class="tone-chip ${selected.has(tone.id) ? 'on' : ''} ${tone.id === profile.currentToneId ? 'fixed' : ''}"><i style="--tone-level:${tone.level}"></i><span>${esc(tone.labelKo)}</span></button>`).join('')}</div><div class="intensity-switch"><button type="button" data-color-intensity="subtle" class="${profile.intensity === 'subtle' ? 'on' : ''}">SUBTLE</button><button type="button" data-color-intensity="balanced" class="${profile.intensity === 'balanced' ? 'on' : ''}">BALANCED</button></div></section>${colorChangeRequired() ? renderMaskEditor() : '<div class="color-empty">현재 색상 유지 · 마스크 확인 불필요</div>'}`}<div class="actions profile-actions"><button class="secondary" id="backToDiagnosis">BACK</button><button class="next-button" id="toStructures" ${canContinue ? '' : 'disabled'}>NEXT</button></div></section>`;
+}
+
+function renderProfile() {
+  return state.profileStep === 0 ? renderDiagnosisProfile() : renderColorProfile();
 }
 
 function currentStageStatus() {
@@ -237,6 +297,16 @@ function structureTileRatio(slotIndex) {
   return STRUCTURE_TILE_RATIOS[(Math.imul(Number(slotIndex) + 5, 11) + 7) % STRUCTURE_TILE_RATIOS.length];
 }
 
+function generationAxisLabel(slot) {
+  const axes = slot.generationAxes || {};
+  return [
+    String(slot.sourceViewKey || axes.sourceViewKey || 'front').toUpperCase(),
+    axes.mirrored ? 'MIRROR' : 'ORIGINAL',
+    axes.colorToneId ? toneLabel(axes.colorToneId) : '',
+    statusKo(slot.status)
+  ].filter(Boolean).join(' · ');
+}
+
 function structureTile(slot) {
   const record = state.recordsById.get(slot.designId);
   const group = record ? state.groupsByKey.get(recordGroupKey(record)) : null;
@@ -244,12 +314,12 @@ function structureTile(slot) {
   const selected = group && state.selectedGroup?.key === group.key;
   const ready = slot.status === 'done' && group;
   const trend = group && TREND_BASE_SET.has(group.baseKo) ? 'TREND · ' : '';
-  return `<button class="structure-tile ${slot.status} ${selected ? 'selected' : ''}" data-structure-slot="${slot.slotIndex}" style="--tile-ratio:${structureTileRatio(slot.slotIndex)}" ${ready ? '' : 'disabled'}><img src="${esc(source)}" alt="${ready ? esc(groupLabel(group)) : ''}"><span class="structure-meta"><b>${ready ? esc(groupLabel(group)) : String(slot.slotIndex + 1).padStart(2, '0')}</b><small>${trend}${esc((slot.sourceViewKey || 'front').toUpperCase())} · ${statusKo(slot.status)}</small></span></button>`;
+  return `<button class="structure-tile ${slot.status} ${selected ? 'selected' : ''}" data-structure-slot="${slot.slotIndex}" style="--tile-ratio:${structureTileRatio(slot.slotIndex)}" ${ready ? '' : 'disabled'}><img src="${esc(source)}" alt="${ready ? esc(groupLabel(group)) : ''}"><span class="structure-meta"><b>${ready ? esc(groupLabel(group)) : String(slot.slotIndex + 1).padStart(2, '0')}</b><small>${trend}${esc(generationAxisLabel(slot))}</small></span></button>`;
 }
 
 function groupLabel(group) { return `${group.lengthKo} · ${familiarStyleName(group.baseKo)} · ${group.frontKo}`; }
 function groupStatus(sum) { return sum.impossible === sum.total ? 'impossible' : sum.possible > 0 ? 'possible' : 'conditional'; }
-function recordGroupKey(record) { return [record.genderId, record.lengthId, record.baseKo, record.frontKo].join('|'); }
+function recordGroupKey(record) { return canonicalStructureKey(record); }
 function variationFromRecord(record) { return { id: record.id, designId: record.id, genderId: record.genderId, lengthId: record.lengthId, baseKo: record.baseKo, frontKo: record.frontKo, finishKo: record.finishKo, mood: '균형 있게', intensity: '균형 있게', finishRecord: record }; }
 function rankFeasibleVariations(variations) {
   const order = { possible: 0, conditional: 1, impossible: 2 };
@@ -276,7 +346,7 @@ function renderCompare() {
 function slotCard(slot) {
   const source = slot.previewUrl || sourceViewPreview(slot.sourceViewKey);
   const checked = state.shortlist.has(slot.designId) ? 'checked' : '';
-  return `<div class="slot ${slot.status}" data-slot="${slot.slotIndex}"><div class="image"><img src="${esc(source)}" alt="${slot.status === 'done' ? esc(slot.designId) : ''}"></div><input type="checkbox" aria-label="후보 선택 ${slot.slotIndex + 1}" data-short="${esc(slot.designId || '')}" ${checked} ${slot.status === 'done' ? '' : 'disabled'}><div class="meta">${String(slot.slotIndex + 1).padStart(2, '0')} · ${esc((slot.sourceViewKey || 'front').toUpperCase())} · ${esc(slot.designId || '대기')} · ${statusKo(slot.status)}</div></div>`;
+  return `<div class="slot ${slot.status}" data-slot="${slot.slotIndex}"><div class="image"><img src="${esc(source)}" alt="${slot.status === 'done' ? esc(slot.designId) : ''}"></div><input type="checkbox" aria-label="후보 선택 ${slot.slotIndex + 1}" data-short="${esc(slot.designId || '')}" ${checked} ${slot.status === 'done' ? '' : 'disabled'}><div class="meta">${String(slot.slotIndex + 1).padStart(2, '0')} · ${esc(generationAxisLabel(slot))} · ${esc(slot.designId || '대기')}</div></div>`;
 }
 
 function renderAgreement() {
@@ -285,9 +355,13 @@ function renderAgreement() {
   return panel('LOCK', `<div class="stats"><span class="pill">SELECT ${ids.length}/6</span><span class="pill">NO IMAGE EXPORT</span></div><div class="shortlist">${ids.map(shortCard).join('')}</div><pre class="notice">${esc(JSON.stringify(exportPayload, null, 2))}</pre><div class="actions"><button id="print">PRINT</button><button id="downloadJson" class="secondary">JSON</button><button id="handoff">DESIGN LOCK</button></div>`);
 }
 function shortCard(id) {
-  const record = state.records.find((r) => r.id === id);
-  const ev = record ? evaluateVariation(variationFromRecord(record), state.diagnosis) : { status: 'possible', reasons: [] };
-  return `<article class="card"><h3>${esc(id)}</h3><div class="metrics"><span class="metric ${statusClass(ev.status)}">${statusKo(ev.status)}</span><span class="metric">${esc(record?.nameKo || '')}</span></div><div class="mini">${esc((ev.reasons || ['선택']).slice(0, 2).join(' · '))}</div></article>`;
+  const record = state.records.find((item) => item.id === id);
+  const evaluation = !record
+    ? { status: 'possible', reasons: [] }
+    : record.kind === 'special'
+      ? { status: 'conditional', reasons: ['특수 구조 시술 가능성 확인 필요'] }
+      : evaluateVariation(variationFromRecord(record), state.diagnosis);
+  return `<article class="card"><h3>${esc(id)}</h3><div class="metrics"><span class="metric ${statusClass(evaluation.status)}">${statusKo(evaluation.status)}</span><span class="metric">${esc(record?.nameKo || '')}</span></div><div class="mini">${esc((evaluation.reasons || ['선택']).slice(0, 2).join(' · '))}</div></article>`;
 }
 function panel(title, body) { return `<section class="panel"><h2>${title}</h2>${body}</section>`; }
 function restoreTextFocus(id, selectionStart, selectionEnd = selectionStart) {
@@ -299,6 +373,55 @@ function restoreTextFocus(id, selectionStart, selectionEnd = selectionStart) {
   });
 }
 
+function replaceHairColorProfile(patch = {}) {
+  state.hairColorProfile = normalizeHairColorProfile({ ...state.hairColorProfile, ...patch });
+}
+
+function reconcileHairColorProfile() {
+  const profile = state.hairColorProfile;
+  if (profile.currentToneId === 'unknown') {
+    replaceHairColorProfile({ selectedToneIds: [PRESERVE_CURRENT_TONE_ID] });
+    return;
+  }
+  const allowed = new Set(deriveAllowedHairColorTones(profile, state.diagnosis).map((tone) => tone.id));
+  const selected = selectedTargetToneIds().filter((toneId) => allowed.has(toneId) && toneId !== profile.currentToneId);
+  replaceHairColorProfile({ selectedToneIds: [profile.currentToneId, ...selected] });
+}
+
+function clearProviderInputCache(viewKey = '') {
+  for (const key of state.providerInputCache.keys()) if (!viewKey || key.startsWith(`${viewKey}:`)) state.providerInputCache.delete(key);
+}
+
+function updateMaskProfile(viewKey, patch = {}) {
+  const profiles = { ...state.hairColorProfile.sourceViewMasks, [viewKey]: { ...state.hairColorProfile.sourceViewMasks[viewKey], ...patch } };
+  replaceHairColorProfile({ sourceViewMasks: profiles });
+}
+
+function invalidateSourceMask(viewKey) {
+  state.sourceViewMasks.delete(viewKey);
+  clearProviderInputCache(viewKey);
+  const current = state.hairColorProfile.sourceViewMasks[viewKey] || { revision: 0 };
+  updateMaskProfile(viewKey, { revision: current.revision + 1, confirmed: false });
+}
+
+function setCurrentTone(toneId) {
+  if (!HAIR_COLOR_TONES.some((tone) => tone.id === toneId)) return;
+  replaceHairColorProfile({ currentToneId: toneId, selectedToneIds: [toneId] });
+  reconcileHairColorProfile();
+  invalidateGeneratedSurfaces('color-change');
+  render();
+}
+
+function toggleTargetTone(toneId) {
+  const current = state.hairColorProfile.currentToneId;
+  if (toneId === current) return;
+  const selected = new Set(selectedTargetToneIds());
+  if (selected.has(toneId)) selected.delete(toneId); else selected.add(toneId);
+  replaceHairColorProfile({ selectedToneIds: [current, ...selected] });
+  invalidateGeneratedSurfaces('color-change');
+  render();
+}
+
 function bind() {
   document.querySelector('#backToList')?.addEventListener('click', () => { state.stage = state.structureSlots.length ? 2 : 0; render(); });
   document.querySelectorAll('[data-stage]').forEach((button) => button.addEventListener('click', () => { const next = Number(button.dataset.stage); if (stageEnabled(next)) { state.stage = next; render(); } }));
@@ -307,9 +430,19 @@ function bind() {
   document.querySelectorAll('[data-source-view]').forEach((button) => button.addEventListener('click', () => { state.sourceViewIndex = Number(button.dataset.sourceView); render(); }));
   document.querySelectorAll('[data-source-step]').forEach((button) => button.addEventListener('click', () => { state.sourceViewIndex = Math.max(0, Math.min(BOARD_VIEWS.length - 1, state.sourceViewIndex + Number(button.dataset.sourceStep))); render(); }));
   document.querySelectorAll('[data-gender]').forEach((button) => button.addEventListener('click', () => { state.diagnosis.profileGender = button.dataset.gender; invalidateGeneratedSurfaces('profile-change'); render(); }));
-  document.querySelector('#toProfile')?.addEventListener('click', () => { if (requiredSourceViewsReady()) { state.stage = 1; render(); } });
+  document.querySelector('#toProfile')?.addEventListener('click', () => setTimeout(() => { state.profileStep = 0; state.stage = 1; render(); }, 0));
   document.querySelectorAll('.dot-range').forEach((input) => input.addEventListener('input', () => updateDiagnosisRange(input)));
   document.querySelector('#mood')?.addEventListener('input', (event) => { state.mood = event.target.value; if (state.structureSlots.length || state.batch) invalidateGeneratedSurfaces('profile-change'); });
+  document.querySelector('#toColor')?.addEventListener('click', () => { syncIntake(); reconcileHairColorProfile(); state.profileStep = 1; render(); });
+  document.querySelector('#backToDiagnosis')?.addEventListener('click', () => { state.profileStep = 0; render(); });
+  document.querySelectorAll('[data-current-tone]').forEach((button) => button.addEventListener('click', () => setCurrentTone(button.dataset.currentTone)));
+  document.querySelectorAll('[data-target-tone]').forEach((button) => button.addEventListener('click', () => toggleTargetTone(button.dataset.targetTone)));
+  document.querySelectorAll('[data-color-intensity]').forEach((button) => button.addEventListener('click', () => { replaceHairColorProfile({ intensity: button.dataset.colorIntensity }); invalidateGeneratedSurfaces('color-change'); render(); }));
+  document.querySelectorAll('[data-mask-view]').forEach((button) => button.addEventListener('click', () => { state.maskViewKey = button.dataset.maskView; render(); }));
+  document.querySelectorAll('[data-mask-tool]').forEach((button) => button.addEventListener('click', () => { state.maskTool = button.dataset.maskTool; document.querySelectorAll('[data-mask-tool]').forEach((item) => item.classList.toggle('on', item === button)); }));
+  document.querySelector('#maskBrushSize')?.addEventListener('input', (event) => { state.maskBrushSize = Number(event.target.value); });
+  document.querySelector('#resetMask')?.addEventListener('click', () => { invalidateSourceMask(state.maskViewKey); render(); });
+  document.querySelector('#confirmMask')?.addEventListener('click', confirmCurrentMask);
   document.querySelector('#toStructures')?.addEventListener('click', startStructureExplore);
   document.querySelectorAll('[data-structure-slot]').forEach((button) => button.addEventListener('click', () => selectStructureSlot(Number(button.dataset.structureSlot))));
   document.querySelector('#toVariations')?.addEventListener('click', () => { hydrateVariations(); state.stage = 3; render(); });
@@ -323,6 +456,7 @@ function bind() {
   document.querySelector('#print')?.addEventListener('click', () => window.print());
   document.querySelector('#downloadJson')?.addEventListener('click', downloadJson);
   document.querySelector('#handoff')?.addEventListener('click', handoff);
+  if (state.stage === 1 && state.profileStep === 1 && colorChangeRequired()) initMaskEditor().catch(() => { state.error = 'MASK ERROR'; render(); });
 }
 
 async function ensureCatalog() {
@@ -341,7 +475,9 @@ async function ensureCatalog() {
 }
 function settingValue(id) {
   const definition = DIAGNOSIS_DEFINITIONS.find((item) => item.id === id);
-  const index = Number(document.querySelector(`#${id}`)?.value ?? definition.defaultIndex);
+  const input = document.querySelector(`#${id}`);
+  if (!input) return diagnosisValue(definition);
+  const index = Number(input.value ?? definition.defaultIndex);
   return definition.values[Math.max(0, Math.min(definition.values.length - 1, index))];
 }
 
@@ -357,6 +493,7 @@ function updateDiagnosisRange(input) {
     state.diagnosis.actualLengthCm = option.actualLengthCm;
     state.settings.currentLength = option.currentLength;
     document.querySelector('#currentLengthValue').textContent = option.label;
+    reconcileHairColorProfile();
     return;
   }
   const definition = DIAGNOSIS_DEFINITIONS.find((item) => item.id === input.dataset.setting);
@@ -364,6 +501,7 @@ function updateDiagnosisRange(input) {
   document.querySelector(`#${definition.id}Value`).textContent = definition.labels[value];
   if (definition.id === 'recentPerm') state.diagnosis.monthsSincePerm = serialized;
   else state.diagnosis[definition.id] = serialized;
+  reconcileHairColorProfile();
 }
 
 function syncIntake() {
@@ -371,8 +509,11 @@ function syncIntake() {
   state.diagnosis = normalizeDiagnosis({ profileGender: state.diagnosis.profileGender ?? 'F', actualLengthCm: lengthOption.actualLengthCm, naturalTexture: settingValue('naturalTexture'), density: settingValue('density'), damage: settingValue('damage'), bleachCount: settingValue('bleachCount'), monthsSincePerm: settingValue('recentPerm'), extensionAllowed: settingValue('extensionAllowed') });
   state.settings = normalizeSettings({ currentLength: lengthOption.currentLength, hairThickness: densityToThickness[state.diagnosis.density] || 'normal', damageCondition: damageMap[state.diagnosis.damage] || 'medium', permAllowed: state.diagnosis.monthsSincePerm >= 3, extensionAllowed: Boolean(state.diagnosis.extensionAllowed), similarity: 2 });
   state.mood = val('mood') || state.mood;
-  state.cfg = { baseURL: val('baseURL'), model: val('model'), size: val('size'), apiKey: val('apiKey') };
-  saveProviderConfig(state.cfg);
+  if (document.querySelector('#baseURL')) {
+    state.cfg = { baseURL: val('baseURL'), model: val('model'), size: val('size'), apiKey: val('apiKey') };
+    saveProviderConfig(state.cfg);
+  }
+  reconcileHairColorProfile();
 }
 function val(id) { return document.querySelector(`#${id}`)?.value ?? ''; }
 function filterGroups() {
@@ -420,19 +561,27 @@ async function startStructureExplore() {
   try {
     syncIntake();
     if (!requiredSourceViewsReady()) throw new Error('FRONT REQUIRED');
+    if (state.hairColorProfile.currentToneId === 'unknown') throw new Error('CURRENT COLOR REQUIRED');
+    if (!requiredColorMasksReady()) throw new Error('HAIR MASK CONFIRMATION REQUIRED');
     const cfg = resolvedProviderConfig();
     if (!cfg.baseURL || !cfg.apiKey || cfg.apiKey === 'YOUR_PROXY_API_KEY') throw new Error('API REQUIRED');
     await ensureCatalog();
     state.filteredGroups = filterGroups();
     prepareGroupSummaries();
-    const { designIds } = selectConsultationStructureDesignIds(state.filteredGroups, state.diagnosis);
+    const selection = selectConsultationStructureDesignIds(state.filteredGroups, state.diagnosis, {
+      sourceViewKeys: availableSourceViewKeys(),
+      hairColorProfile: state.hairColorProfile,
+      mood: state.mood,
+      preferences: { mood: state.mood, maintenance: 'medium' },
+      seedInput: `${state.sourceKey}:structure:${state.mood}`
+    });
     cancelActiveBatch('structure-refresh');
     state.selectedGroup = null;
     state.selectedVariation = null;
     state.shortlist.clear();
     state.slots = [];
     state.status = '';
-    state.batch = assignBatchSourceViews(createConsultationBatch({ batchId: `structure-${Date.now()}`, designIds, sourcePhotoKey: state.sourceKey, settings: state.settings, metadata: { purpose: 'structure' } }), 'structure');
+    state.batch = assignBatchSourceViews(createConsultationBatch({ batchId: `structure-${Date.now()}`, designIds: selection.designIds, generationAxes: selection.generationAxes, sourcePhotoKey: state.sourceKey, settings: state.settings, metadata: { purpose: 'structure', diversityRelaxations: selection.diversityRelaxations } }), 'structure');
     state.structureSlots = state.batch.slots;
     state.structureActiveLimit = state.batch.activeLimit;
     state.structureStatus = '100 PICKS';
@@ -459,7 +608,8 @@ async function loadBoardView(event) {
     const prepared = await prepareOriginalJpeg(file);
     state.sourceViews[role] = prepared.dataUrl;
     state.sourceViewBlobs[role] = prepared.blob;
-    state.sourceViewMasks.delete(role);
+    invalidateSourceMask(role);
+    state.maskViewKey = role;
     state.error = '';
   } catch {
     state.error = 'IMAGE ERROR';
@@ -479,9 +629,10 @@ async function loadPhoto(event) {
     state.originalJpegDataUrl = prepared.dataUrl;
     state.originalJpegBlob = prepared.blob;
     state.sourceViewBlobs.front = prepared.blob;
-    state.sourceViewMasks.delete('front');
+    invalidateSourceMask('front');
     state.sourceKey = await sourcePhotoKey(new Uint8Array(await prepared.blob.arrayBuffer()), prepared.blob.type);
     state.sourceViews.front = prepared.dataUrl;
+    state.maskViewKey = 'front';
     state.shortlist.clear();
   } catch {
     state.error = 'IMAGE ERROR';
@@ -505,6 +656,20 @@ function blobToDataUrl(blob) {
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
+}
+
+function loadBlobImage(blob, message = 'Image decode failed') {
+  return new Promise((resolve, reject) => {
+    const element = new Image();
+    const objectUrl = URL.createObjectURL(blob);
+    element.onload = () => { URL.revokeObjectURL(objectUrl); resolve(element); };
+    element.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error(message)); };
+    element.src = objectUrl;
+  });
+}
+
+function canvasToBlob(canvas, type = 'image/png', quality) {
+  return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Canvas encode failed')), type, quality));
 }
 
 function prepareOriginalJpeg(file, maxEdge = 1024, quality = 0.82) {
@@ -549,18 +714,18 @@ async function hairOnlyMask(viewKey) {
   context.fillStyle = '#000';
   context.fillRect(0, 0, canvas.width, canvas.height);
   const editableRegions = {
-    front: [[0.5, 0.13, 0.31, 0.16], [0.24, 0.29, 0.1, 0.2], [0.76, 0.29, 0.1, 0.2]],
-    side: [[0.5, 0.14, 0.33, 0.17], [0.24, 0.3, 0.11, 0.22], [0.76, 0.3, 0.11, 0.22]],
-    back: [[0.5, 0.25, 0.37, 0.31]],
-    crown: [[0.5, 0.42, 0.38, 0.36]],
-    nape: [[0.5, 0.29, 0.36, 0.34]],
-    detail: [[0.5, 0.5, 0.4, 0.42]]
+    front: [[0.5, 0.24, 0.24, 0.15], [0.33, 0.36, 0.08, 0.14], [0.67, 0.36, 0.08, 0.14]],
+    side: [[0.5, 0.25, 0.25, 0.17], [0.43, 0.38, 0.14, 0.14]],
+    back: [[0.5, 0.31, 0.28, 0.23]],
+    crown: [[0.5, 0.48, 0.32, 0.3]],
+    nape: [[0.5, 0.35, 0.28, 0.26]],
+    detail: [[0.5, 0.5, 0.35, 0.38]]
   };
   const protectedRegions = {
-    front: [[0.5, 0.45, 0.32, 0.38], [0.5, 0.24, 0.3, 0.17]],
-    side: [[0.5, 0.47, 0.36, 0.4], [0.5, 0.25, 0.32, 0.18]],
-    back: [[0.5, 0.67, 0.17, 0.24]],
-    nape: [[0.5, 0.68, 0.18, 0.25]]
+    front: [[0.5, 0.59, 0.3, 0.3], [0.22, 0.48, 0.055, 0.11], [0.78, 0.48, 0.055, 0.11]],
+    side: [[0.5, 0.61, 0.31, 0.3], [0.77, 0.47, 0.07, 0.12]],
+    back: [[0.5, 0.69, 0.18, 0.22]],
+    nape: [[0.5, 0.7, 0.18, 0.23]]
   };
   const paintRegions = (regions, operation, feather) => {
     context.save();
@@ -581,18 +746,119 @@ async function hairOnlyMask(viewKey) {
   return mask;
 }
 
-async function compositeHairOnlyResult(resultUrl, sourceBlob, maskBlob, signal) {
+function renderMaskOverlay(canvas) {
+  const dataCanvas = canvas._maskDataCanvas;
+  if (!dataCanvas) return;
+  const context = canvas.getContext('2d');
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = 'rgba(217,138,160,.62)';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.globalCompositeOperation = 'destination-out';
+  context.drawImage(dataCanvas, 0, 0, canvas.width, canvas.height);
+  context.globalCompositeOperation = 'source-over';
+}
+
+async function saveMaskCanvas(canvas, confirmed) {
+  const viewKey = canvas?.dataset.maskCanvas;
+  const dataCanvas = canvas?._maskDataCanvas;
+  if (!viewKey || !dataCanvas) throw new Error('Mask editor is not ready');
+  const mask = await canvasToBlob(dataCanvas, 'image/png');
+  state.sourceViewMasks.set(viewKey, mask);
+  clearProviderInputCache(viewKey);
+  const current = state.hairColorProfile.sourceViewMasks[viewKey] || { revision: 0 };
+  updateMaskProfile(viewKey, { revision: current.revision + 1, confirmed });
+  const confirm = document.querySelector('#confirmMask');
+  if (confirm) confirm.textContent = confirmed ? 'CONFIRMED' : 'CONFIRM';
+}
+
+async function initMaskEditor() {
+  const canvas = document.querySelector('#hairMaskCanvas');
+  if (!canvas || canvas._maskDataCanvas) return canvas;
+  const viewKey = canvas.dataset.maskCanvas;
+  const sourceBlob = state.sourceViewBlobs[viewKey];
+  if (!(sourceBlob instanceof Blob)) throw new Error('Mask source missing');
+  const maskBlob = await hairOnlyMask(viewKey);
+  const [source, mask] = await Promise.all([loadBlobImage(sourceBlob, 'Mask source decode failed'), loadBlobImage(maskBlob, 'Mask decode failed')]);
+  if (!canvas.isConnected) return null;
+  canvas.width = source.naturalWidth;
+  canvas.height = source.naturalHeight;
+  const dataCanvas = document.createElement('canvas');
+  dataCanvas.width = canvas.width;
+  dataCanvas.height = canvas.height;
+  dataCanvas.getContext('2d').drawImage(mask, 0, 0, dataCanvas.width, dataCanvas.height);
+  canvas._maskDataCanvas = dataCanvas;
+  renderMaskOverlay(canvas);
+  let drawing = false;
+  const paint = (event) => {
+    if (!drawing) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = (event.clientX - rect.left) * canvas.width / rect.width;
+    const y = (event.clientY - rect.top) * canvas.height / rect.height;
+    const radius = state.maskBrushSize * canvas.width / Math.max(1, rect.width) / 2;
+    const context = dataCanvas.getContext('2d');
+    context.save();
+    context.globalCompositeOperation = state.maskTool === 'protect' ? 'source-over' : 'destination-out';
+    context.fillStyle = '#000';
+    context.beginPath();
+    context.arc(x, y, radius, 0, Math.PI * 2);
+    context.fill();
+    context.restore();
+    renderMaskOverlay(canvas);
+  };
+  canvas.addEventListener('pointerdown', (event) => { drawing = true; canvas.setPointerCapture(event.pointerId); paint(event); });
+  canvas.addEventListener('pointermove', paint);
+  canvas.addEventListener('pointerup', async (event) => { if (!drawing) return; drawing = false; canvas.releasePointerCapture(event.pointerId); await saveMaskCanvas(canvas, false); });
+  canvas.addEventListener('pointercancel', () => { drawing = false; });
+  return canvas;
+}
+
+async function confirmCurrentMask() {
+  try {
+    const canvas = await initMaskEditor();
+    if (!canvas) return;
+    await saveMaskCanvas(canvas, true);
+    const next = availableSourceViewKeys().find((key) => !state.hairColorProfile.sourceViewMasks[key]?.confirmed);
+    if (next) state.maskViewKey = next;
+    render();
+  } catch {
+    state.error = 'MASK ERROR';
+    render();
+  }
+}
+
+async function flipBlobHorizontally(blob, type = blob.type || 'image/png') {
+  const image = await loadBlobImage(blob, 'Transform decode failed');
+  const canvas = document.createElement('canvas');
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight;
+  const context = canvas.getContext('2d');
+  context.translate(canvas.width, 0);
+  context.scale(-1, 1);
+  context.drawImage(image, 0, 0);
+  return canvasToBlob(canvas, type, type === 'image/jpeg' ? 0.92 : undefined);
+}
+
+async function providerInputsForItem(item) {
+  const viewKey = item.sourceViewKey || item.generationAxes?.sourceViewKey || 'front';
+  const mirrored = Boolean(item.generationAxes?.mirrored);
+  const revision = state.hairColorProfile.sourceViewMasks[viewKey]?.revision ?? 0;
+  const key = `${viewKey}:${mirrored ? 1 : 0}:${revision}`;
+  if (state.providerInputCache.has(key)) return state.providerInputCache.get(key);
+  const sourceBlob = state.sourceViewBlobs[viewKey];
+  if (!(sourceBlob instanceof Blob)) throw new Error(`Missing source view: ${viewKey}`);
+  const maskBlob = await hairOnlyMask(viewKey);
+  const value = mirrored
+    ? { sourceBlob: await flipBlobHorizontally(sourceBlob, 'image/jpeg'), maskBlob: await flipBlobHorizontally(maskBlob, 'image/png'), originalSourceBlob: sourceBlob, originalMaskBlob: maskBlob }
+    : { sourceBlob, maskBlob, originalSourceBlob: sourceBlob, originalMaskBlob: maskBlob };
+  state.providerInputCache.set(key, value);
+  return value;
+}
+
+async function compositeHairOnlyResult(resultUrl, sourceBlob, maskBlob, signal, mirrored = false) {
   const response = await fetch(resultUrl, { signal });
   if (!response.ok) throw new Error('Generated image fetch failed');
   const generatedBlob = await response.blob();
-  const loadImage = (blob) => new Promise((resolve, reject) => {
-    const element = new Image();
-    const objectUrl = URL.createObjectURL(blob);
-    element.onload = () => { URL.revokeObjectURL(objectUrl); resolve(element); };
-    element.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Composite image decode failed')); };
-    element.src = objectUrl;
-  });
-  const [source, generated, mask] = await Promise.all([loadImage(sourceBlob), loadImage(generatedBlob), loadImage(maskBlob)]);
+  const [source, generated, mask] = await Promise.all([loadBlobImage(sourceBlob, 'Composite source decode failed'), loadBlobImage(generatedBlob, 'Composite image decode failed'), loadBlobImage(maskBlob, 'Composite mask decode failed')]);
   const canvas = document.createElement('canvas');
   canvas.width = source.naturalWidth;
   canvas.height = source.naturalHeight;
@@ -602,11 +868,16 @@ async function compositeHairOnlyResult(resultUrl, sourceBlob, maskBlob, signal) 
   edited.width = canvas.width;
   edited.height = canvas.height;
   const editedContext = edited.getContext('2d');
+  if (mirrored) {
+    editedContext.translate(edited.width, 0);
+    editedContext.scale(-1, 1);
+  }
   editedContext.drawImage(generated, 0, 0, edited.width, edited.height);
+  if (mirrored) editedContext.setTransform(1, 0, 0, 1, 0, 0);
   editedContext.globalCompositeOperation = 'destination-out';
   editedContext.drawImage(mask, 0, 0, edited.width, edited.height);
   context.drawImage(edited, 0, 0);
-  const safeBlob = await new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Composite encode failed')), 'image/png'));
+  const safeBlob = await canvasToBlob(canvas, 'image/png');
   return { url: await blobToDataUrl(safeBlob), bytes: safeBlob.size, mimeType: 'image/png' };
 }
 
@@ -638,6 +909,11 @@ async function startCompare() {
     render();
     return;
   }
+  if (!requiredColorMasksReady()) {
+    state.error = 'HAIR MASK CONFIRMATION REQUIRED';
+    render();
+    return;
+  }
   if (!cfg.baseURL || !cfg.apiKey || cfg.apiKey === 'YOUR_PROXY_API_KEY') {
     state.error = 'API REQUIRED';
     render();
@@ -645,7 +921,13 @@ async function startCompare() {
   }
   cancelActiveBatch('new-batch');
   const selected = selectConsultationDesignIds(state.records, state.settings, { seedInput: `${state.sourceKey}:${state.mood}`, centerDesignId: state.selectedVariation?.designId, diagnosis: state.diagnosis, mood: state.selectedVariation?.mood, intensity: state.selectedVariation?.intensity });
-  state.batch = assignBatchSourceViews(createConsultationBatch({ batchId: `consult-${Date.now()}`, designIds: selected.designIds, sourcePhotoKey: state.sourceKey, settings: state.settings, metadata: { purpose: 'compare', selectedVariationId: state.selectedVariation?.id } }), 'compare');
+  const candidates = selected.designIds.map((designId) => {
+    const record = state.recordsById.get(designId);
+    return { ...record, id: designId, designId, structureKey: canonicalStructureKey(record), mood: state.selectedVariation?.mood || '자연스러운', intensity: state.selectedVariation?.intensity || '균형 있게', finishKo: record.finishKo || record.promptAtoms?.finishKo, finishRecord: record };
+  });
+  const assigned = assignConsultationGenerationAxes(candidates, { diagnosis: state.diagnosis, sourceViewKeys: availableSourceViewKeys(), hairColorProfile: state.hairColorProfile, preferences: { mood: state.mood, maintenance: 'medium' }, seedInput: `${state.sourceKey}:compare:${state.selectedVariation?.designId || ''}` });
+  const generationAxes = assigned.map((candidate) => candidate.generationAxes);
+  state.batch = assignBatchSourceViews(createConsultationBatch({ batchId: `consult-${Date.now()}`, designIds: selected.designIds, generationAxes, sourcePhotoKey: state.sourceKey, settings: state.settings, metadata: { purpose: 'compare', selectedVariationId: state.selectedVariation?.id } }), 'compare');
   state.shortlist.clear();
   state.slots = state.batch.slots;
   state.status = '100 SLOTS';
@@ -699,6 +981,9 @@ async function runJob(item, batchId, batchSourcePhotoKey) {
       slotIndex: item.slotIndex,
       designId: item.designId,
       generation: item.generation,
+      sourceViewKey: item.sourceViewKey,
+      mirrored: item.generationAxes?.mirrored,
+      colorToneId: item.generationAxes?.colorToneId,
       errorType: result.errorType,
       statusCode: result.statusCode
     });
@@ -739,8 +1024,15 @@ function textureControlPrompt(record) {
   }
   return 'TEXTURE CONTROL: keep texture natural, soft and low-amplitude. Use a few readable bends and cohesive hair masses; no wiry strands, crispy separation, wet look, excessive curl frequency or over-styled volume.';
 }
-function consultationPrompt(record, viewKey) {
+function consultationPrompt(record, item) {
   const selected = state.selectedVariation;
+  const axes = item.generationAxes || {};
+  const viewKey = item.sourceViewKey || axes.sourceViewKey || 'front';
+  const currentToneId = state.hairColorProfile.currentToneId;
+  const targetToneId = axes.colorToneId || currentToneId;
+  const colorRule = targetToneId === currentToneId
+    ? `COLOR: preserve the exact current hair tone (${toneLabel(currentToneId)}). No global color grading.`
+    : `COLOR: change only masked hair from ${toneLabel(currentToneId)} to ${toneLabel(targetToneId)} with ${axes.intensity || state.hairColorProfile.intensity} intensity. Keep roots, depth and highlights natural; no global color grading.`;
   const viewRule = {
     front: 'Preserve the exact front-facing pose, facial geometry, gaze and expression.',
     side: 'Preserve the exact side profile, nose line, jaw line, ear position and neck angle.',
@@ -752,15 +1044,18 @@ function consultationPrompt(record, viewKey) {
   return [
     `TASK: edit only the hair in the single uploaded original customer ${viewKey} photograph.`,
     `SOURCE VIEW: ${viewKey.toUpperCase()}. Return the same view and camera angle.`,
+    `SOURCE TRANSFORM: ${axes.mirrored ? 'HORIZONTAL MIRROR AUGMENTATION; keep the supplied mirrored orientation exactly so the client can invert it back.' : 'ORIGINAL ORIENTATION; do not mirror.'}`,
+    `GENERATION AXES: v${axes.version || CONSULTATION_GENERATION_AXES_VERSION}; source-transform v${axes.sourceTransformVersion || CONSULTATION_SOURCE_TRANSFORM_VERSION}; mask revision ${state.hairColorProfile.sourceViewMasks[viewKey]?.revision ?? 0}.`,
     'OUTPUT CONTRACT: exactly ONE full-frame image and ONE person.',
-    'PIXEL LOCK: every non-hair pixel must remain unchanged. Do not redraw, regenerate, beautify, retouch or reinterpret the face, facial shape, skin, eyes, eyebrows, nose, lips, jaw, ears, body, clothing, background, lighting or camera geometry.',
+    'PIXEL LOCK: every non-hair pixel must remain unchanged. Do not redraw, regenerate, beautify, retouch or reinterpret face shape, identity, expression, skin, scalp skin, eyes, eyebrows, facial hair, nose, lips, jaw, ears, neck, body, clothing, background, lighting, framing or camera angle.',
     'FACE LOCK: preserve exact identity, proportions, expression, gaze, skin texture and pixel alignment. No face slimming, eye enlargement, skin smoothing or symmetry correction.',
-    'HAIRLINE LOCK: preserve the exact forehead, temples and visible hairline boundary. Never generate hair across protected skin.',
-    'FACIAL HAIR LOCK: beard, mustache, sideburn boundary and eyebrows are not hairstyle edit targets and must remain exact source pixels.',
+    'HAIRLINE LOCK: preserve the exact forehead, temples and visible hairline boundary. Never recolor scalp skin or generate hair across protected skin.',
+    'COLOR BOUNDARY: never recolor face, eyebrows, facial hair, ears, neck, body, clothing, background, highlights outside hair, or the whole frame.',
     'MASK CONTRACT: modify transparent mask pixels only. Opaque mask pixels are immutable source pixels.',
     viewRule,
     'PRESERVE SOURCE FRAME: no crop, zoom, enlargement, reframing, collage, split screen, duplicate person, inset or border.',
     textureControlPrompt(record),
+    colorRule,
     `DESIGN ID: ${record.id}`,
     `STYLE: ${familiarStyleName(record.promptAtoms?.titleKo || record.nameKo)}`,
     `STRUCTURE: ${familiarStyleName(record.promptAtoms?.structureKo || record.baseKo)}`,
@@ -776,20 +1071,20 @@ function consultationPrompt(record, viewKey) {
 async function requestImageEdit(item, signal) {
   const cfg = resolvedProviderConfig();
   const designId = item.designId;
-  const viewKey = item.sourceViewKey || 'front';
+  const viewKey = item.sourceViewKey || item.generationAxes?.sourceViewKey || 'front';
   const record = state.recordsById.get(designId);
-  const sourceBlob = state.sourceViewBlobs[viewKey];
-  if (!cfg.baseURL || !cfg.apiKey || !record || !(sourceBlob instanceof Blob)) return { ok: false, errorType: 'config', statusCode: 0 };
-  const mask = await hairOnlyMask(viewKey);
+  if (!cfg.baseURL || !cfg.apiKey || !record) return { ok: false, errorType: 'config', statusCode: 0 };
+  const inputs = await providerInputsForItem(item);
   const form = new FormData();
   form.append('model', cfg.model);
-  form.append('prompt', consultationPrompt(record, viewKey));
+  form.append('prompt', consultationPrompt(record, item));
   form.append('size', cfg.size);
   form.append('quality', 'low');
   form.append('output_format', 'jpeg');
   form.append('output_compression', '70');
-  form.append('image', sourceBlob, `${designId}-${viewKey}.jpg`);
-  form.append('mask', mask, `${designId}-${viewKey}-hair-mask.png`);
+  const suffix = item.generationAxes?.mirrored ? 'mirror' : 'original';
+  form.append('image', inputs.sourceBlob, `${designId}-${viewKey}-${suffix}.jpg`);
+  form.append('mask', inputs.maskBlob, `${designId}-${viewKey}-${suffix}-hair-mask.png`);
   const response = await fetch(cfg.baseURL.replace(/\/+$/, '') + '/images/edits', { method: 'POST', headers: { Authorization: `Bearer ${cfg.apiKey}` }, body: form, signal });
   if (!response.ok) return { ok: false, errorType: 'http', statusCode: response.status };
   let payload;
@@ -798,7 +1093,7 @@ async function requestImageEdit(item, signal) {
   const normalized = normalizeProviderResult(datum ? { ...datum, providerStatus: response.status } : null, { designId, batchId: state.batch?.batchId, slotIndex: item.slotIndex });
   if (!normalized.ok) return { ok: false, errorType: normalized.errorCode, statusCode: normalized.providerStatus || response.status };
   try {
-    const safe = await compositeHairOnlyResult(normalized.url, sourceBlob, mask, signal);
+    const safe = await compositeHairOnlyResult(normalized.url, inputs.originalSourceBlob, inputs.originalMaskBlob, signal, Boolean(item.generationAxes?.mirrored));
     return { ...normalized, ...safe, providerKind: `${normalized.providerKind}-hair-mask-composite` };
   } catch (error) {
     return { ok: false, errorType: error?.name === 'AbortError' ? 'aborted' : 'composite', statusCode: 0 };
@@ -814,7 +1109,7 @@ function toggleShort(event) {
   } else state.shortlist.delete(id);
   render();
 }
-function agreementPayload(includeOriginal) { return { ...(includeOriginal ? { originalFrontDataUrl: state.originalJpegDataUrl, sourceViews: { ...state.sourceViews, front: state.originalJpegDataUrl } } : {}), currentDesignIds: [...state.shortlist].slice(0, 6), settings: state.settings, diagnosis: state.diagnosis, decision: { mood: state.mood, selectedGroup: state.selectedGroup?.key, selectedVariation: state.selectedVariation?.id }, catalogVersion, promptVersion }; }
+function agreementPayload(includeOriginal) { return { ...(includeOriginal ? { originalFrontDataUrl: state.originalJpegDataUrl, sourceViews: { ...state.sourceViews, front: state.originalJpegDataUrl } } : {}), currentDesignIds: [...state.shortlist].slice(0, 6), settings: state.settings, diagnosis: state.diagnosis, hairColorProfile: state.hairColorProfile, decision: { mood: state.mood, selectedStructureKey: state.selectedGroup?.key, selectedVariation: state.selectedVariation?.id }, catalogVersion, promptVersion }; }
 function downloadJson() { const blob = new Blob([JSON.stringify(agreementPayload(false), null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'hairloom-consultation.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
 function handoff() { const payload = buildConsultationHandoff(agreementPayload(true)); sessionStorage.setItem(CONSULTATION_HANDOFF_STORAGE_KEY, JSON.stringify(payload)); location.href = CONSULTATION_HANDOFF_QUERY_TRIGGER; }
 function loadProviderConfig() { try { const cfg = JSON.parse(localStorage.getItem('HAIR_IMAGEN_CFG') || '{}'); return { baseURL: cfg.baseURL || '', model: cfg.model || 'gpt-image-2', size: cfg.size || '1024x1024', apiKey: sessionStorage.getItem('HAIR_IMAGEN_KEY') || '' }; } catch { localStorage.removeItem('HAIR_IMAGEN_CFG'); return { baseURL: '', model: 'gpt-image-2', size: '1024x1024', apiKey: '' }; } }

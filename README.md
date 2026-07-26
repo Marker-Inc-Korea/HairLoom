@@ -6,12 +6,13 @@ Hairloom은 원본 인물 사진을 유지하면서 다양한 헤어 디자인�
 
 ## 주요 기능
 
-- 6,500개 헤어 디자인 카탈로그 기반 Explore
+- 6,500개 v2 헤어 디자인 카탈로그 기반 Explore
 - 고정 100개 결과 슬롯과 최대 동시 요청 32개
-- 원본 FRONT 사진만 사용하는 결과 생성
+- 기본 Explore는 원본 FRONT 사진만 사용하는 빠른 탐색
 - FRONT / SIDE / BACK 기반 Design Lock
-- 미용 전문가용 상담 화면
-- 헤어 외 얼굴·피부·의상·배경 원본 픽셀 보호
+- 별도 PRO 워크스테이션의 6단계 흐름: `SOURCE → PROFILE → STRUCTURE → VARIATION → COMPARE → LOCK`
+- PRO의 선택 원본 뷰 균형 배분, 좌우 반전 증강, 자연색 범위 선택
+- 헤어 마스크 밖 얼굴·피부·의상·배경 원본 픽셀을 PNG 합성으로 복원
 - 생성 이미지를 다음 생성 입력으로 재사용하지 않는 원본 계보 유지
 
 ## 화면
@@ -48,10 +49,13 @@ HOST=127.0.0.1 PORT=4180 npm run start
 ### PRO 상담
 
 1. FRONT 사진을 필수로 넣고 SIDE / BACK / CROWN / NAPE / DETAIL 사진을 선택적으로 추가합니다.
-2. PROFILE에서 길이, 모질, 밀도, 손상도와 시술 이력을 설정합니다.
-3. STRUCTURE에서 100개 구조를 비교합니다.
-4. VARIATION과 COMPARE에서 세부 스타일을 선택합니다.
-5. LOCK에서 선택 결과를 Design Lock으로 전달합니다.
+2. `PROFILE 1/2`에서 `짧은 머리 / 중간 / 장발`, 모질, 밀도, 손상도와 시술 이력을 설정합니다.
+3. `COLOR 2/2`에서 현재 색상을 직접 지정하고 허용된 자연 색상을 복수 선택합니다.
+4. 현재 색상과 다른 색을 선택했다면 모든 입력 뷰의 헤어 마스크를 확인합니다. 분홍 영역만 생성 결과가 적용됩니다.
+5. STRUCTURE의 100개 슬롯은 입력한 원본 뷰를 균형 있게 섞고, 좌우 반전 증강 결과는 원래 방향으로 되돌려 표시합니다.
+6. VARIATION과 COMPARE에서 세부 스타일을 선택한 뒤 LOCK에서 1–6개 디자인과 원본 뷰를 Design Lock으로 전달합니다.
+
+PRO 요청은 항상 준비된 원본 사진과 확인된 헤어 마스크를 사용합니다. 생성 결과는 다음 요청의 입력이 되지 않으며, 마스크 밖 픽셀은 원본에서 그대로 복원됩니다.
 
 ## 이미지 Provider 설정
 
@@ -83,9 +87,11 @@ npm run verify
 현재 기준:
 
 ```text
-45 tests passing
+50 tests passing
 1,080-design taxonomy check passing
-6,500-design master catalog check passing
+6,500-design v2 master catalog check passing
+catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
+promptVersion: HLM-EXPLORE-PROMPT-2026-07-2
 ```
 
 ## 주요 파일
@@ -103,7 +109,9 @@ server.mjs                         로컬 전용 정적 서버
 ## 개발 원칙
 
 - Hairloom과 BeautyTape는 별도 저장소입니다.
-- 원본 사진만 이미지 생성 입력으로 사용합니다.
-- 헤어 외 영역은 원본 픽셀로 복원합니다.
+- 기본 Explore는 원본 FRONT만, PRO는 사용자가 제공한 원본 뷰만 생성 입력으로 사용합니다.
+- PRO의 다른 색상 생성은 입력한 모든 뷰의 헤어 마스크 확인 후 시작됩니다.
+- 좌우 반전은 Provider 입력에만 적용하고 결과는 원래 방향으로 복원합니다.
+- 헤어 외 영역은 원본 픽셀로 복원한 무손실 PNG를 사용합니다.
 - 고손상 조건에서는 펌과 붙임머리를 제외합니다.
-- 고객 사진과 인증 정보는 저장소에 포함하지 않습니다.
+- 고객 사진, 생성 이미지, API 키와 QA 자료를 저장소에 포함하지 않습니다.

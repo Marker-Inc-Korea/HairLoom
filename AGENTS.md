@@ -12,7 +12,7 @@ This is the machine-operable guide for work in the standalone Hairloom repositor
 - App URL: `http://127.0.0.1:4180/`
 - Health URL: `http://127.0.0.1:4180/healthz`
 - Main verification: `npm run verify`
-- Expected baseline: 45 tests passing
+- Expected baseline: 50 tests passing
 
 ## Hard project boundary
 
@@ -42,7 +42,7 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-`npm run verify` must cover syntax checks, both catalog drift checks, Explore/catalog/consultation/server tests, and the 45-test baseline.
+`npm run verify` must cover syntax checks, both catalog drift checks, Explore/catalog/consultation/server tests, and the 50-test baseline.
 
 ## Product invariants
 
@@ -58,10 +58,28 @@ HOST=127.0.0.1 PORT=4180 npm run start
 - Shortlists contain 1–6 current `HLM-*` design IDs.
 - Explore handoff requires the current `catalogVersion` and `promptVersion`.
 - Standard Design Lock continues to use its normal recommendation path.
+- PRO remains a separate six-stage route: `SOURCE → PROFILE → STRUCTURE → VARIATION → COMPARE → LOCK`.
+- PRO requires FRONT and accepts optional SIDE / BACK / CROWN / NAPE / DETAIL originals.
+- PRO PROFILE is two pages: diagnosis, then manual current color and bounded natural target colors.
+- PRO user-facing length choices are exactly `짧은 머리 / 중간 / 장발`.
+- Any non-current target color requires a confirmed hair mask for every supplied source view.
+- PRO fixed 100-slot allocations remain deterministic, approximately balance supplied views, and retain view/mirror/color axes through retries.
+- Provider-side mirrored sources and masks must be flipped back before compositing and display.
+- PRO outputs must restore all protected pixels from the original source and encode the final composite as PNG.
+- Consultation handoff schema v2 must validate schema, generation-axis, source-transform, catalog, and prompt versions; legacy v1 is migration-only.
 
 ## Runtime catalog
 
 The authoritative catalog contains exactly 6,500 validated records. Compact dictionary/tuple encoding is intentional; hydrate it through `src/exploreCore.mjs` rather than expanding the disk payload.
+
+Current runtime versions:
+
+```text
+schemaVersion: 1
+catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
+promptVersion: HLM-EXPLORE-PROMPT-2026-07-2
+consultation handoff schema: 2
+```
 
 Current budgets:
 

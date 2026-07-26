@@ -9,12 +9,15 @@ import {
   CONSULTATION_HARD_MAX_ACTIVE,
   CONSULTATION_HANDOFF_SCHEMA_VERSION,
   CONSULTATION_GENERATION_AXES_VERSION,
+  CONSULTATION_LEGACY_CATALOG_VERSION,
+  CONSULTATION_LEGACY_PROMPT_VERSION,
   HAIR_COLOR_TONES,
   PRESERVE_CURRENT_TONE_ID,
   TREND_STRUCTURE_BASES,
   buildConsultationHandoff,
   createConsultationBatch,
   assignConsultationSourceViews,
+  assignConsultationGenerationAxes,
   allocateConsultationDiversity,
   buildConsultationCandidatePool,
   canonicalStructureKey,
@@ -174,6 +177,18 @@ test('stable taxonomy keys are ID-based and migrate legacy labels', () => {
   assert.equal(femaleLong.legacyKey.includes(record.baseKo), true);
 });
 
+test('special catalog IDs receive deterministic stable generation axes', () => {
+  const record = catalog.records.find((item) => item.kind === 'special');
+  assert.match(canonicalStructureKey(record), /^U\|SP\|S-[A-Z]{2}-\d{2}\|NA$/);
+  const candidate = { ...record, designId: record.id, structureKey: canonicalStructureKey(record), mood: '자연스러운', intensity: '은은하게' };
+  const options = { diagnosis: diagnosis({ damage: 'low' }), sourceViewKeys: ['front'], hairColorProfile: { currentToneId: 'natural-black', selectedToneIds: ['natural-black'] }, seedInput: 'special' };
+  const first = assignConsultationGenerationAxes([candidate], options)[0].generationAxes;
+  const second = assignConsultationGenerationAxes([candidate], options)[0].generationAxes;
+  assert.deepEqual(first, second);
+  assert.equal(first.suitabilityScore, 60);
+  assert.equal(first.sourceViewKey, 'front');
+});
+
 test('natural color profile bounds black to adjacent tones and requires per-view masks', () => {
   const current = diagnosis({ damage: 'low' });
   const profile = normalizeHairColorProfile({ currentToneId: 'natural-black', selectedToneIds: ['natural-black', 'dark-brown'], sourceViewMasks: { front: { revision: 1, confirmed: true }, side: { revision: 1, confirmed: false } } });
@@ -322,7 +337,7 @@ test('handoff validates exact versioned payload and rejects unknown or generated
   assert.equal(handoff.sourceViews.front, handoff.originalFrontDataUrl);
   assert.match(handoff.sourceViews.side, /^data:image\//);
   assert.equal(validateConsultationHandoffPayload(handoff).catalogVersion, catalogVersion);
-  const legacy = Object.fromEntries(Object.entries(handoff).filter(([key]) => !['schemaVersion', 'generationAxesVersion', 'sourceTransformVersion', 'hairColorProfile'].includes(key)));
+  const legacy = { ...Object.fromEntries(Object.entries(handoff).filter(([key]) => !['schemaVersion', 'generationAxesVersion', 'sourceTransformVersion', 'hairColorProfile'].includes(key))), catalogVersion: CONSULTATION_LEGACY_CATALOG_VERSION, promptVersion: CONSULTATION_LEGACY_PROMPT_VERSION };
   const migrated = validateConsultationHandoffPayload(legacy);
   assert.equal(migrated.schemaVersion, CONSULTATION_HANDOFF_SCHEMA_VERSION);
   assert.equal(migrated.hairColorProfile.currentToneId, 'unknown');

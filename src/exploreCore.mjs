@@ -1,6 +1,6 @@
 export const schemaVersion = 1;
-export const catalogVersion = 'HLM-MASTER-2026-07-EXPLORE-1';
-export const promptVersion = 'HLM-EXPLORE-PROMPT-2026-07-1';
+export const catalogVersion = 'HLM-MASTER-2026-07-EXPLORE-2';
+export const promptVersion = 'HLM-EXPLORE-PROMPT-2026-07-2';
 export const MAX_EXPLORE_ACTIVE = 32;
 export const EXPLORE_SELECTION_LIMIT = 100;
 
@@ -288,7 +288,7 @@ export function selectNeighbor100(indexRecords, rawSettings, clickedDesignId, se
 
 export function buildExploreCacheKey({ sourcePhotoKey, settings, batchKind = 'initial', centerDesignId = 'initial' }) {
   const settingsHash = stableHash32(stableSettingsString(settings)).toString(16).padStart(8, '0');
-  return `hlm:explore:v1:${catalogVersion}:${promptVersion}:${sourcePhotoKey}:${settingsHash}:${batchKind}:${centerDesignId}`;
+  return `hlm:explore:v2:${catalogVersion}:${promptVersion}:${sourcePhotoKey}:${settingsHash}:${batchKind}:${centerDesignId}`;
 }
 
 export async function sourcePhotoKey(bytes, mimeType = 'image/jpeg') {
