@@ -94,8 +94,8 @@ test('serves only consultation route and allowlisted consultation assets', async
       assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
       assert.match(response.headers.get('cache-control') || '', /no-store/);
       const html = await response.text();
-      assert.match(html, /styles\.css\?v=20260727-auto-color-v3/);
-      assert.match(html, /app\.mjs\?v=20260727-auto-color-v3/);
+      assert.match(html, /styles\.css\?v=20260727-button-mask-v5/);
+      assert.match(html, /app\.mjs\?v=20260727-button-mask-v5/);
     }
     for (const [path, mime] of [['/consultation/styles.css', /^text\/css/], ['/consultation/app.mjs', /^text\/javascript/], ['/src/consultationCore.mjs', /^text\/javascript/]]) {
       const response = await fetch(`http://127.0.0.1:${port}${path}`);
@@ -132,9 +132,18 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /detectCurrentHairTone/);
     assert.match(appSource, /AUTO \$\{Math\.round\(detection\.confidence \* 100\)\}%/);
     assert.match(appSource, /직접 수정 가능/);
+    assert.match(appSource, /state\.sourceProcessing = true/);
+    assert.match(appSource, /function goToProfile/);
+    assert.match(appSource, /PREPARING…/);
+    assert.match(appSource, /requestAnimationFrame/);
+    assert.match(appSource, /data-ready=/);
+    assert.match(appSource, /aria-describedby=/);
     assert.match(appSource, /data-target-tone/);
     assert.match(appSource, /data-mask-tool/);
     assert.match(appSource, /HAIR MASK CONFIRMATION REQUIRED/);
+    assert.match(appSource, /반투명 골드 영역만 변경/);
+    assert.match(appSource, /rgba\(202,164,115,\.48\)/);
+    assert.doesNotMatch(appSource, /rgba\(217,138,160,\.62\)/);
     assert.match(appSource, /providerInputsForItem/);
     assert.match(appSource, /flipBlobHorizontally/);
     assert.match(appSource, /sourceTransformVersion/);
@@ -181,6 +190,9 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(consultationCss, /\.tone-grid\{/);
     assert.match(consultationCss, /\.mask-canvas-stage canvas\{/);
     assert.match(consultationCss, /touch-action:none/);
+    assert.match(consultationCss, /explicit button response and preparation states/);
+    assert.match(consultationCss, /\.color-continue-note\.busy/);
+    assert.match(consultationCss, /\.source-next\{/);
 
     for (const path of ['/consultation.html', '/consultation/prototype.html', '/consultation/deleted-prototype.html', '/docs/ux-segments/stylist-consultation/prototype.html', '/consultation/../package.json', '/consultation/notes.md', '/src/modules.mjs']) {
       assert.equal((await fetch(`http://127.0.0.1:${port}${path}`)).status, 404, path);

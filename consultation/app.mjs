@@ -43,6 +43,7 @@ const state = {
   sourceViewBlobs: { front: null, side: null, back: null, crown: null, nape: null, detail: null },
   sourceViewMasks: new Map(),
   sourceViewIndex: 0,
+  sourceProcessing: false,
   maskViewKey: 'front',
   maskTool: 'add',
   maskBrushSize: 36,
@@ -60,6 +61,7 @@ const state = {
   structureSlots: [],
   structureActiveLimit: CONSULTATION_INITIAL_ACTIVE,
   structureStatus: '',
+  structurePreparing: false,
   selectedGroup: null,
   variations: [],
   ranked: [],
@@ -227,7 +229,10 @@ function renderSource() {
   const view = BOARD_VIEWS[state.sourceViewIndex] ?? BOARD_VIEWS[0];
   const source = sourceViewSource(view);
   const required = state.originalJpegDataUrl ? 1 : 0;
-  return `<section class="source-step single-source"><div class="source-view-head"><b>VIEWS</b><span>${required} / 1 REQUIRED</span></div><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><button class="single-view-upload ${source ? 'filled' : ''}" type="button" data-upload-view="${view.id}" aria-label="${source ? 'Replace' : 'Add'} ${view.label} photo">${source ? `<img src="${esc(source)}" alt="${view.label}">` : `<span>＋</span><small>ADD ${view.label}</small>`}</button><input id="view-${view.id}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label}"><div class="source-view-nav"><button type="button" data-source-step="-1" aria-label="Previous view">←</button><nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => `<button type="button" data-source-view="${index}" class="${index === state.sourceViewIndex ? 'on' : ''} ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav><button type="button" data-source-step="1" aria-label="Next view">→</button></div></div><div class="source-footer"><div class="profile-switch" aria-label="Profile"><button data-gender="F" class="${gender === 'F' ? 'on' : ''}">FEMALE</button><button data-gender="M" class="${gender === 'M' ? 'on' : ''}">MALE</button></div><button class="next-button" id="toProfile" ${requiredSourceViewsReady() ? '' : 'disabled'}>NEXT</button></div></section>`;
+  const processing = state.sourceProcessing && view.id === 'front';
+  const uploadContent = source ? `<img src="${esc(source)}" alt="${view.label}">` : processing ? '<span class="source-processing-mark">···</span><small>ANALYZING PHOTO</small>' : `<span>＋</span><small>ADD ${view.label}</small>`;
+  const continueLabel = state.sourceProcessing ? '사진과 현재 컬러를 분석하고 있습니다.' : required ? 'FRONT 준비 완료' : 'FRONT 사진을 먼저 추가하세요.';
+  return `<section class="source-step single-source"><div class="source-view-head"><b>VIEWS</b><span>${required} / 1 REQUIRED</span></div><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><button class="single-view-upload ${source ? 'filled' : ''}" type="button" data-upload-view="${view.id}" aria-label="${source ? 'Replace' : 'Add'} ${view.label} photo" ${state.sourceProcessing ? 'disabled' : ''}>${uploadContent}</button><input id="view-${view.id}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label}"><div class="source-view-nav"><button type="button" data-source-step="-1" aria-label="Previous view">←</button><nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => `<button type="button" data-source-view="${index}" class="${index === state.sourceViewIndex ? 'on' : ''} ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav><button type="button" data-source-step="1" aria-label="Next view">→</button></div></div><div class="source-footer"><div class="profile-switch" aria-label="Profile"><button data-gender="F" class="${gender === 'F' ? 'on' : ''}">FEMALE</button><button data-gender="M" class="${gender === 'M' ? 'on' : ''}">MALE</button></div><div class="source-next"><small id="sourceContinueStatus">${continueLabel}</small><button class="next-button" id="toProfile" data-ready="${requiredSourceViewsReady() ? 'true' : 'false'}" aria-describedby="sourceContinueStatus" ${state.sourceProcessing ? 'disabled aria-busy="true"' : ''}>${state.sourceProcessing ? 'PROCESSING…' : 'NEXT'}</button></div></div></section>`;
 }
 
 function toneLabel(toneId) {
@@ -273,7 +278,7 @@ function renderMaskEditor() {
   const viewKey = views.includes(state.maskViewKey) ? state.maskViewKey : views[0];
   const profile = state.hairColorProfile.sourceViewMasks[viewKey] || { revision: 0, confirmed: false };
   const confirmed = views.filter((key) => state.hairColorProfile.sourceViewMasks[key]?.confirmed).length;
-  return `<section class="mask-editor"><div class="color-section-head"><div><b>HAIR MASK</b><small>${confirmed} / ${views.length} CONFIRMED</small></div><span>분홍 영역만 변경</span></div><nav class="mask-view-tabs" aria-label="Mask source views">${views.map((key) => `<button type="button" data-mask-view="${key}" class="${key === viewKey ? 'on' : ''} ${state.hairColorProfile.sourceViewMasks[key]?.confirmed ? 'done' : ''}">${key.toUpperCase()}</button>`).join('')}</nav><div class="mask-workspace"><div class="mask-canvas-stage"><img src="${esc(sourceViewPreview(viewKey))}" alt="${esc(viewKey)} source"><canvas id="hairMaskCanvas" data-mask-canvas="${viewKey}" aria-label="${esc(viewKey)} hair mask editor"></canvas></div><div class="mask-controls"><div class="mask-tools"><button type="button" data-mask-tool="add" class="${state.maskTool === 'add' ? 'on' : ''}">ADD HAIR</button><button type="button" data-mask-tool="protect" class="${state.maskTool === 'protect' ? 'on' : ''}">PROTECT</button></div><label>BRUSH <input id="maskBrushSize" type="range" min="8" max="96" step="4" value="${state.maskBrushSize}"></label><div class="mask-actions"><button type="button" class="secondary" id="resetMask">RESET</button><button type="button" class="next-button" id="confirmMask">${profile.confirmed ? 'CONFIRMED' : 'CONFIRM'}</button></div></div></div></section>`;
+  return `<section class="mask-editor"><div class="color-section-head"><div><b>HAIR MASK</b><small>${confirmed} / ${views.length} CONFIRMED</small></div><span>반투명 골드 영역만 변경</span></div><nav class="mask-view-tabs" aria-label="Mask source views">${views.map((key) => `<button type="button" data-mask-view="${key}" class="${key === viewKey ? 'on' : ''} ${state.hairColorProfile.sourceViewMasks[key]?.confirmed ? 'done' : ''}">${key.toUpperCase()}</button>`).join('')}</nav><div class="mask-workspace"><div class="mask-canvas-stage"><img src="${esc(sourceViewPreview(viewKey))}" alt="${esc(viewKey)} source"><canvas id="hairMaskCanvas" data-mask-canvas="${viewKey}" aria-label="${esc(viewKey)} hair mask editor"></canvas></div><div class="mask-controls"><div class="mask-tools"><button type="button" data-mask-tool="add" class="${state.maskTool === 'add' ? 'on' : ''}">ADD HAIR</button><button type="button" data-mask-tool="protect" class="${state.maskTool === 'protect' ? 'on' : ''}">PROTECT</button></div><label>BRUSH <input id="maskBrushSize" type="range" min="8" max="96" step="4" value="${state.maskBrushSize}"></label><div class="mask-actions"><button type="button" class="secondary" id="resetMask">RESET</button><button type="button" class="next-button" id="confirmMask">${profile.confirmed ? 'CONFIRMED' : 'CONFIRM'}</button></div></div></div></section>`;
 }
 
 function renderColorProfile() {
@@ -282,7 +287,9 @@ function renderColorProfile() {
   const selected = new Set(selectedTargetToneIds());
   const canContinue = profile.currentToneId !== 'unknown' && requiredColorMasksReady();
   const emptyMessage = state.hairColorDetection.status === 'detecting' ? '원본 사진에서 현재 머리색을 분석 중입니다.' : '자동 감지 실패 · 현재 머리색을 직접 선택하세요.';
-  return `<section class="profile-step color-step"><div class="profile-page-head"><b>COLOR</b><span>2 / 2</span></div><section class="color-section"><div class="color-section-head"><div><b>CURRENT</b><small>${currentColorDetectionLabel()} · 직접 수정 가능</small></div><span>${esc(toneLabel(profile.currentToneId))}</span></div><div class="tone-grid current-tones">${HAIR_COLOR_TONES.map((tone) => `<button type="button" data-current-tone="${tone.id}" class="tone-chip ${profile.currentToneId === tone.id ? 'on' : ''}"><i style="--tone-level:${tone.level}"></i><span>${esc(tone.labelKo)}</span></button>`).join('')}</div></section>${profile.currentToneId === 'unknown' ? `<div class="color-empty">${emptyMessage}</div>` : `<section class="color-section"><div class="color-section-head"><div><b>TARGET</b><small>복수 선택</small></div><span>${profile.intensity === 'balanced' ? 'BALANCED' : 'SUBTLE'}</span></div><div class="tone-grid target-tones">${allowed.map((tone) => `<button type="button" data-target-tone="${tone.id}" class="tone-chip ${selected.has(tone.id) ? 'on' : ''} ${tone.id === profile.currentToneId ? 'fixed' : ''}"><i style="--tone-level:${tone.level}"></i><span>${esc(tone.labelKo)}</span></button>`).join('')}</div><div class="intensity-switch"><button type="button" data-color-intensity="subtle" class="${profile.intensity === 'subtle' ? 'on' : ''}">SUBTLE</button><button type="button" data-color-intensity="balanced" class="${profile.intensity === 'balanced' ? 'on' : ''}">BALANCED</button></div></section>${colorChangeRequired() ? renderMaskEditor() : '<div class="color-empty">현재 색상 유지 · 마스크 확인 불필요</div>'}`}<div class="actions profile-actions"><button class="secondary" id="backToDiagnosis">BACK</button><button class="next-button" id="toStructures" ${canContinue ? '' : 'disabled'}>NEXT</button></div></section>`;
+  const continueMessage = state.structurePreparing ? '100개 구조 후보를 준비하고 있습니다. 잠시만 기다려 주세요.' : profile.currentToneId === 'unknown' ? '현재 머리색을 선택해야 다음 단계로 갈 수 있습니다.' : !requiredColorMasksReady() ? '컬러를 바꾸려면 모든 입력 사진의 HAIR MASK를 CONFIRM 하세요.' : '준비 완료 · NEXT를 누르면 STRUCTURE 단계가 시작됩니다.';
+  const continueStatus = state.structurePreparing ? 'busy' : canContinue ? 'ready' : 'blocked';
+  return `<section class="profile-step color-step"><div class="profile-page-head"><b>COLOR</b><span>2 / 2</span></div><section class="color-section"><div class="color-section-head"><div><b>CURRENT</b><small>${currentColorDetectionLabel()} · 직접 수정 가능</small></div><span>${esc(toneLabel(profile.currentToneId))}</span></div><div class="tone-grid current-tones">${HAIR_COLOR_TONES.map((tone) => `<button type="button" data-current-tone="${tone.id}" class="tone-chip ${profile.currentToneId === tone.id ? 'on' : ''}"><i style="--tone-level:${tone.level}"></i><span>${esc(tone.labelKo)}</span></button>`).join('')}</div></section>${profile.currentToneId === 'unknown' ? `<div class="color-empty">${emptyMessage}</div>` : `<section class="color-section"><div class="color-section-head"><div><b>TARGET</b><small>복수 선택</small></div><span>${profile.intensity === 'balanced' ? 'BALANCED' : 'SUBTLE'}</span></div><div class="tone-grid target-tones">${allowed.map((tone) => `<button type="button" data-target-tone="${tone.id}" class="tone-chip ${selected.has(tone.id) ? 'on' : ''} ${tone.id === profile.currentToneId ? 'fixed' : ''}"><i style="--tone-level:${tone.level}"></i><span>${esc(tone.labelKo)}</span></button>`).join('')}</div><div class="intensity-switch"><button type="button" data-color-intensity="subtle" class="${profile.intensity === 'subtle' ? 'on' : ''}">SUBTLE</button><button type="button" data-color-intensity="balanced" class="${profile.intensity === 'balanced' ? 'on' : ''}">BALANCED</button></div></section>${colorChangeRequired() ? renderMaskEditor() : '<div class="color-empty">현재 색상 유지 · 마스크 확인 불필요</div>'}`}<div class="color-continue-note ${continueStatus}" id="colorContinueStatus" role="status">${continueMessage}</div><div class="actions profile-actions"><button class="secondary" id="backToDiagnosis">BACK</button><button class="next-button" id="toStructures" data-ready="${canContinue ? 'true' : 'false'}" aria-describedby="colorContinueStatus" ${state.structurePreparing ? 'disabled aria-busy="true"' : ''}>${state.structurePreparing ? 'PREPARING…' : 'NEXT'}</button></div></section>`;
 }
 
 function renderProfile() {
@@ -434,6 +441,17 @@ function toggleTargetTone(toneId) {
   render();
 }
 
+function goToProfile() {
+  if (state.sourceProcessing) return;
+  if (!requiredSourceViewsReady()) {
+    state.error = 'FRONT REQUIRED · FRONT 사진을 먼저 추가하세요.';
+    render();
+    return;
+  }
+  state.error = '';
+  setTimeout(() => { state.profileStep = 0; state.stage = 1; render(); }, 0);
+}
+
 function bind() {
   document.querySelector('#backToList')?.addEventListener('click', () => { state.stage = state.structureSlots.length ? 2 : 0; render(); });
   document.querySelectorAll('[data-stage]').forEach((button) => button.addEventListener('click', () => { const next = Number(button.dataset.stage); if (stageEnabled(next)) { state.stage = next; render(); } }));
@@ -442,7 +460,7 @@ function bind() {
   document.querySelectorAll('[data-source-view]').forEach((button) => button.addEventListener('click', () => { state.sourceViewIndex = Number(button.dataset.sourceView); render(); }));
   document.querySelectorAll('[data-source-step]').forEach((button) => button.addEventListener('click', () => { state.sourceViewIndex = Math.max(0, Math.min(BOARD_VIEWS.length - 1, state.sourceViewIndex + Number(button.dataset.sourceStep))); render(); }));
   document.querySelectorAll('[data-gender]').forEach((button) => button.addEventListener('click', () => { state.diagnosis.profileGender = button.dataset.gender; invalidateGeneratedSurfaces('profile-change'); render(); }));
-  document.querySelector('#toProfile')?.addEventListener('click', () => setTimeout(() => { state.profileStep = 0; state.stage = 1; render(); }, 0));
+  document.querySelector('#toProfile')?.addEventListener('click', goToProfile);
   document.querySelectorAll('.dot-range').forEach((input) => input.addEventListener('input', () => updateDiagnosisRange(input)));
   document.querySelector('#mood')?.addEventListener('input', (event) => { state.mood = event.target.value; if (state.structureSlots.length || state.batch) invalidateGeneratedSurfaces('profile-change'); });
   document.querySelector('#toColor')?.addEventListener('click', () => { syncIntake(); reconcileHairColorProfile(); state.profileStep = 1; render(); });
@@ -569,14 +587,18 @@ function selectStructureSlot(slotIndex) {
 }
 
 async function startStructureExplore() {
+  if (state.structurePreparing) return;
   state.error = '';
   try {
     syncIntake();
-    if (!requiredSourceViewsReady()) throw new Error('FRONT REQUIRED');
-    if (state.hairColorProfile.currentToneId === 'unknown') throw new Error('CURRENT COLOR REQUIRED');
-    if (!requiredColorMasksReady()) throw new Error('HAIR MASK CONFIRMATION REQUIRED');
+    if (!requiredSourceViewsReady()) throw new Error('FRONT REQUIRED · FRONT 사진을 먼저 추가하세요.');
+    if (state.hairColorProfile.currentToneId === 'unknown') throw new Error('CURRENT COLOR REQUIRED · 현재 머리색을 선택하세요.');
+    if (!requiredColorMasksReady()) throw new Error('HAIR MASK CONFIRMATION REQUIRED · 모든 입력 사진의 마스크를 CONFIRM 하세요.');
     const cfg = resolvedProviderConfig();
-    if (!cfg.baseURL || !cfg.apiKey || cfg.apiKey === 'YOUR_PROXY_API_KEY') throw new Error('API REQUIRED');
+    if (!cfg.baseURL || !cfg.apiKey || cfg.apiKey === 'YOUR_PROXY_API_KEY') throw new Error('API REQUIRED · PROFILE 1/2의 API 설정을 확인하세요.');
+    state.structurePreparing = true;
+    render();
+    await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
     await ensureCatalog();
     state.filteredGroups = filterGroups();
     prepareGroupSummaries();
@@ -597,10 +619,12 @@ async function startStructureExplore() {
     state.structureSlots = state.batch.slots;
     state.structureActiveLimit = state.batch.activeLimit;
     state.structureStatus = '100 PICKS';
+    state.structurePreparing = false;
     state.stage = 2;
     render();
     pumpQueue();
   } catch (error) {
+    state.structurePreparing = false;
     state.error = error?.message || 'STRUCTURE ERROR';
     render();
   }
@@ -633,6 +657,8 @@ async function loadPhoto(event) {
   const file = event.target.files?.[0];
   if (!file || !file.type.startsWith('image/')) return;
   state.error = '';
+  state.sourceProcessing = true;
+  render();
   try {
     invalidateGeneratedSurfaces('source-change');
     const prepared = await prepareOriginalJpeg(file);
@@ -656,6 +682,7 @@ async function loadPhoto(event) {
     state.hairColorDetection = { status: 'failed', source: 'auto', toneId: 'unknown', confidence: 0 };
     state.error = 'IMAGE ERROR';
   }
+  state.sourceProcessing = false;
   setTimeout(render, 0);
 }
 
@@ -804,7 +831,7 @@ function renderMaskOverlay(canvas) {
   if (!dataCanvas) return;
   const context = canvas.getContext('2d');
   context.clearRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = 'rgba(217,138,160,.62)';
+  context.fillStyle = 'rgba(202,164,115,.48)';
   context.fillRect(0, 0, canvas.width, canvas.height);
   context.globalCompositeOperation = 'destination-out';
   context.drawImage(dataCanvas, 0, 0, canvas.width, canvas.height);

@@ -51,7 +51,7 @@ Open `http://127.0.0.1:4180/` in a browser.
 1. Add the required FRONT photo and optional SIDE / BACK / CROWN / NAPE / DETAIL photos.
 2. In `PROFILE 1/2`, choose `short / medium / long`, natural texture, density, damage, and treatment history.
 3. In `COLOR 2/2`, Hairloom automatically selects the current tone from conservative FRONT hair-region samples. Review the `AUTO` confidence, correct it manually when needed, and select one or more allowed natural target tones.
-4. When any target differs from the current tone, review and confirm the hair mask for every supplied source view. Only the pink region is editable.
+4. When any target differs from the current tone, review and confirm the hair mask for every supplied source view. Only the translucent warm-gold region is editable.
 5. STRUCTURE distributes its 100 stable slots approximately evenly across supplied views. Mirrored provider inputs are flipped back before display.
 6. Refine the structure in VARIATION and COMPARE, then send 1–6 design IDs and original source views to Design Lock from LOCK.
 
