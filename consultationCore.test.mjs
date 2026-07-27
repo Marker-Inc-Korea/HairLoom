@@ -190,13 +190,14 @@ test('special catalog IDs receive deterministic stable generation axes', () => {
   assert.equal(first.sourceViewKey, 'front');
 });
 
-test('natural color profile bounds black to adjacent tones and requires per-view masks', () => {
+test('natural color profile bounds black to adjacent tones without mask gating', () => {
   const current = diagnosis({ damage: 'low' });
-  const profile = normalizeHairColorProfile({ currentToneId: 'natural-black', selectedToneIds: ['natural-black', 'dark-brown'], sourceViewMasks: { front: { revision: 1, confirmed: true }, side: { revision: 1, confirmed: false } } });
+  const profile = normalizeHairColorProfile({ currentToneId: 'natural-black', selectedToneIds: ['natural-black', 'dark-brown'] });
   assert.deepEqual(deriveAllowedHairColorTones(profile, current).map((tone) => tone.id), ['natural-black', 'soft-black', 'dark-brown']);
   assert.equal(evaluateHairColorFeasibility('dark-brown', profile, current, 'front').status, 'possible');
-  assert.equal(evaluateHairColorFeasibility('dark-brown', profile, current, 'side').status, 'impossible');
+  assert.equal(evaluateHairColorFeasibility('dark-brown', profile, current, 'side').status, 'possible');
   assert.equal(evaluateHairColorFeasibility('warm-brown', profile, current, 'front').status, 'impossible');
+  assert.equal(Object.hasOwn(profile, 'sourceViewMasks'), false);
   const legacy = normalizeHairColorProfile({});
   assert.equal(legacy.currentToneId, 'unknown');
   assert.deepEqual(legacy.selectedToneIds, [PRESERVE_CURRENT_TONE_ID]);
@@ -231,8 +232,7 @@ test('suitability is auditable, hair-only, and reaches 100 for an exact preferen
 test('diversity axes balance views, mirrors, colors, and retain retry ownership', () => {
   const profileGroups = groups.filter((group) => group.genderId === 'F');
   const current = diagnosis({ actualLengthCm: 80, damage: 'low' });
-  const sourceViewMasks = Object.fromEntries(['front', 'side', 'back'].map((key) => [key, { revision: 1, confirmed: true }]));
-  const hairColorProfile = { currentToneId: 'natural-black', selectedToneIds: ['natural-black', 'dark-brown'], sourceViewMasks };
+  const hairColorProfile = { currentToneId: 'natural-black', selectedToneIds: ['natural-black', 'dark-brown'] };
   const pool = buildConsultationCandidatePool(profileGroups, current, { mood: '자연', maintenance: 'medium' });
   const allocation = allocateConsultationDiversity(pool, { count: 100, diagnosis: current, sourceViewKeys: ['front', 'side', 'back'], hairColorProfile, seedInput: 'axes' });
   const validation = validateConsultationGenerationAxes(allocation.generationAxes, { count: 100 });

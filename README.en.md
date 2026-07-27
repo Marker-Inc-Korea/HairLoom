@@ -12,7 +12,7 @@ Hairloom is a local-first hairstyle exploration and Design Lock application. It 
 - FRONT / SIDE / BACK Design Lock workflow
 - Separate six-stage PRO workstation: `SOURCE → PROFILE → STRUCTURE → VARIATION → COMPARE → LOCK`
 - Balanced optional source-view allocation, horizontal-mirror augmentation, and bounded natural colors in PRO
-- Lossless PNG compositing that restores source pixels outside the confirmed hair mask
+- Maskless PRO requests that send one prepared original and rely on strict prompt preservation for face, clothing, and background
 - Generated images are never reused as generation inputs
 
 ## Routes
@@ -51,11 +51,11 @@ Open `http://127.0.0.1:4180/` in a browser.
 1. Add the required FRONT photo and optional SIDE / BACK / CROWN / NAPE / DETAIL photos.
 2. In `PROFILE 1/2`, choose `short / medium / long`, natural texture, density, damage, and treatment history.
 3. In `COLOR 2/2`, Hairloom automatically selects the current tone from conservative FRONT hair-region samples. Review the `AUTO` confidence, correct it manually when needed, and select one or more allowed natural target tones.
-4. When any target differs from the current tone, review and confirm the hair mask for every supplied source view. Only the translucent warm-gold region is editable.
+4. Start STRUCTURE generation with the current or selected natural tones without reviewing or confirming a hair mask.
 5. STRUCTURE distributes its 100 stable slots approximately evenly across supplied views. Mirrored provider inputs are flipped back before display.
 6. Refine the structure in VARIATION and COMPARE, then send 1–6 design IDs and original source views to Design Lock from LOCK.
 
-Every PRO request uses a prepared original source photo and its confirmed hair mask. Generated outputs never become request inputs, and pixels outside the editable mask are restored from the original source.
+Every PRO request uses one prepared original source photo. Generated outputs never become request inputs; only mirrored outputs are flipped back before the provider result is displayed directly.
 
 ## Image provider configuration
 
@@ -110,8 +110,8 @@ server.mjs                         Local-only static server
 
 - Hairloom and BeautyTape are separate repositories.
 - Base Explore uses only the original FRONT photo; PRO uses only source views supplied by the user.
-- Non-current color generation cannot start until every supplied-view hair mask is confirmed.
+- PRO does not create or send a hair mask, and non-current colors require no mask-confirmation step.
 - Horizontal mirroring exists only at the provider boundary; final results return to the original orientation.
-- Protected non-hair areas are restored from source pixels in a lossless PNG.
+- PRO uses the provider result directly without source-pixel compositing.
 - High-damage profiles exclude perm and extension designs.
 - Customer photos, generated images, API keys, and QA artifacts never belong in the repository.

@@ -41,12 +41,8 @@ const state = {
   originalJpegBlob: null,
   sourceViews: { front: '', side: '', back: '', crown: '', nape: '', detail: '' },
   sourceViewBlobs: { front: null, side: null, back: null, crown: null, nape: null, detail: null },
-  sourceViewMasks: new Map(),
   sourceViewIndex: 0,
   sourceProcessing: false,
-  maskViewKey: 'front',
-  maskTool: 'add',
-  maskBrushSize: 36,
   providerInputCache: new Map(),
   sourceKey: '',
   catalog: null,
@@ -245,17 +241,6 @@ function selectedTargetToneIds() {
   return [...new Set(state.hairColorProfile.selectedToneIds.map((toneId) => toneId === PRESERVE_CURRENT_TONE_ID ? current : toneId).filter((toneId) => toneId && toneId !== 'unknown'))];
 }
 
-function colorChangeRequired() {
-  const current = state.hairColorProfile.currentToneId;
-  return current !== 'unknown' && selectedTargetToneIds().some((toneId) => toneId !== current);
-}
-
-function requiredColorMasksReady() {
-  if (!colorChangeRequired()) return true;
-  const profiles = state.hairColorProfile.sourceViewMasks;
-  return availableSourceViewKeys().every((viewKey) => profiles[viewKey]?.confirmed);
-}
-
 function currentColorDetectionLabel() {
   const detection = state.hairColorDetection;
   if (detection.status === 'detecting') return 'AUTO ANALYZING';
@@ -273,23 +258,15 @@ function renderDiagnosisProfile() {
   </section>`;
 }
 
-function renderMaskEditor() {
-  const views = availableSourceViewKeys();
-  const viewKey = views.includes(state.maskViewKey) ? state.maskViewKey : views[0];
-  const profile = state.hairColorProfile.sourceViewMasks[viewKey] || { revision: 0, confirmed: false };
-  const confirmed = views.filter((key) => state.hairColorProfile.sourceViewMasks[key]?.confirmed).length;
-  return `<section class="mask-editor"><div class="color-section-head"><div><b>HAIR MASK</b><small>${confirmed} / ${views.length} CONFIRMED</small></div><span>반투명 골드 영역만 변경</span></div><nav class="mask-view-tabs" aria-label="Mask source views">${views.map((key) => `<button type="button" data-mask-view="${key}" class="${key === viewKey ? 'on' : ''} ${state.hairColorProfile.sourceViewMasks[key]?.confirmed ? 'done' : ''}">${key.toUpperCase()}</button>`).join('')}</nav><div class="mask-workspace"><div class="mask-canvas-stage"><img src="${esc(sourceViewPreview(viewKey))}" alt="${esc(viewKey)} source"><canvas id="hairMaskCanvas" data-mask-canvas="${viewKey}" aria-label="${esc(viewKey)} hair mask editor"></canvas></div><div class="mask-controls"><div class="mask-tools"><button type="button" data-mask-tool="add" class="${state.maskTool === 'add' ? 'on' : ''}">ADD HAIR</button><button type="button" data-mask-tool="protect" class="${state.maskTool === 'protect' ? 'on' : ''}">PROTECT</button></div><label>BRUSH <input id="maskBrushSize" type="range" min="8" max="96" step="4" value="${state.maskBrushSize}"></label><div class="mask-actions"><button type="button" class="secondary" id="resetMask">RESET</button><button type="button" class="next-button" id="confirmMask">${profile.confirmed ? 'CONFIRMED' : 'CONFIRM'}</button></div></div></div></section>`;
-}
-
 function renderColorProfile() {
   const profile = state.hairColorProfile;
   const allowed = deriveAllowedHairColorTones(profile, state.diagnosis);
   const selected = new Set(selectedTargetToneIds());
-  const canContinue = profile.currentToneId !== 'unknown' && requiredColorMasksReady();
+  const canContinue = profile.currentToneId !== 'unknown';
   const emptyMessage = state.hairColorDetection.status === 'detecting' ? '원본 사진에서 현재 머리색을 분석 중입니다.' : '자동 감지 실패 · 현재 머리색을 직접 선택하세요.';
-  const continueMessage = state.structurePreparing ? '100개 구조 후보를 준비하고 있습니다. 잠시만 기다려 주세요.' : profile.currentToneId === 'unknown' ? '현재 머리색을 선택해야 다음 단계로 갈 수 있습니다.' : !requiredColorMasksReady() ? '컬러를 바꾸려면 모든 입력 사진의 HAIR MASK를 CONFIRM 하세요.' : '준비 완료 · NEXT를 누르면 STRUCTURE 단계가 시작됩니다.';
+  const continueMessage = state.structurePreparing ? '100개 구조 후보를 준비하고 있습니다. 잠시만 기다려 주세요.' : profile.currentToneId === 'unknown' ? '현재 머리색을 선택해야 다음 단계로 갈 수 있습니다.' : '준비 완료 · NEXT를 누르면 STRUCTURE 단계가 시작됩니다.';
   const continueStatus = state.structurePreparing ? 'busy' : canContinue ? 'ready' : 'blocked';
-  return `<section class="profile-step color-step"><div class="profile-page-head"><b>COLOR</b><span>2 / 2</span></div><section class="color-section"><div class="color-section-head"><div><b>CURRENT</b><small>${currentColorDetectionLabel()} · 직접 수정 가능</small></div><span>${esc(toneLabel(profile.currentToneId))}</span></div><div class="tone-grid current-tones">${HAIR_COLOR_TONES.map((tone) => `<button type="button" data-current-tone="${tone.id}" class="tone-chip ${profile.currentToneId === tone.id ? 'on' : ''}"><i style="--tone-level:${tone.level}"></i><span>${esc(tone.labelKo)}</span></button>`).join('')}</div></section>${profile.currentToneId === 'unknown' ? `<div class="color-empty">${emptyMessage}</div>` : `<section class="color-section"><div class="color-section-head"><div><b>TARGET</b><small>복수 선택</small></div><span>${profile.intensity === 'balanced' ? 'BALANCED' : 'SUBTLE'}</span></div><div class="tone-grid target-tones">${allowed.map((tone) => `<button type="button" data-target-tone="${tone.id}" class="tone-chip ${selected.has(tone.id) ? 'on' : ''} ${tone.id === profile.currentToneId ? 'fixed' : ''}"><i style="--tone-level:${tone.level}"></i><span>${esc(tone.labelKo)}</span></button>`).join('')}</div><div class="intensity-switch"><button type="button" data-color-intensity="subtle" class="${profile.intensity === 'subtle' ? 'on' : ''}">SUBTLE</button><button type="button" data-color-intensity="balanced" class="${profile.intensity === 'balanced' ? 'on' : ''}">BALANCED</button></div></section>${colorChangeRequired() ? renderMaskEditor() : '<div class="color-empty">현재 색상 유지 · 마스크 확인 불필요</div>'}`}<div class="color-continue-note ${continueStatus}" id="colorContinueStatus" role="status">${continueMessage}</div><div class="actions profile-actions"><button class="secondary" id="backToDiagnosis">BACK</button><button class="next-button" id="toStructures" data-ready="${canContinue ? 'true' : 'false'}" aria-describedby="colorContinueStatus" ${state.structurePreparing ? 'disabled aria-busy="true"' : ''}>${state.structurePreparing ? 'PREPARING…' : 'NEXT'}</button></div></section>`;
+  return `<section class="profile-step color-step"><div class="profile-page-head"><b>COLOR</b><span>2 / 2</span></div><section class="color-section"><div class="color-section-head"><div><b>CURRENT</b><small>${currentColorDetectionLabel()} · 직접 수정 가능</small></div><span>${esc(toneLabel(profile.currentToneId))}</span></div><div class="tone-grid current-tones">${HAIR_COLOR_TONES.map((tone) => `<button type="button" data-current-tone="${tone.id}" class="tone-chip ${profile.currentToneId === tone.id ? 'on' : ''}"><i style="--tone-level:${tone.level}"></i><span>${esc(tone.labelKo)}</span></button>`).join('')}</div></section>${profile.currentToneId === 'unknown' ? `<div class="color-empty">${emptyMessage}</div>` : `<section class="color-section"><div class="color-section-head"><div><b>TARGET</b><small>복수 선택</small></div><span>${profile.intensity === 'balanced' ? 'BALANCED' : 'SUBTLE'}</span></div><div class="tone-grid target-tones">${allowed.map((tone) => `<button type="button" data-target-tone="${tone.id}" class="tone-chip ${selected.has(tone.id) ? 'on' : ''} ${tone.id === profile.currentToneId ? 'fixed' : ''}"><i style="--tone-level:${tone.level}"></i><span>${esc(tone.labelKo)}</span></button>`).join('')}</div><div class="intensity-switch"><button type="button" data-color-intensity="subtle" class="${profile.intensity === 'subtle' ? 'on' : ''}">SUBTLE</button><button type="button" data-color-intensity="balanced" class="${profile.intensity === 'balanced' ? 'on' : ''}">BALANCED</button></div></section><div class="color-empty maskless-notice">MASKLESS · 헤어 마스크 없이 원본 전체를 기준으로 생성합니다.</div>`}<div class="color-continue-note ${continueStatus}" id="colorContinueStatus" role="status">${continueMessage}</div><div class="actions profile-actions"><button class="secondary" id="backToDiagnosis">BACK</button><button class="next-button" id="toStructures" data-ready="${canContinue ? 'true' : 'false'}" aria-describedby="colorContinueStatus" ${state.structurePreparing ? 'disabled aria-busy="true"' : ''}>${state.structurePreparing ? 'PREPARING…' : 'NEXT'}</button></div></section>`;
 }
 
 function renderProfile() {
@@ -410,18 +387,6 @@ function clearProviderInputCache(viewKey = '') {
   for (const key of state.providerInputCache.keys()) if (!viewKey || key.startsWith(`${viewKey}:`)) state.providerInputCache.delete(key);
 }
 
-function updateMaskProfile(viewKey, patch = {}) {
-  const profiles = { ...state.hairColorProfile.sourceViewMasks, [viewKey]: { ...state.hairColorProfile.sourceViewMasks[viewKey], ...patch } };
-  replaceHairColorProfile({ sourceViewMasks: profiles });
-}
-
-function invalidateSourceMask(viewKey) {
-  state.sourceViewMasks.delete(viewKey);
-  clearProviderInputCache(viewKey);
-  const current = state.hairColorProfile.sourceViewMasks[viewKey] || { revision: 0 };
-  updateMaskProfile(viewKey, { revision: current.revision + 1, confirmed: false });
-}
-
 function setCurrentTone(toneId) {
   if (!HAIR_COLOR_TONES.some((tone) => tone.id === toneId)) return;
   replaceHairColorProfile({ currentToneId: toneId, selectedToneIds: [toneId] });
@@ -449,8 +414,26 @@ function goToProfile() {
     return;
   }
   state.error = '';
-  setTimeout(() => { state.profileStep = 0; state.stage = 1; render(); }, 0);
+  state.profileStep = 0;
+  state.stage = 1;
+  render();
 }
+
+function handleNextAction(event) {
+  const button = event.target.closest('button');
+  if (!button || !app.contains(button) || !['toProfile', 'toColor', 'toStructures', 'toVariations', 'toCompare', 'toAgreement'].includes(button.id)) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  if (button.disabled) return;
+  if (button.id === 'toProfile') goToProfile();
+  else if (button.id === 'toColor') { syncIntake(); reconcileHairColorProfile(); state.profileStep = 1; render(); }
+  else if (button.id === 'toStructures') startStructureExplore();
+  else if (button.id === 'toVariations') { hydrateVariations(); state.stage = 3; render(); }
+  else if (button.id === 'toCompare') startCompare();
+  else if (button.id === 'toAgreement') { state.stage = 5; render(); }
+}
+
+app.addEventListener('click', handleNextAction, true);
 
 function bind() {
   document.querySelector('#backToList')?.addEventListener('click', () => { state.stage = state.structureSlots.length ? 2 : 0; render(); });
@@ -460,33 +443,21 @@ function bind() {
   document.querySelectorAll('[data-source-view]').forEach((button) => button.addEventListener('click', () => { state.sourceViewIndex = Number(button.dataset.sourceView); render(); }));
   document.querySelectorAll('[data-source-step]').forEach((button) => button.addEventListener('click', () => { state.sourceViewIndex = Math.max(0, Math.min(BOARD_VIEWS.length - 1, state.sourceViewIndex + Number(button.dataset.sourceStep))); render(); }));
   document.querySelectorAll('[data-gender]').forEach((button) => button.addEventListener('click', () => { state.diagnosis.profileGender = button.dataset.gender; invalidateGeneratedSurfaces('profile-change'); render(); }));
-  document.querySelector('#toProfile')?.addEventListener('click', goToProfile);
   document.querySelectorAll('.dot-range').forEach((input) => input.addEventListener('input', () => updateDiagnosisRange(input)));
   document.querySelector('#mood')?.addEventListener('input', (event) => { state.mood = event.target.value; if (state.structureSlots.length || state.batch) invalidateGeneratedSurfaces('profile-change'); });
-  document.querySelector('#toColor')?.addEventListener('click', () => { syncIntake(); reconcileHairColorProfile(); state.profileStep = 1; render(); });
   document.querySelector('#backToDiagnosis')?.addEventListener('click', () => { state.profileStep = 0; render(); });
   document.querySelectorAll('[data-current-tone]').forEach((button) => button.addEventListener('click', () => setCurrentTone(button.dataset.currentTone)));
   document.querySelectorAll('[data-target-tone]').forEach((button) => button.addEventListener('click', () => toggleTargetTone(button.dataset.targetTone)));
   document.querySelectorAll('[data-color-intensity]').forEach((button) => button.addEventListener('click', () => { replaceHairColorProfile({ intensity: button.dataset.colorIntensity }); invalidateGeneratedSurfaces('color-change'); render(); }));
-  document.querySelectorAll('[data-mask-view]').forEach((button) => button.addEventListener('click', () => { state.maskViewKey = button.dataset.maskView; render(); }));
-  document.querySelectorAll('[data-mask-tool]').forEach((button) => button.addEventListener('click', () => { state.maskTool = button.dataset.maskTool; document.querySelectorAll('[data-mask-tool]').forEach((item) => item.classList.toggle('on', item === button)); }));
-  document.querySelector('#maskBrushSize')?.addEventListener('input', (event) => { state.maskBrushSize = Number(event.target.value); });
-  document.querySelector('#resetMask')?.addEventListener('click', () => { invalidateSourceMask(state.maskViewKey); render(); });
-  document.querySelector('#confirmMask')?.addEventListener('click', confirmCurrentMask);
-  document.querySelector('#toStructures')?.addEventListener('click', startStructureExplore);
   document.querySelectorAll('[data-structure-slot]').forEach((button) => button.addEventListener('click', () => selectStructureSlot(Number(button.dataset.structureSlot))));
-  document.querySelector('#toVariations')?.addEventListener('click', () => { hydrateVariations(); state.stage = 3; render(); });
   document.querySelector('#mood2')?.addEventListener('input', (event) => { const { selectionStart, selectionEnd } = event.target; state.mood = event.target.value; clearTimeout(moodRankTimer); moodRankTimer = setTimeout(() => { if (state.stage !== 3) return; state.ranked = rankFeasibleVariations(state.variations); state.variationPage = 0; state.selectedVariation = state.ranked.find((variation) => evaluateVariation(variation, state.diagnosis).status !== 'impossible') || null; render(); restoreTextFocus('mood2', selectionStart, selectionEnd); }, 350); });
   document.querySelector('#prevVariation')?.addEventListener('click', () => { state.variationPage = Math.max(0, state.variationPage - 1); render(); });
   document.querySelector('#nextVariation')?.addEventListener('click', () => { const pages = Math.max(1, Math.ceil(state.ranked.length / 72)); state.variationPage = Math.min(pages - 1, state.variationPage + 1); render(); });
   document.querySelectorAll('[data-var]').forEach((button) => button.addEventListener('click', () => { state.selectedVariation = state.ranked.find((variation) => String(variation.id) === button.dataset.var); render(); }));
-  document.querySelector('#toCompare')?.addEventListener('click', startCompare);
   document.querySelectorAll('[data-short]').forEach((input) => input.addEventListener('change', toggleShort));
-  document.querySelector('#toAgreement')?.addEventListener('click', () => { state.stage = 5; render(); });
   document.querySelector('#print')?.addEventListener('click', () => window.print());
   document.querySelector('#downloadJson')?.addEventListener('click', downloadJson);
   document.querySelector('#handoff')?.addEventListener('click', handoff);
-  if (state.stage === 1 && state.profileStep === 1 && colorChangeRequired()) initMaskEditor().catch(() => { state.error = 'MASK ERROR'; render(); });
 }
 
 async function ensureCatalog() {
@@ -593,7 +564,6 @@ async function startStructureExplore() {
     syncIntake();
     if (!requiredSourceViewsReady()) throw new Error('FRONT REQUIRED · FRONT 사진을 먼저 추가하세요.');
     if (state.hairColorProfile.currentToneId === 'unknown') throw new Error('CURRENT COLOR REQUIRED · 현재 머리색을 선택하세요.');
-    if (!requiredColorMasksReady()) throw new Error('HAIR MASK CONFIRMATION REQUIRED · 모든 입력 사진의 마스크를 CONFIRM 하세요.');
     const cfg = resolvedProviderConfig();
     if (!cfg.baseURL || !cfg.apiKey || cfg.apiKey === 'YOUR_PROXY_API_KEY') throw new Error('API REQUIRED · PROFILE 1/2의 API 설정을 확인하세요.');
     state.structurePreparing = true;
@@ -644,8 +614,7 @@ async function loadBoardView(event) {
     const prepared = await prepareOriginalJpeg(file);
     state.sourceViews[role] = prepared.dataUrl;
     state.sourceViewBlobs[role] = prepared.blob;
-    invalidateSourceMask(role);
-    state.maskViewKey = role;
+    clearProviderInputCache(role);
     state.error = '';
   } catch {
     state.error = 'IMAGE ERROR';
@@ -667,10 +636,9 @@ async function loadPhoto(event) {
     state.originalJpegDataUrl = prepared.dataUrl;
     state.originalJpegBlob = prepared.blob;
     state.sourceViewBlobs.front = prepared.blob;
-    invalidateSourceMask('front');
+    clearProviderInputCache('front');
     state.sourceKey = await sourcePhotoKey(new Uint8Array(await prepared.blob.arrayBuffer()), prepared.blob.type);
     state.sourceViews.front = prepared.dataUrl;
-    state.maskViewKey = 'front';
     state.shortlist.clear();
     replaceHairColorProfile({ currentToneId: 'unknown', selectedToneIds: [PRESERVE_CURRENT_TONE_ID] });
     try {
@@ -722,24 +690,45 @@ async function detectCurrentHairTone(viewKey = 'front') {
   const sourceBlob = state.sourceViewBlobs[viewKey];
   if (!(sourceBlob instanceof Blob)) return { toneId: 'unknown', confidence: 0 };
   state.hairColorDetection = { status: 'detecting', source: 'auto', toneId: 'unknown', confidence: 0 };
-  const maskBlob = await hairOnlyMask(viewKey);
-  const [source, mask] = await Promise.all([loadBlobImage(sourceBlob, 'Color source decode failed'), loadBlobImage(maskBlob, 'Color mask decode failed')]);
+  const source = await loadBlobImage(sourceBlob, 'Color source decode failed');
   const scale = Math.min(1, 256 / Math.max(source.naturalWidth, source.naturalHeight));
   const width = Math.max(1, Math.round(source.naturalWidth * scale));
   const height = Math.max(1, Math.round(source.naturalHeight * scale));
-  const sourceCanvas = document.createElement('canvas');
-  sourceCanvas.width = width;
-  sourceCanvas.height = height;
-  sourceCanvas.getContext('2d').drawImage(source, 0, 0, width, height);
-  const maskCanvas = document.createElement('canvas');
-  maskCanvas.width = width;
-  maskCanvas.height = height;
-  maskCanvas.getContext('2d').drawImage(mask, 0, 0, width, height);
-  const sourcePixels = sourceCanvas.getContext('2d').getImageData(0, 0, width, height).data;
-  const maskPixels = maskCanvas.getContext('2d').getImageData(0, 0, width, height).data;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d');
+  context.drawImage(source, 0, 0, width, height);
+  const pixels = context.getImageData(0, 0, width, height).data;
+  const samplingRegions = {
+    front: [[0.5, 0.24, 0.24, 0.15], [0.33, 0.36, 0.08, 0.14], [0.67, 0.36, 0.08, 0.14]],
+    side: [[0.5, 0.25, 0.25, 0.17], [0.43, 0.38, 0.14, 0.14]],
+    back: [[0.5, 0.31, 0.28, 0.23]],
+    crown: [[0.5, 0.48, 0.32, 0.3]],
+    nape: [[0.5, 0.35, 0.28, 0.26]],
+    detail: [[0.5, 0.5, 0.35, 0.38]]
+  };
+  const excludedRegions = {
+    front: [[0.5, 0.59, 0.3, 0.3], [0.22, 0.48, 0.055, 0.11], [0.78, 0.48, 0.055, 0.11]],
+    side: [[0.5, 0.61, 0.31, 0.3], [0.77, 0.47, 0.07, 0.12]],
+    back: [[0.5, 0.69, 0.18, 0.22]],
+    nape: [[0.5, 0.7, 0.18, 0.23]]
+  };
+  const inside = (x, y, region) => {
+    const [cx, cy, rx, ry] = region;
+    return ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1;
+  };
+  const included = samplingRegions[viewKey] ?? samplingRegions.front;
+  const excluded = excludedRegions[viewKey] ?? [];
   const samples = [];
-  for (let index = 0; index < sourcePixels.length; index += 4) {
-    if (maskPixels[index + 3] <= 32) samples.push([sourcePixels[index], sourcePixels[index + 1], sourcePixels[index + 2]]);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const nx = (x + 0.5) / width;
+      const ny = (y + 0.5) / height;
+      if (!included.some((region) => inside(nx, ny, region)) || excluded.some((region) => inside(nx, ny, region))) continue;
+      const index = (y * width + x) * 4;
+      samples.push([pixels[index], pixels[index + 1], pixels[index + 2]]);
+    }
   }
   const detection = classifyHairColorSamples(samples);
   if (state.sourceViewBlobs[viewKey] !== sourceBlob) return { ...detection, stale: true };
@@ -776,136 +765,6 @@ function prepareOriginalJpeg(file, maxEdge = 1024, quality = 0.82) {
   });
 }
 
-async function hairOnlyMask(viewKey) {
-  if (state.sourceViewMasks.has(viewKey)) return state.sourceViewMasks.get(viewKey);
-  const sourceBlob = state.sourceViewBlobs[viewKey];
-  if (!(sourceBlob instanceof Blob)) throw new Error(`Missing source view: ${viewKey}`);
-  const image = await new Promise((resolve, reject) => {
-    const element = new Image();
-    const objectUrl = URL.createObjectURL(sourceBlob);
-    element.onload = () => { URL.revokeObjectURL(objectUrl); resolve(element); };
-    element.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error('Mask source decode failed')); };
-    element.src = objectUrl;
-  });
-  const canvas = document.createElement('canvas');
-  canvas.width = image.naturalWidth;
-  canvas.height = image.naturalHeight;
-  const context = canvas.getContext('2d');
-  context.fillStyle = '#000';
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  const editableRegions = {
-    front: [[0.5, 0.24, 0.24, 0.15], [0.33, 0.36, 0.08, 0.14], [0.67, 0.36, 0.08, 0.14]],
-    side: [[0.5, 0.25, 0.25, 0.17], [0.43, 0.38, 0.14, 0.14]],
-    back: [[0.5, 0.31, 0.28, 0.23]],
-    crown: [[0.5, 0.48, 0.32, 0.3]],
-    nape: [[0.5, 0.35, 0.28, 0.26]],
-    detail: [[0.5, 0.5, 0.35, 0.38]]
-  };
-  const protectedRegions = {
-    front: [[0.5, 0.59, 0.3, 0.3], [0.22, 0.48, 0.055, 0.11], [0.78, 0.48, 0.055, 0.11]],
-    side: [[0.5, 0.61, 0.31, 0.3], [0.77, 0.47, 0.07, 0.12]],
-    back: [[0.5, 0.69, 0.18, 0.22]],
-    nape: [[0.5, 0.7, 0.18, 0.23]]
-  };
-  const paintRegions = (regions, operation, feather) => {
-    context.save();
-    context.globalCompositeOperation = operation;
-    context.fillStyle = '#000';
-    context.filter = feather ? `blur(${Math.max(2, Math.round(Math.min(canvas.width, canvas.height) * feather))}px)` : 'none';
-    for (const [x, y, rx, ry] of regions) {
-      context.beginPath();
-      context.ellipse(canvas.width * x, canvas.height * y, canvas.width * rx, canvas.height * ry, 0, 0, Math.PI * 2);
-      context.fill();
-    }
-    context.restore();
-  };
-  paintRegions(editableRegions[viewKey] ?? editableRegions.front, 'destination-out', 0.012);
-  paintRegions(protectedRegions[viewKey] ?? [], 'source-over', 0.008);
-  const mask = await new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Mask encode failed')), 'image/png'));
-  state.sourceViewMasks.set(viewKey, mask);
-  return mask;
-}
-
-function renderMaskOverlay(canvas) {
-  const dataCanvas = canvas._maskDataCanvas;
-  if (!dataCanvas) return;
-  const context = canvas.getContext('2d');
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.fillStyle = 'rgba(202,164,115,.48)';
-  context.fillRect(0, 0, canvas.width, canvas.height);
-  context.globalCompositeOperation = 'destination-out';
-  context.drawImage(dataCanvas, 0, 0, canvas.width, canvas.height);
-  context.globalCompositeOperation = 'source-over';
-}
-
-async function saveMaskCanvas(canvas, confirmed) {
-  const viewKey = canvas?.dataset.maskCanvas;
-  const dataCanvas = canvas?._maskDataCanvas;
-  if (!viewKey || !dataCanvas) throw new Error('Mask editor is not ready');
-  const mask = await canvasToBlob(dataCanvas, 'image/png');
-  state.sourceViewMasks.set(viewKey, mask);
-  clearProviderInputCache(viewKey);
-  const current = state.hairColorProfile.sourceViewMasks[viewKey] || { revision: 0 };
-  updateMaskProfile(viewKey, { revision: current.revision + 1, confirmed });
-  const confirm = document.querySelector('#confirmMask');
-  if (confirm) confirm.textContent = confirmed ? 'CONFIRMED' : 'CONFIRM';
-}
-
-async function initMaskEditor() {
-  const canvas = document.querySelector('#hairMaskCanvas');
-  if (!canvas || canvas._maskDataCanvas) return canvas;
-  const viewKey = canvas.dataset.maskCanvas;
-  const sourceBlob = state.sourceViewBlobs[viewKey];
-  if (!(sourceBlob instanceof Blob)) throw new Error('Mask source missing');
-  const maskBlob = await hairOnlyMask(viewKey);
-  const [source, mask] = await Promise.all([loadBlobImage(sourceBlob, 'Mask source decode failed'), loadBlobImage(maskBlob, 'Mask decode failed')]);
-  if (!canvas.isConnected) return null;
-  canvas.width = source.naturalWidth;
-  canvas.height = source.naturalHeight;
-  const dataCanvas = document.createElement('canvas');
-  dataCanvas.width = canvas.width;
-  dataCanvas.height = canvas.height;
-  dataCanvas.getContext('2d').drawImage(mask, 0, 0, dataCanvas.width, dataCanvas.height);
-  canvas._maskDataCanvas = dataCanvas;
-  renderMaskOverlay(canvas);
-  let drawing = false;
-  const paint = (event) => {
-    if (!drawing) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = (event.clientX - rect.left) * canvas.width / rect.width;
-    const y = (event.clientY - rect.top) * canvas.height / rect.height;
-    const radius = state.maskBrushSize * canvas.width / Math.max(1, rect.width) / 2;
-    const context = dataCanvas.getContext('2d');
-    context.save();
-    context.globalCompositeOperation = state.maskTool === 'protect' ? 'source-over' : 'destination-out';
-    context.fillStyle = '#000';
-    context.beginPath();
-    context.arc(x, y, radius, 0, Math.PI * 2);
-    context.fill();
-    context.restore();
-    renderMaskOverlay(canvas);
-  };
-  canvas.addEventListener('pointerdown', (event) => { drawing = true; canvas.setPointerCapture(event.pointerId); paint(event); });
-  canvas.addEventListener('pointermove', paint);
-  canvas.addEventListener('pointerup', async (event) => { if (!drawing) return; drawing = false; canvas.releasePointerCapture(event.pointerId); await saveMaskCanvas(canvas, false); });
-  canvas.addEventListener('pointercancel', () => { drawing = false; });
-  return canvas;
-}
-
-async function confirmCurrentMask() {
-  try {
-    const canvas = await initMaskEditor();
-    if (!canvas) return;
-    await saveMaskCanvas(canvas, true);
-    const next = availableSourceViewKeys().find((key) => !state.hairColorProfile.sourceViewMasks[key]?.confirmed);
-    if (next) state.maskViewKey = next;
-    render();
-  } catch {
-    state.error = 'MASK ERROR';
-    render();
-  }
-}
-
 async function flipBlobHorizontally(blob, type = blob.type || 'image/png') {
   const image = await loadBlobImage(blob, 'Transform decode failed');
   const canvas = document.createElement('canvas');
@@ -921,44 +780,21 @@ async function flipBlobHorizontally(blob, type = blob.type || 'image/png') {
 async function providerInputsForItem(item) {
   const viewKey = item.sourceViewKey || item.generationAxes?.sourceViewKey || 'front';
   const mirrored = Boolean(item.generationAxes?.mirrored);
-  const revision = state.hairColorProfile.sourceViewMasks[viewKey]?.revision ?? 0;
-  const key = `${viewKey}:${mirrored ? 1 : 0}:${revision}`;
+  const key = `${viewKey}:${mirrored ? 1 : 0}`;
   if (state.providerInputCache.has(key)) return state.providerInputCache.get(key);
-  const sourceBlob = state.sourceViewBlobs[viewKey];
-  if (!(sourceBlob instanceof Blob)) throw new Error(`Missing source view: ${viewKey}`);
-  const maskBlob = await hairOnlyMask(viewKey);
-  const value = mirrored
-    ? { sourceBlob: await flipBlobHorizontally(sourceBlob, 'image/jpeg'), maskBlob: await flipBlobHorizontally(maskBlob, 'image/png'), originalSourceBlob: sourceBlob, originalMaskBlob: maskBlob }
-    : { sourceBlob, maskBlob, originalSourceBlob: sourceBlob, originalMaskBlob: maskBlob };
+  const originalSourceBlob = state.sourceViewBlobs[viewKey];
+  if (!(originalSourceBlob instanceof Blob)) throw new Error(`Missing source view: ${viewKey}`);
+  const value = { sourceBlob: mirrored ? await flipBlobHorizontally(originalSourceBlob, 'image/jpeg') : originalSourceBlob };
   state.providerInputCache.set(key, value);
   return value;
 }
 
-async function compositeHairOnlyResult(resultUrl, sourceBlob, maskBlob, signal, mirrored = false) {
+async function restoreGeneratedOrientation(resultUrl, signal, mirrored = false) {
   const response = await fetch(resultUrl, { signal });
   if (!response.ok) throw new Error('Generated image fetch failed');
   const generatedBlob = await response.blob();
-  const [source, generated, mask] = await Promise.all([loadBlobImage(sourceBlob, 'Composite source decode failed'), loadBlobImage(generatedBlob, 'Composite image decode failed'), loadBlobImage(maskBlob, 'Composite mask decode failed')]);
-  const canvas = document.createElement('canvas');
-  canvas.width = source.naturalWidth;
-  canvas.height = source.naturalHeight;
-  const context = canvas.getContext('2d');
-  context.drawImage(source, 0, 0, canvas.width, canvas.height);
-  const edited = document.createElement('canvas');
-  edited.width = canvas.width;
-  edited.height = canvas.height;
-  const editedContext = edited.getContext('2d');
-  if (mirrored) {
-    editedContext.translate(edited.width, 0);
-    editedContext.scale(-1, 1);
-  }
-  editedContext.drawImage(generated, 0, 0, edited.width, edited.height);
-  if (mirrored) editedContext.setTransform(1, 0, 0, 1, 0, 0);
-  editedContext.globalCompositeOperation = 'destination-out';
-  editedContext.drawImage(mask, 0, 0, edited.width, edited.height);
-  context.drawImage(edited, 0, 0);
-  const safeBlob = await canvasToBlob(canvas, 'image/png');
-  return { url: await blobToDataUrl(safeBlob), bytes: safeBlob.size, mimeType: 'image/png' };
+  const resultBlob = mirrored ? await flipBlobHorizontally(generatedBlob, 'image/png') : generatedBlob;
+  return { url: await blobToDataUrl(resultBlob), bytes: resultBlob.size, mimeType: resultBlob.type || (mirrored ? 'image/png' : 'image/jpeg') };
 }
 
 function resolvedProviderConfig() {
@@ -986,11 +822,6 @@ async function startCompare() {
   const cfg = resolvedProviderConfig();
   if (!state.originalJpegBlob || !state.originalJpegDataUrl) {
     state.error = 'FRONT REQUIRED';
-    render();
-    return;
-  }
-  if (!requiredColorMasksReady()) {
-    state.error = 'HAIR MASK CONFIRMATION REQUIRED';
     render();
     return;
   }
@@ -1112,7 +943,7 @@ function consultationPrompt(record, item) {
   const targetToneId = axes.colorToneId || currentToneId;
   const colorRule = targetToneId === currentToneId
     ? `COLOR: preserve the exact current hair tone (${toneLabel(currentToneId)}). No global color grading.`
-    : `COLOR: change only masked hair from ${toneLabel(currentToneId)} to ${toneLabel(targetToneId)} with ${axes.intensity || state.hairColorProfile.intensity} intensity. Keep roots, depth and highlights natural; no global color grading.`;
+    : `COLOR: change hair from ${toneLabel(currentToneId)} to ${toneLabel(targetToneId)} with ${axes.intensity || state.hairColorProfile.intensity} intensity. Keep roots, depth and highlights natural; no global color grading.`;
   const viewRule = {
     front: 'Preserve the exact front-facing pose, facial geometry, gaze and expression.',
     side: 'Preserve the exact side profile, nose line, jaw line, ear position and neck angle.',
@@ -1125,13 +956,13 @@ function consultationPrompt(record, item) {
     `TASK: edit only the hair in the single uploaded original customer ${viewKey} photograph.`,
     `SOURCE VIEW: ${viewKey.toUpperCase()}. Return the same view and camera angle.`,
     `SOURCE TRANSFORM: ${axes.mirrored ? 'HORIZONTAL MIRROR AUGMENTATION; keep the supplied mirrored orientation exactly so the client can invert it back.' : 'ORIGINAL ORIENTATION; do not mirror.'}`,
-    `GENERATION AXES: v${axes.version || CONSULTATION_GENERATION_AXES_VERSION}; source-transform v${axes.sourceTransformVersion || CONSULTATION_SOURCE_TRANSFORM_VERSION}; mask revision ${state.hairColorProfile.sourceViewMasks[viewKey]?.revision ?? 0}.`,
+    `GENERATION AXES: v${axes.version || CONSULTATION_GENERATION_AXES_VERSION}; source-transform v${axes.sourceTransformVersion || CONSULTATION_SOURCE_TRANSFORM_VERSION}; maskless full-frame edit.`,
     'OUTPUT CONTRACT: exactly ONE full-frame image and ONE person.',
     'PIXEL LOCK: every non-hair pixel must remain unchanged. Do not redraw, regenerate, beautify, retouch or reinterpret face shape, identity, expression, skin, scalp skin, eyes, eyebrows, facial hair, nose, lips, jaw, ears, neck, body, clothing, background, lighting, framing or camera angle.',
-    'FACE LOCK: preserve exact identity, proportions, expression, gaze, skin texture and pixel alignment. No face slimming, eye enlargement, skin smoothing or symmetry correction.',
-    'HAIRLINE LOCK: preserve the exact forehead, temples and visible hairline boundary. Never recolor scalp skin or generate hair across protected skin.',
+    'FACE LOCK: preserve exact identity, proportions, expression, gaze, skin texture and alignment. No face slimming, eye enlargement, skin smoothing or symmetry correction.',
+    'HAIRLINE LOCK: preserve the exact forehead, temples and visible hairline boundary. Never recolor scalp skin or generate hair across skin.',
     'COLOR BOUNDARY: never recolor face, eyebrows, facial hair, ears, neck, body, clothing, background, highlights outside hair, or the whole frame.',
-    'MASK CONTRACT: modify transparent mask pixels only. Opaque mask pixels are immutable source pixels.',
+    'MASKLESS CONTRACT: no edit mask is supplied. Render the requested hairstyle as one natural continuous silhouette, including necessary length or volume beyond the current hair outline, while changing hair only.',
     viewRule,
     'PRESERVE SOURCE FRAME: no crop, zoom, enlargement, reframing, collage, split screen, duplicate person, inset or border.',
     textureControlPrompt(record),
@@ -1164,7 +995,6 @@ async function requestImageEdit(item, signal) {
   form.append('output_compression', '70');
   const suffix = item.generationAxes?.mirrored ? 'mirror' : 'original';
   form.append('image', inputs.sourceBlob, `${designId}-${viewKey}-${suffix}.jpg`);
-  form.append('mask', inputs.maskBlob, `${designId}-${viewKey}-${suffix}-hair-mask.png`);
   const response = await fetch(cfg.baseURL.replace(/\/+$/, '') + '/images/edits', { method: 'POST', headers: { Authorization: `Bearer ${cfg.apiKey}` }, body: form, signal });
   if (!response.ok) return { ok: false, errorType: 'http', statusCode: response.status };
   let payload;
@@ -1173,10 +1003,10 @@ async function requestImageEdit(item, signal) {
   const normalized = normalizeProviderResult(datum ? { ...datum, providerStatus: response.status } : null, { designId, batchId: state.batch?.batchId, slotIndex: item.slotIndex });
   if (!normalized.ok) return { ok: false, errorType: normalized.errorCode, statusCode: normalized.providerStatus || response.status };
   try {
-    const safe = await compositeHairOnlyResult(normalized.url, inputs.originalSourceBlob, inputs.originalMaskBlob, signal, Boolean(item.generationAxes?.mirrored));
-    return { ...normalized, ...safe, providerKind: `${normalized.providerKind}-hair-mask-composite` };
+    const restored = await restoreGeneratedOrientation(normalized.url, signal, Boolean(item.generationAxes?.mirrored));
+    return { ...normalized, ...restored, providerKind: `${normalized.providerKind}-maskless${item.generationAxes?.mirrored ? '-unmirrored' : ''}` };
   } catch (error) {
-    return { ok: false, errorType: error?.name === 'AbortError' ? 'aborted' : 'composite', statusCode: 0 };
+    return { ok: false, errorType: error?.name === 'AbortError' ? 'aborted' : 'result', statusCode: 0 };
   }
 }
 

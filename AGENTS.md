@@ -62,10 +62,10 @@ HOST=127.0.0.1 PORT=4180 npm run start
 - PRO requires FRONT and accepts optional SIDE / BACK / CROWN / NAPE / DETAIL originals.
 - PRO PROFILE is two pages: diagnosis, then deterministic FRONT-based current-color selection with visible confidence and manual correction, plus bounded natural target colors.
 - PRO user-facing length choices are exactly `짧은 머리 / 중간 / 장발`.
-- Any non-current target color requires a confirmed hair mask for every supplied source view.
+- PRO does not create, confirm, or send hair masks; current and non-current natural tones use the same maskless provider path.
 - PRO fixed 100-slot allocations remain deterministic, approximately balance supplied views, and retain view/mirror/color axes through retries.
-- Provider-side mirrored sources and masks must be flipped back before compositing and display.
-- PRO outputs must restore all protected pixels from the original source and encode the final composite as PNG.
+- Provider-side mirrored source images must be flipped back before display.
+- PRO displays the provider result directly after orientation restoration; it does not composite protected source pixels over the result.
 - Consultation handoff schema v2 must validate schema, generation-axis, source-transform, catalog, and prompt versions; legacy v1 is migration-only.
 
 ## Runtime catalog

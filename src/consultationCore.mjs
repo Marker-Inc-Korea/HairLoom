@@ -143,15 +143,6 @@ export function validateStableTaxonomyIds(records) {
   return { coreCount, structureCount: structureKeys.size, tupleCount: tuples.size };
 }
 
-function normalizeSourceViewMaskProfiles(raw = {}) {
-  const profiles = {};
-  for (const viewKey of SOURCE_VIEW_KEYS) {
-    const value = raw?.[viewKey] ?? {};
-    profiles[viewKey] = Object.freeze({ revision: Math.max(0, Math.trunc(finiteNumber(value.revision, 0))), confirmed: Boolean(value.confirmed) });
-  }
-  return Object.freeze(profiles);
-}
-
 export function normalizeHairColorProfile(raw = {}) {
   const requestedCurrent = String(raw.currentToneId ?? 'unknown');
   const currentToneId = requestedCurrent === 'unknown' || HAIR_COLOR_TONE_BY_ID.has(requestedCurrent) ? requestedCurrent : 'unknown';
@@ -163,8 +154,7 @@ export function normalizeHairColorProfile(raw = {}) {
   return Object.freeze({
     currentToneId,
     selectedToneIds: Object.freeze(selectedToneIds),
-    intensity,
-    sourceViewMasks: normalizeSourceViewMaskProfiles(raw.sourceViewMasks ?? raw.maskProfiles)
+    intensity
   });
 }
 
@@ -235,7 +225,6 @@ export function evaluateHairColorFeasibility(targetToneId, rawProfile = {}, rawD
   if (profile.currentToneId === 'unknown') return { status: 'impossible', reasons: ['현재 머리색 선택 필요'], levelDelta: null };
   const allowed = new Set(deriveAllowedHairColorTones(profile, diagnosis).map((tone) => tone.id));
   if (!allowed.has(targetId)) return { status: 'impossible', reasons: ['현재 모발 상태에서 허용되지 않는 색상'], levelDelta: null };
-  if (!profile.sourceViewMasks[sourceViewKey]?.confirmed) return { status: 'impossible', reasons: [`${sourceViewKey.toUpperCase()} 헤어 마스크 확인 필요`], levelDelta: null };
   const current = HAIR_COLOR_TONE_BY_ID.get(profile.currentToneId);
   const target = HAIR_COLOR_TONE_BY_ID.get(targetId);
   const levelDelta = Math.abs(target.level - current.level);
