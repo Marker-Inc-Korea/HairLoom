@@ -23,6 +23,7 @@ import {
   canonicalStructureKey,
   deriveAllowedHairColorTones,
   evaluateHairColorFeasibility,
+  classifyHairColorSamples,
   evaluateVariation,
   expandStructureGroup,
   groupCoreCatalog,
@@ -200,6 +201,21 @@ test('natural color profile bounds black to adjacent tones and requires per-view
   assert.equal(legacy.currentToneId, 'unknown');
   assert.deepEqual(legacy.selectedToneIds, [PRESERVE_CURRENT_TONE_ID]);
   assert.equal(HAIR_COLOR_TONES.length, 7);
+});
+
+test('hair color samples classify dark and natural brown tones deterministically', () => {
+  const samples = (rgb, count = 900) => Array.from({ length: count }, (_, index) => rgb.map((value, channel) => value + ((index + channel) % 5) - 2));
+  const naturalBlack = classifyHairColorSamples(samples([28, 27, 26]));
+  const darkBrown = classifyHairColorSamples(samples([76, 68, 62]));
+  const warmBrown = classifyHairColorSamples(samples([148, 119, 92]));
+  const ashBrown = classifyHairColorSamples(samples([132, 137, 145]));
+  assert.equal(naturalBlack.toneId, 'natural-black');
+  assert.equal(darkBrown.toneId, 'dark-brown');
+  assert.equal(warmBrown.toneId, 'warm-brown');
+  assert.equal(ashBrown.toneId, 'muted-ash-brown');
+  assert.ok(naturalBlack.confidence >= 0.9);
+  assert.deepEqual(classifyHairColorSamples(samples([76, 68, 62])), darkBrown);
+  assert.equal(classifyHairColorSamples([[10, 10, 10]]).toneId, 'unknown');
 });
 
 test('suitability is auditable, hair-only, and reaches 100 for an exact preference match', () => {

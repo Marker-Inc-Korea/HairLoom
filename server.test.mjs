@@ -94,8 +94,8 @@ test('serves only consultation route and allowlisted consultation assets', async
       assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
       assert.match(response.headers.get('cache-control') || '', /no-store/);
       const html = await response.text();
-      assert.match(html, /styles\.css\?v=20260726-color-diversity-v2/);
-      assert.match(html, /app\.mjs\?v=20260726-color-diversity-v2/);
+      assert.match(html, /styles\.css\?v=20260727-auto-color-v3/);
+      assert.match(html, /app\.mjs\?v=20260727-auto-color-v3/);
     }
     for (const [path, mime] of [['/consultation/styles.css', /^text\/css/], ['/consultation/app.mjs', /^text\/javascript/], ['/src/consultationCore.mjs', /^text\/javascript/]]) {
       const response = await fetch(`http://127.0.0.1:${port}${path}`);
@@ -105,6 +105,8 @@ test('serves only consultation route and allowlisted consultation assets', async
       assert.match(response.headers.get('cache-control') || '', /no-store/);
     }
     const appSource = await (await fetch(`http://127.0.0.1:${port}/consultation/app.mjs`)).text();
+    const coreSource = await (await fetch(`http://127.0.0.1:${port}/src/consultationCore.mjs`)).text();
+    assert.match(coreSource, /export function classifyHairColorSamples/);
     assert.match(appSource, /\['SOURCE', 'PROFILE', 'STRUCTURE', 'VARIATION', 'COMPARE', 'LOCK'\]/);
     assert.match(appSource, /FRONT REQUIRED/);
     assert.match(appSource, /purpose: 'structure'/);
@@ -127,6 +129,9 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /HAIR_COLOR_TONES/);
     assert.match(appSource, /deriveAllowedHairColorTones/);
     assert.match(appSource, /data-current-tone/);
+    assert.match(appSource, /detectCurrentHairTone/);
+    assert.match(appSource, /AUTO \$\{Math\.round\(detection\.confidence \* 100\)\}%/);
+    assert.match(appSource, /직접 수정 가능/);
     assert.match(appSource, /data-target-tone/);
     assert.match(appSource, /data-mask-tool/);
     assert.match(appSource, /HAIR MASK CONFIRMATION REQUIRED/);

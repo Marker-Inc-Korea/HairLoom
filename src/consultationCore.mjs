@@ -168,6 +168,51 @@ export function normalizeHairColorProfile(raw = {}) {
   });
 }
 
+function sampleQuantile(sorted, ratio) {
+  if (!sorted.length) return 0;
+  const index = Math.max(0, Math.min(sorted.length - 1, Math.round((sorted.length - 1) * ratio)));
+  return sorted[index];
+}
+
+export function classifyHairColorSamples(rawSamples = []) {
+  const samples = [];
+  for (const raw of rawSamples ?? []) {
+    const values = Array.isArray(raw) ? raw : [raw?.r, raw?.g, raw?.b];
+    const [r, g, b] = values.map((value) => Math.max(0, Math.min(255, finiteNumber(value, NaN))));
+    if (![r, g, b].every(Number.isFinite)) continue;
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    if (luminance < 4 || luminance > 210) continue;
+    samples.push({ r, g, b, luminance });
+  }
+  if (samples.length < 24) return { toneId: 'unknown', confidence: 0, sampleCount: samples.length, medianLuminance: null, undertone: 'unknown' };
+  samples.sort((a, b) => a.luminance - b.luminance);
+  const lower = Math.floor(samples.length * 0.05);
+  const upper = Math.max(lower + 1, Math.ceil(samples.length * 0.7));
+  const focused = samples.slice(lower, upper);
+  const luminances = focused.map((sample) => sample.luminance).sort((a, b) => a - b);
+  const reds = focused.map((sample) => sample.r).sort((a, b) => a - b);
+  const greens = focused.map((sample) => sample.g).sort((a, b) => a - b);
+  const blues = focused.map((sample) => sample.b).sort((a, b) => a - b);
+  const medianLuminance = sampleQuantile(luminances, 0.5);
+  const medianR = sampleQuantile(reds, 0.5);
+  const medianG = sampleQuantile(greens, 0.5);
+  const medianB = sampleQuantile(blues, 0.5);
+  const warmBias = medianR - medianB;
+  const coolBias = medianB - medianR;
+  const undertone = coolBias >= 8 ? 'cool' : warmBias >= 10 && medianR >= medianG ? 'warm' : 'neutral';
+  let toneId;
+  if (medianLuminance < 42) toneId = 'natural-black';
+  else if (medianLuminance < 62) toneId = 'soft-black';
+  else if (medianLuminance < 88) toneId = 'dark-brown';
+  else if (medianLuminance < 120) toneId = undertone === 'warm' ? 'chocolate-brown' : 'mocha-brown';
+  else toneId = undertone === 'warm' ? 'warm-brown' : 'muted-ash-brown';
+  const spread = sampleQuantile(luminances, 0.75) - sampleQuantile(luminances, 0.25);
+  const sampleConfidence = Math.min(1, focused.length / 600);
+  const stability = Math.max(0.25, Math.min(1, 1 - spread / 110));
+  const confidence = Number((sampleConfidence * stability).toFixed(2));
+  return { toneId, confidence, sampleCount: focused.length, medianLuminance: Number(medianLuminance.toFixed(2)), undertone };
+}
+
 export function deriveAllowedHairColorTones(rawProfile = {}, rawDiagnosis = {}) {
   const profile = normalizeHairColorProfile(rawProfile);
   if (profile.currentToneId === 'unknown') return Object.freeze([{ id: PRESERVE_CURRENT_TONE_ID, labelKo: '현재 색상 유지', level: null, undertone: 'source' }]);

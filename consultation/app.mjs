@@ -12,6 +12,7 @@ import {
   normalizeDiagnosis,
   normalizeHairColorProfile,
   deriveAllowedHairColorTones,
+  classifyHairColorSamples,
   canonicalStructureKey,
   buildConsultationGroups,
   expandConsultationGroup,
@@ -65,6 +66,7 @@ const state = {
   selectedVariation: null,
   diagnosis: {},
   hairColorProfile: normalizeHairColorProfile({}),
+  hairColorDetection: { status: 'idle', source: 'none', toneId: 'unknown', confidence: 0 },
   settings: normalizeSettings({}),
   mood: '',
   batch: null,
@@ -249,6 +251,14 @@ function requiredColorMasksReady() {
   return availableSourceViewKeys().every((viewKey) => profiles[viewKey]?.confirmed);
 }
 
+function currentColorDetectionLabel() {
+  const detection = state.hairColorDetection;
+  if (detection.status === 'detecting') return 'AUTO ANALYZING';
+  if (detection.source === 'auto' && detection.status === 'done') return `AUTO ${Math.round(detection.confidence * 100)}%`;
+  if (detection.source === 'manual') return 'MANUAL';
+  return 'AUTO FAILED';
+}
+
 function renderDiagnosisProfile() {
   return `<section class="profile-step"><div class="profile-page-head"><b>PROFILE</b><span>1 / 2</span></div>
     <div class="settings-grid">${currentLengthSetting()}${DIAGNOSIS_DEFINITIONS.map(rangeSetting).join('')}</div>
@@ -271,7 +281,8 @@ function renderColorProfile() {
   const allowed = deriveAllowedHairColorTones(profile, state.diagnosis);
   const selected = new Set(selectedTargetToneIds());
   const canContinue = profile.currentToneId !== 'unknown' && requiredColorMasksReady();
-  return `<section class="profile-step color-step"><div class="profile-page-head"><b>COLOR</b><span>2 / 2</span></div><section class="color-section"><div class="color-section-head"><div><b>CURRENT</b><small>직접 선택</small></div><span>${esc(toneLabel(profile.currentToneId))}</span></div><div class="tone-grid current-tones">${HAIR_COLOR_TONES.map((tone) => `<button type="button" data-current-tone="${tone.id}" class="tone-chip ${profile.currentToneId === tone.id ? 'on' : ''}"><i style="--tone-level:${tone.level}"></i><span>${esc(tone.labelKo)}</span></button>`).join('')}</div></section>${profile.currentToneId === 'unknown' ? '<div class="color-empty">현재 머리색을 선택하세요.</div>' : `<section class="color-section"><div class="color-section-head"><div><b>TARGET</b><small>복수 선택</small></div><span>${profile.intensity === 'balanced' ? 'BALANCED' : 'SUBTLE'}</span></div><div class="tone-grid target-tones">${allowed.map((tone) => `<button type="button" data-target-tone="${tone.id}" class="tone-chip ${selected.has(tone.id) ? 'on' : ''} ${tone.id === profile.currentToneId ? 'fixed' : ''}"><i style="--tone-level:${tone.level}"></i><span>${esc(tone.labelKo)}</span></button>`).join('')}</div><div class="intensity-switch"><button type="button" data-color-intensity="subtle" class="${profile.intensity === 'subtle' ? 'on' : ''}">SUBTLE</button><button type="button" data-color-intensity="balanced" class="${profile.intensity === 'balanced' ? 'on' : ''}">BALANCED</button></div></section>${colorChangeRequired() ? renderMaskEditor() : '<div class="color-empty">현재 색상 유지 · 마스크 확인 불필요</div>'}`}<div class="actions profile-actions"><button class="secondary" id="backToDiagnosis">BACK</button><button class="next-button" id="toStructures" ${canContinue ? '' : 'disabled'}>NEXT</button></div></section>`;
+  const emptyMessage = state.hairColorDetection.status === 'detecting' ? '원본 사진에서 현재 머리색을 분석 중입니다.' : '자동 감지 실패 · 현재 머리색을 직접 선택하세요.';
+  return `<section class="profile-step color-step"><div class="profile-page-head"><b>COLOR</b><span>2 / 2</span></div><section class="color-section"><div class="color-section-head"><div><b>CURRENT</b><small>${currentColorDetectionLabel()} · 직접 수정 가능</small></div><span>${esc(toneLabel(profile.currentToneId))}</span></div><div class="tone-grid current-tones">${HAIR_COLOR_TONES.map((tone) => `<button type="button" data-current-tone="${tone.id}" class="tone-chip ${profile.currentToneId === tone.id ? 'on' : ''}"><i style="--tone-level:${tone.level}"></i><span>${esc(tone.labelKo)}</span></button>`).join('')}</div></section>${profile.currentToneId === 'unknown' ? `<div class="color-empty">${emptyMessage}</div>` : `<section class="color-section"><div class="color-section-head"><div><b>TARGET</b><small>복수 선택</small></div><span>${profile.intensity === 'balanced' ? 'BALANCED' : 'SUBTLE'}</span></div><div class="tone-grid target-tones">${allowed.map((tone) => `<button type="button" data-target-tone="${tone.id}" class="tone-chip ${selected.has(tone.id) ? 'on' : ''} ${tone.id === profile.currentToneId ? 'fixed' : ''}"><i style="--tone-level:${tone.level}"></i><span>${esc(tone.labelKo)}</span></button>`).join('')}</div><div class="intensity-switch"><button type="button" data-color-intensity="subtle" class="${profile.intensity === 'subtle' ? 'on' : ''}">SUBTLE</button><button type="button" data-color-intensity="balanced" class="${profile.intensity === 'balanced' ? 'on' : ''}">BALANCED</button></div></section>${colorChangeRequired() ? renderMaskEditor() : '<div class="color-empty">현재 색상 유지 · 마스크 확인 불필요</div>'}`}<div class="actions profile-actions"><button class="secondary" id="backToDiagnosis">BACK</button><button class="next-button" id="toStructures" ${canContinue ? '' : 'disabled'}>NEXT</button></div></section>`;
 }
 
 function renderProfile() {
@@ -407,6 +418,7 @@ function invalidateSourceMask(viewKey) {
 function setCurrentTone(toneId) {
   if (!HAIR_COLOR_TONES.some((tone) => tone.id === toneId)) return;
   replaceHairColorProfile({ currentToneId: toneId, selectedToneIds: [toneId] });
+  state.hairColorDetection = { status: 'done', source: 'manual', toneId, confidence: 1 };
   reconcileHairColorProfile();
   invalidateGeneratedSurfaces('color-change');
   render();
@@ -634,7 +646,14 @@ async function loadPhoto(event) {
     state.sourceViews.front = prepared.dataUrl;
     state.maskViewKey = 'front';
     state.shortlist.clear();
+    replaceHairColorProfile({ currentToneId: 'unknown', selectedToneIds: [PRESERVE_CURRENT_TONE_ID] });
+    try {
+      await detectCurrentHairTone('front');
+    } catch {
+      state.hairColorDetection = { status: 'failed', source: 'auto', toneId: 'unknown', confidence: 0 };
+    }
   } catch {
+    state.hairColorDetection = { status: 'failed', source: 'auto', toneId: 'unknown', confidence: 0 };
     state.error = 'IMAGE ERROR';
   }
   setTimeout(render, 0);
@@ -670,6 +689,40 @@ function loadBlobImage(blob, message = 'Image decode failed') {
 
 function canvasToBlob(canvas, type = 'image/png', quality) {
   return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Canvas encode failed')), type, quality));
+}
+
+async function detectCurrentHairTone(viewKey = 'front') {
+  const sourceBlob = state.sourceViewBlobs[viewKey];
+  if (!(sourceBlob instanceof Blob)) return { toneId: 'unknown', confidence: 0 };
+  state.hairColorDetection = { status: 'detecting', source: 'auto', toneId: 'unknown', confidence: 0 };
+  const maskBlob = await hairOnlyMask(viewKey);
+  const [source, mask] = await Promise.all([loadBlobImage(sourceBlob, 'Color source decode failed'), loadBlobImage(maskBlob, 'Color mask decode failed')]);
+  const scale = Math.min(1, 256 / Math.max(source.naturalWidth, source.naturalHeight));
+  const width = Math.max(1, Math.round(source.naturalWidth * scale));
+  const height = Math.max(1, Math.round(source.naturalHeight * scale));
+  const sourceCanvas = document.createElement('canvas');
+  sourceCanvas.width = width;
+  sourceCanvas.height = height;
+  sourceCanvas.getContext('2d').drawImage(source, 0, 0, width, height);
+  const maskCanvas = document.createElement('canvas');
+  maskCanvas.width = width;
+  maskCanvas.height = height;
+  maskCanvas.getContext('2d').drawImage(mask, 0, 0, width, height);
+  const sourcePixels = sourceCanvas.getContext('2d').getImageData(0, 0, width, height).data;
+  const maskPixels = maskCanvas.getContext('2d').getImageData(0, 0, width, height).data;
+  const samples = [];
+  for (let index = 0; index < sourcePixels.length; index += 4) {
+    if (maskPixels[index + 3] <= 32) samples.push([sourcePixels[index], sourcePixels[index + 1], sourcePixels[index + 2]]);
+  }
+  const detection = classifyHairColorSamples(samples);
+  if (state.sourceViewBlobs[viewKey] !== sourceBlob) return { ...detection, stale: true };
+  if (detection.toneId !== 'unknown') {
+    replaceHairColorProfile({ currentToneId: detection.toneId, selectedToneIds: [detection.toneId] });
+    state.hairColorDetection = { ...detection, status: 'done', source: 'auto' };
+  } else {
+    state.hairColorDetection = { ...detection, status: 'failed', source: 'auto' };
+  }
+  return detection;
 }
 
 function prepareOriginalJpeg(file, maxEdge = 1024, quality = 0.82) {

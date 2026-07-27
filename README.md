@@ -50,7 +50,7 @@ HOST=127.0.0.1 PORT=4180 npm run start
 
 1. FRONT 사진을 필수로 넣고 SIDE / BACK / CROWN / NAPE / DETAIL 사진을 선택적으로 추가합니다.
 2. `PROFILE 1/2`에서 `짧은 머리 / 중간 / 장발`, 모질, 밀도, 손상도와 시술 이력을 설정합니다.
-3. `COLOR 2/2`에서 현재 색상을 직접 지정하고 허용된 자연 색상을 복수 선택합니다.
+3. `COLOR 2/2`에서 FRONT 원본의 보수적인 헤어 영역 샘플로 현재 색상을 자동 선택합니다. `AUTO` 신뢰도를 확인하고 필요하면 직접 수정한 뒤, 허용된 자연 색상을 복수 선택합니다.
 4. 현재 색상과 다른 색을 선택했다면 모든 입력 뷰의 헤어 마스크를 확인합니다. 분홍 영역만 생성 결과가 적용됩니다.
 5. STRUCTURE의 100개 슬롯은 입력한 원본 뷰를 균형 있게 섞고, 좌우 반전 증강 결과는 원래 방향으로 되돌려 표시합니다.
 6. VARIATION과 COMPARE에서 세부 스타일을 선택한 뒤 LOCK에서 1–6개 디자인과 원본 뷰를 Design Lock으로 전달합니다.
@@ -87,7 +87,7 @@ npm run verify
 현재 기준:
 
 ```text
-50 tests passing
+51 tests passing
 1,080-design taxonomy check passing
 6,500-design v2 master catalog check passing
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2

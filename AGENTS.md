@@ -12,7 +12,7 @@ This is the machine-operable guide for work in the standalone Hairloom repositor
 - App URL: `http://127.0.0.1:4180/`
 - Health URL: `http://127.0.0.1:4180/healthz`
 - Main verification: `npm run verify`
-- Expected baseline: 50 tests passing
+- Expected baseline: 51 tests passing
 
 ## Hard project boundary
 
@@ -42,7 +42,7 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-`npm run verify` must cover syntax checks, both catalog drift checks, Explore/catalog/consultation/server tests, and the 50-test baseline.
+`npm run verify` must cover syntax checks, both catalog drift checks, Explore/catalog/consultation/server tests, and the 51-test baseline.
 
 ## Product invariants
 
@@ -60,7 +60,7 @@ HOST=127.0.0.1 PORT=4180 npm run start
 - Standard Design Lock continues to use its normal recommendation path.
 - PRO remains a separate six-stage route: `SOURCE → PROFILE → STRUCTURE → VARIATION → COMPARE → LOCK`.
 - PRO requires FRONT and accepts optional SIDE / BACK / CROWN / NAPE / DETAIL originals.
-- PRO PROFILE is two pages: diagnosis, then manual current color and bounded natural target colors.
+- PRO PROFILE is two pages: diagnosis, then deterministic FRONT-based current-color selection with visible confidence and manual correction, plus bounded natural target colors.
 - PRO user-facing length choices are exactly `짧은 머리 / 중간 / 장발`.
 - Any non-current target color requires a confirmed hair mask for every supplied source view.
 - PRO fixed 100-slot allocations remain deterministic, approximately balance supplied views, and retain view/mirror/color axes through retries.
