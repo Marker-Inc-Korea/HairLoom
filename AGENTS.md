@@ -63,6 +63,7 @@ HOST=127.0.0.1 PORT=4180 npm run start
 - PRO PROFILE is two pages: diagnosis, then deterministic FRONT-based current-color selection with visible confidence and manual correction, plus bounded natural target colors.
 - PRO user-facing length choices are exactly `짧은 머리 / 중간 / 장발`.
 - PRO does not create, confirm, or send hair masks; current and non-current natural tones use the same maskless provider path.
+- Explore, PRO, and Design Lock prompts must use the shared low-sheen satin-to-matte surface contract and reject wet, oily, glassy, plastic, metallic, lacquered, or synthetic-wig shine.
 - PRO fixed 100-slot allocations remain deterministic, approximately balance supplied views, and retain view/mirror/color axes through retries.
 - Provider-side mirrored source images must be flipped back before display.
 - PRO displays the provider result directly after orientation restoration; it does not composite protected source pixels over the result.
@@ -77,7 +78,7 @@ Current runtime versions:
 ```text
 schemaVersion: 1
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
-promptVersion: HLM-EXPLORE-PROMPT-2026-07-2
+promptVersion: HLM-EXPLORE-PROMPT-2026-07-3
 consultation handoff schema: 2
 ```
 

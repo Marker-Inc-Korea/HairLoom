@@ -7,7 +7,7 @@ const outputDir = resolve(root, 'docs/hair-design-master');
 const checkOnly = process.argv.includes('--check');
 const schemaVersion = 1;
 const catalogVersion = 'HLM-MASTER-2026-07-EXPLORE-2';
-const promptVersion = 'HLM-EXPLORE-PROMPT-2026-07-2';
+const promptVersion = 'HLM-EXPLORE-PROMPT-2026-07-3';
 const catalogSizeLimitBytes = 2_500_000;
 const indexSizeLimitBytes = 900_000;
 const b = (name, feature, tags = []) => ({ name, feature, tags });

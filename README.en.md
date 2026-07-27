@@ -13,6 +13,7 @@ Hairloom is a local-first hairstyle exploration and Design Lock application. It 
 - Separate six-stage PRO workstation: `SOURCE → PROFILE → STRUCTURE → VARIATION → COMPARE → LOCK`
 - Balanced optional source-view allocation, horizontal-mirror augmentation, and bounded natural colors in PRO
 - Maskless PRO requests that send one prepared original and rely on strict prompt preservation for face, clothing, and background
+- Explore, PRO, and Design Lock default to natural low-sheen satin-to-matte texture with soft diffuse highlights
 - Generated images are never reused as generation inputs
 
 ## Routes
@@ -91,7 +92,7 @@ Current baseline:
 1,080-design taxonomy check passing
 6,500-design v2 master catalog check passing
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
-promptVersion: HLM-EXPLORE-PROMPT-2026-07-2
+promptVersion: HLM-EXPLORE-PROMPT-2026-07-3
 ```
 
 ## Main files

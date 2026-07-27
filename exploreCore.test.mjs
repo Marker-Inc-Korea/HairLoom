@@ -167,7 +167,7 @@ test('cache key and stable settings string use dc=', () => {
   assert.match(serialized, /dc=high/);
   assert.doesNotMatch(serialized, /damage=/);
   const key = buildExploreCacheKey({ sourcePhotoKey: 'abc123', settings: { damage: 'high' } });
-  assert.match(key, /^hlm:explore:v2:HLM-MASTER-2026-07-EXPLORE-2:HLM-EXPLORE-PROMPT-2026-07-2:abc123:/);
+  assert.match(key, /^hlm:explore:v2:HLM-MASTER-2026-07-EXPLORE-2:HLM-EXPLORE-PROMPT-2026-07-3:abc123:/);
 });
 
 test('queue enforces max 32, supersession, stale guards, and out-of-order stable slots', () => {

@@ -935,6 +935,9 @@ function textureControlPrompt(record) {
   }
   return 'TEXTURE CONTROL: keep texture natural, soft and low-amplitude. Use a few readable bends and cohesive hair masses; no wiry strands, crispy separation, wet look, excessive curl frequency or over-styled volume.';
 }
+
+const NATURAL_SURFACE_FINISH_PROMPT = 'SURFACE FINISH LOCK: use natural low-sheen satin-to-matte hair with soft, diffuse, broken highlights, realistic strand variation and shadow depth. No wet or oily look, glassy or plastic shine, mirror-like specular bands, metallic gloss, lacquered finish or synthetic wig sheen. Keep subtle healthy highlights; do not make the hair chalky or flat.';
+
 function consultationPrompt(record, item) {
   const selected = state.selectedVariation;
   const axes = item.generationAxes || {};
@@ -966,6 +969,7 @@ function consultationPrompt(record, item) {
     viewRule,
     'PRESERVE SOURCE FRAME: no crop, zoom, enlargement, reframing, collage, split screen, duplicate person, inset or border.',
     textureControlPrompt(record),
+    NATURAL_SURFACE_FINISH_PROMPT,
     colorRule,
     `DESIGN ID: ${record.id}`,
     `STYLE: ${familiarStyleName(record.promptAtoms?.titleKo || record.nameKo)}`,

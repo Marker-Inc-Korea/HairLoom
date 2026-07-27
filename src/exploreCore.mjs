@@ -1,6 +1,6 @@
 export const schemaVersion = 1;
 export const catalogVersion = 'HLM-MASTER-2026-07-EXPLORE-2';
-export const promptVersion = 'HLM-EXPLORE-PROMPT-2026-07-2';
+export const promptVersion = 'HLM-EXPLORE-PROMPT-2026-07-3';
 export const MAX_EXPLORE_ACTIVE = 32;
 export const EXPLORE_SELECTION_LIMIT = 100;
 

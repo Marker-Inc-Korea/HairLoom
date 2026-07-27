@@ -53,6 +53,10 @@ test('serves Hairloom page and isolated static assets', async () => {
     assert.match(rootHtml, /미니 단발/);
     assert.match(rootHtml, /웨이브 단발/);
     assert.doesNotMatch(rootHtml, /ko:'미니 보브'/);
+    assert.match(rootHtml, /SURFACE FINISH LOCK/);
+    assert.match(rootHtml, /low-sheen satin-to-matte/);
+    assert.match(rootHtml, /synthetic wig sheen/);
+    assert.match(rootHtml, /자연스러운 저광택/);
     assert.equal(rootResponse.headers.get('x-content-type-options'), 'nosniff');
     assert.match(rootResponse.headers.get('cache-control') || '', /no-store/);
 
@@ -95,7 +99,7 @@ test('serves only consultation route and allowlisted consultation assets', async
       assert.match(response.headers.get('cache-control') || '', /no-store/);
       const html = await response.text();
       assert.match(html, /styles\.css\?v=20260727-maskless-v9/);
-      assert.match(html, /app\.mjs\?v=20260727-maskless-v9/);
+      assert.match(html, /app\.mjs\?v=20260727-low-sheen-v10/);
     }
     for (const [path, mime] of [['/consultation/styles.css', /^text\/css/], ['/consultation/app.mjs', /^text\/javascript/], ['/src/consultationCore.mjs', /^text\/javascript/]]) {
       const response = await fetch(`http://127.0.0.1:${port}${path}`);
@@ -167,6 +171,10 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /--tile-ratio/);
     assert.match(appSource, /textureControlPrompt/);
     assert.match(appSource, /no micro-crimping/);
+    assert.match(appSource, /SURFACE FINISH LOCK/);
+    assert.match(appSource, /low-sheen satin-to-matte/);
+    assert.match(appSource, /glassy or plastic shine/);
+    assert.match(appSource, /synthetic wig sheen/);
     assert.match(appSource, /태슬 단발/);
     assert.match(appSource, /TREND ·/);
     assert.match(appSource, /id="currentLength"/);

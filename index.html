@@ -611,9 +611,10 @@ function cacheExploreResult(designId,result){
   EX.cache.set(key,{...result,lastUsed:Date.now()});
   while(EX.cache.size>200||[...EX.cache.values()].reduce((sum,entry)=>sum+(entry.bytes||0),0)>180*1024*1024){const [oldestKey,oldest]=[...EX.cache.entries()].sort((a,b)=>a[1].lastUsed-b[1].lastUsed)[0];if(oldest.objectUrl)URL.revokeObjectURL(oldest.objectUrl);EX.cache.delete(oldestKey)}
 }
+const NATURAL_SURFACE_FINISH_PROMPT='SURFACE FINISH LOCK: use natural low-sheen satin-to-matte hair with soft, diffuse, broken highlights, realistic strand variation and shadow depth. No wet or oily look, glassy or plastic shine, mirror-like specular bands, metallic gloss, lacquered finish or synthetic wig sheen. Keep subtle healthy highlights; do not make the hair chalky or flat.';
 function explorePrompt(record){
   const settings=EX.settings,damage={low:'현재 모발 손상이 낮음',medium:'현재 모발 손상이 보통',high:'현재 모발 손상이 높음. 화학 펌, 붙임, 피스, 강한 장력과 고열을 절대 사용하지 않음'}[settings.damageCondition];
-  return ['TASK: edit only the hair in the single uploaded original customer front photograph.','OUTPUT CONTRACT: return exactly ONE full-frame portrait containing ONE person, ONE front view and ONE image.','PRESERVE THE ENTIRE SOURCE FRAME: no crop, zoom, enlargement, reframing, collage, contact sheet, split screen, before/after, duplicate person, inset, border or multiple view.',`DESIGN LOCK ID: ${record.id}`,`STYLE: ${record.promptAtoms.titleKo}`,`STRUCTURE: ${record.promptAtoms.structureKo}`,record.promptAtoms.frontKo?`FRONT: ${record.promptAtoms.frontKo}`:'',record.promptAtoms.finishKo?`FINISH: ${record.promptAtoms.finishKo}`:'',`CURRENT LENGTH: ${EXPLORE_DEFINITIONS[0].values[settings.currentLength]}`,`HAIR THICKNESS: ${settings.hairThickness}`,damage,!settings.permAllowed?'NO PERM OR CHEMICAL CURL PROCESS.':'',!settings.extensionAllowed?'NO EXTENSIONS, PIECES, WIGS OR ADDED HAIR.':'',record.promptAtoms.safetyKo,'IDENTITY LOCK: preserve the person, face, skin, expression, body, clothing, background, lighting, camera angle and original hair color. Change only the hairstyle geometry.','No text, logo, watermark or decorative graphic.'].filter(Boolean).join('\n');
+  return ['TASK: edit only the hair in the single uploaded original customer front photograph.','OUTPUT CONTRACT: return exactly ONE full-frame portrait containing ONE person, ONE front view and ONE image.','PRESERVE THE ENTIRE SOURCE FRAME: no crop, zoom, enlargement, reframing, collage, contact sheet, split screen, before/after, duplicate person, inset, border or multiple view.',`DESIGN LOCK ID: ${record.id}`,`STYLE: ${record.promptAtoms.titleKo}`,`STRUCTURE: ${record.promptAtoms.structureKo}`,record.promptAtoms.frontKo?`FRONT: ${record.promptAtoms.frontKo}`:'',record.promptAtoms.finishKo?`FINISH: ${record.promptAtoms.finishKo}`:'',`CURRENT LENGTH: ${EXPLORE_DEFINITIONS[0].values[settings.currentLength]}`,`HAIR THICKNESS: ${settings.hairThickness}`,damage,!settings.permAllowed?'NO PERM OR CHEMICAL CURL PROCESS.':'',!settings.extensionAllowed?'NO EXTENSIONS, PIECES, WIGS OR ADDED HAIR.':'',record.promptAtoms.safetyKo,NATURAL_SURFACE_FINISH_PROMPT,'IDENTITY LOCK: preserve the person, face, skin, expression, body, clothing, background, lighting, camera angle and original hair color. Change only the hairstyle geometry.','No text, logo, watermark or decorative graphic.'].filter(Boolean).join('\n');
 }
 function decodeExploreImage(base64){const binary=atob(base64),bytes=Uint8Array.from(binary,char=>char.charCodeAt(0)),mimeType=ExploreCore.detectImageMime(bytes);if(!mimeType)throw new Error('unknown image MIME');const blob=new Blob([bytes],{type:mimeType}),objectUrl=URL.createObjectURL(blob);return {url:objectUrl,objectUrl,blob,mimeType,bytes:bytes.byteLength,providerKind:'b64_json'}}
 async function callExploreEdit(job,controller){
@@ -764,7 +765,7 @@ const LENGTH_RULES={
   medium:'미디엄 기장 고정: 끝선은 턱 아래부터 쇄골 사이. 가장 긴 모발도 쇄골 아래로 내려가지 않고, 측면과 후면에서 같은 높이의 외곽선을 유지해.',
   long:'롱 기장 고정: 끝선은 반드시 쇄골 아래로 내려가고 최소 가슴 윗선까지 이어져야 해. 측면과 후면에서 어깨 위나 턱선 길이로 짧아지지 마.'
 };
-const TEXTURE_RULES={straight:'전체 각도에서 같은 매끈한 스트레이트 결을 유지해.',wave:'전체 각도에서 같은 굵기와 간격의 자연스러운 웨이브를 유지해.',curl:'전체 각도에서 같은 컬 직경·밀도·방향을 유지해.'};
+const TEXTURE_RULES={straight:'전체 각도에서 같은 자연스러운 저광택 스트레이트 결을 유지해. 유리처럼 매끈한 반사띠를 만들지 마.',wave:'전체 각도에서 같은 굵기와 간격의 자연스러운 저광택 웨이브를 유지해.',curl:'전체 각도에서 같은 컬 직경·밀도·방향과 자연스러운 저광택 질감을 유지해.'};
 function hairPrompt(cut,angleKey='front'){
   const angle={front:'FRONT VIEW, straight-on camera',side:'LEFT SIDE PROFILE VIEW, exactly 90-degree profile camera',back:'BACK VIEW, exactly rear-facing camera'}[angleKey]||angleKey;
   const angleRule={front:'Preserve the original front-facing head pose and facial geometry.',side:'Preserve the source profile pose, ear position, nose line, jaw line and neck angle.',back:'Preserve the source rear pose, head center, ear symmetry, neck and shoulder geometry.'}[angleKey];
@@ -781,6 +782,7 @@ function hairPrompt(cut,angleKey='front'){
     `STYLE NAME: ${cut.ko}. Do not substitute, hybridize or reinterpret it as another haircut.`,
     LENGTH_RULES[fromExplore?cut.len:S.length]||`기장: ${LENKO[fromExplore?cut.len:S.length]||cut.len||S.length}로 고정.`,
     TEXTURE_RULES[cut.tex]||'',
+    NATURAL_SURFACE_FINISH_PROMPT,
     fromExplore?'COLOR LOCK: preserve the original source hair color exactly.':`COLOR LOCK: ${S.color.ko}. Keep identical hue, brightness and saturation for this design.`,
     damage==='high'?'DAMAGE SAFETY LOCK: no chemical perm, extensions, pieces, added hair, high tension or high heat. Use only a low-stress haircut structure.':'',
     cut.promptBlueprint?.safetyKo||'',
