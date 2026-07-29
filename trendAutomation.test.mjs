@@ -61,8 +61,12 @@ test('trend change guard accepts only allowlisted data paths', async () => {
     assert.equal(git.status, 0, git.stderr);
   }
 
-  await writeFile(resolve(directory, 'data/hair-trend-signals.json'), '{"updated":true}\n');
   const checker = new URL('./scripts/checkHairTrendChanges.mjs', import.meta.url).pathname;
+  const clean = spawnSync(process.execPath, [checker], { cwd: directory, encoding: 'utf8' });
+  assert.equal(clean.status, 0, clean.stderr);
+  assert.deepEqual(JSON.parse(clean.stdout), { changed: false, paths: [], staged: false });
+
+  await writeFile(resolve(directory, 'data/hair-trend-signals.json'), '{"updated":true}\n');
   const allowed = spawnSync(process.execPath, [checker], { cwd: directory, encoding: 'utf8' });
   assert.equal(allowed.status, 0, allowed.stderr);
   assert.deepEqual(JSON.parse(allowed.stdout), { changed: true, paths: ['data/hair-trend-signals.json'], staged: false });
