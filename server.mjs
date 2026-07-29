@@ -38,6 +38,8 @@ function resolveStaticPath(pathname) {
     decoded === '/imagen.web.js' ||
     decoded === '/imagen.web.example.js' ||
     decoded === '/src/exploreCore.mjs' ||
+    decoded === '/src/trendRegistry.mjs' ||
+    decoded === '/src/hairTrendData.mjs' ||
     decoded === '/src/consultationCore.mjs' ||
     decoded === '/docs/hair-design-master/catalog.json' ||
     decoded === '/docs/hair-design-master/catalog-index.json' ||

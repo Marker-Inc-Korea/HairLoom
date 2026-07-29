@@ -1,4 +1,5 @@
 import { catalogVersion, promptVersion, hydrateCatalogPayload, normalizeProviderResult, normalizeSettings, sourcePhotoKey, genderLineTreatmentPrompt } from '../src/exploreCore.mjs';
+import { trendBadgeForCandidate } from '../src/trendRegistry.mjs';
 import {
   CONSULTATION_HANDOFF_STORAGE_KEY,
   CONSULTATION_HANDOFF_QUERY_TRIGGER,
@@ -8,7 +9,6 @@ import {
   CONSULTATION_SOURCE_TRANSFORM_VERSION,
   HAIR_COLOR_TONES,
   PRESERVE_CURRENT_TONE_ID,
-  TREND_STRUCTURE_BASES,
   normalizeDiagnosis,
   normalizeHairColorProfile,
   deriveAllowedHairColorTones,
@@ -87,7 +87,6 @@ const statusClass = (s) => s === 'possible' ? 'ok' : s === 'conditional' ? 'cond
 const densityToThickness = { low: 'fine', normal: 'normal', high: 'thick' };
 const damageMap = { low: 'low', medium: 'medium', high: 'high' };
 let moodRankTimer = 0;
-const TREND_BASE_SET = new Set(TREND_STRUCTURE_BASES);
 const STYLE_NAME_REPLACEMENTS = [
   ['턱선 블런트 보브', '태슬 단발'],
   ['그래듀에이티드 보브', 'A라인 단발'],
@@ -308,8 +307,8 @@ function structureTile(slot) {
   const source = slot.previewUrl || sourceViewPreview(slot.sourceViewKey);
   const selected = group && state.selectedGroup?.key === group.key;
   const ready = slot.status === 'done' && group;
-  const trend = group && TREND_BASE_SET.has(group.baseKo) ? 'TREND · ' : '';
-  return `<button class="structure-tile ${slot.status} ${selected ? 'selected' : ''}" data-structure-slot="${slot.slotIndex}" style="--tile-ratio:${structureTileRatio(slot.slotIndex)}" ${ready ? '' : 'disabled'}><img src="${esc(source)}" alt="${ready ? esc(groupLabel(group)) : ''}"><span class="structure-meta"><b>${ready ? esc(groupLabel(group)) : String(slot.slotIndex + 1).padStart(2, '0')}</b><small>${trend}${esc(generationAxisLabel(slot))}</small></span></button>`;
+  const trend = group ? trendBadgeForCandidate(group) : '';
+  return `<button class="structure-tile ${slot.status} ${selected ? 'selected' : ''}" data-structure-slot="${slot.slotIndex}" style="--tile-ratio:${structureTileRatio(slot.slotIndex)}" ${ready ? '' : 'disabled'}><img src="${esc(source)}" alt="${ready ? esc(groupLabel(group)) : ''}"><span class="structure-meta"><b>${ready ? esc(groupLabel(group)) : String(slot.slotIndex + 1).padStart(2, '0')}</b><small>${trend ? `${esc(trend)} · ` : ''}${esc(generationAxisLabel(slot))}</small></span></button>`;
 }
 
 function groupLabel(group) { return `${group.lengthKo} · ${familiarStyleName(group.baseKo)} · ${group.frontKo}`; }

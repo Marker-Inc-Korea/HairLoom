@@ -1,3 +1,5 @@
+import { trendSelectionBonusForCandidate } from './trendRegistry.mjs';
+
 export const schemaVersion = 1;
 export const catalogVersion = 'HLM-MASTER-2026-07-EXPLORE-2';
 export const promptVersion = 'HLM-EXPLORE-PROMPT-2026-07-4';
@@ -242,7 +244,7 @@ function diversityScore(record, selected, seed) {
     + 8 / (1 + bucketCount(selected, 'finishBucket', v.finishBucket))
     + 6 / (1 + bucketCount(selected, 'textureBucket', v.textureBucket));
   const jitter = stableHash32(`${seed}|${record.id}`) / 0xffffffff;
-  return coverage + jitter;
+  return coverage + trendSelectionBonusForCandidate(record) + jitter;
 }
 
 export function selectDiverse100(indexRecords, rawSettings, seedInput = '') {

@@ -1,4 +1,5 @@
 imagen.web.js
+.env
 .DS_Store
 node_modules/
 docs/assets/test-subjects/

@@ -101,9 +101,9 @@ test('serves only consultation route and allowlisted consultation assets', async
       assert.match(response.headers.get('cache-control') || '', /no-store/);
       const html = await response.text();
       assert.match(html, /styles\.css\?v=20260727-maskless-v9/);
-      assert.match(html, /app\.mjs\?v=20260729-gender-lines-v11/);
+      assert.match(html, /app\.mjs\?v=20260729-trend-registry-v12/);
     }
-    for (const [path, mime] of [['/consultation/styles.css', /^text\/css/], ['/consultation/app.mjs', /^text\/javascript/], ['/src/consultationCore.mjs', /^text\/javascript/]]) {
+    for (const [path, mime] of [['/consultation/styles.css', /^text\/css/], ['/consultation/app.mjs', /^text\/javascript/], ['/src/consultationCore.mjs', /^text\/javascript/], ['/src/trendRegistry.mjs', /^text\/javascript/], ['/src/hairTrendData.mjs', /^text\/javascript/]]) {
       const response = await fetch(`http://127.0.0.1:${port}${path}`);
       assert.equal(response.status, 200, path);
       assert.match(response.headers.get('content-type') || '', mime, path);
@@ -113,12 +113,19 @@ test('serves only consultation route and allowlisted consultation assets', async
     const appSource = await (await fetch(`http://127.0.0.1:${port}/consultation/app.mjs`)).text();
     const coreSource = await (await fetch(`http://127.0.0.1:${port}/src/consultationCore.mjs`)).text();
     const exploreCoreSource = await (await fetch(`http://127.0.0.1:${port}/src/exploreCore.mjs`)).text();
+    const trendRegistrySource = await (await fetch(`http://127.0.0.1:${port}/src/trendRegistry.mjs`)).text();
+    const trendDataSource = await (await fetch(`http://127.0.0.1:${port}/src/hairTrendData.mjs`)).text();
     assert.match(coreSource, /export function classifyHairColorSamples/);
     assert.match(exploreCoreSource, /MASCULINE LINE TREATMENT/);
     assert.match(exploreCoreSource, /stronger directional planes/);
     assert.match(exploreCoreSource, /FEMININE LINE TREATMENT/);
     assert.match(exploreCoreSource, /softer connected arcs/);
     assert.match(exploreCoreSource, /hair only; never alter the face, body, or identity/);
+    assert.match(trendRegistrySource, /trendBadgeForCandidate/);
+    assert.match(trendDataSource, /HLM-TRENDS-2026-07-1/);
+    assert.match(trendDataSource, /"sourcePolicy": "metadata-only"/);
+    assert.doesNotMatch(trendDataSource, /"(?:imageUrl|media_url|thumbnail|base64|dataUrl)"\s*:/);
+    assert.equal((await fetch(`http://127.0.0.1:${port}/data/hair-trend-signals.json`)).status, 404);
     assert.match(appSource, /\['SOURCE', 'PROFILE', 'STRUCTURE', 'VARIATION', 'COMPARE', 'LOCK'\]/);
     assert.match(appSource, /FRONT REQUIRED/);
     assert.match(appSource, /purpose: 'structure'/);
@@ -185,7 +192,8 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /synthetic wig sheen/);
     assert.match(appSource, /genderLineTreatmentPrompt\(record\.genderId\)/);
     assert.match(appSource, /태슬 단발/);
-    assert.match(appSource, /TREND ·/);
+    assert.match(appSource, /trendBadgeForCandidate\(group\)/);
+    assert.doesNotMatch(appSource, /TREND_BASE_SET/);
     assert.match(appSource, /id="currentLength"/);
     assert.match(appSource, /짧은 머리/);
     assert.match(appSource, /중간/);

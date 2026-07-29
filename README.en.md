@@ -2,7 +2,7 @@
 
 [한국어 README](README.md)
 
-Hairloom is a local-first hairstyle exploration and Design Lock application. It generates hairstyle alternatives from original customer photos while restoring protected non-hair pixels from the source image.
+Hairloom is a local-first hairstyle exploration and Design Lock application. It generates hairstyle alternatives from original customer photos while keeping generated images out of subsequent requests.
 
 ## Features
 
@@ -15,6 +15,7 @@ Hairloom is a local-first hairstyle exploration and Design Lock application. It 
 - Maskless PRO requests that send one prepared original and rely on strict prompt preservation for face, clothing, and background
 - Explore, PRO, and Design Lock default to natural low-sheen satin-to-matte texture with soft diffuse highlights
 - Feminine designs use connected curves, nuanced face-framing, and fluid ends; masculine designs use directional planes, broader sections, and controlled temple/nape lines
+- A versioned trend registry maps Instagram, Naver, Google, Pinterest, and stylist signals to stable catalog IDs with visible `RISING/WATCH` provenance
 - Generated images are never reused as generation inputs
 
 ## Routes
@@ -80,6 +81,35 @@ window.HAIR_IMAGEN = {
 
 Never commit API keys, customer photos, generated customer images, or `.gjc/` QA artifacts.
 
+## Trend registry
+
+Hairloom never uses external social images as generation inputs. The trend collector retains only style names, publication timestamps, public permalinks, sample counts, and momentum signals, then maps them to existing `HLM-C-*` structure IDs. The initial registry contains 40 stylist-reviewed baseline styles. Trend contributes at most a 0–3 Explore selection bonus and 5 PRO suitability points; feasibility and original-source lineage always win.
+
+Verify or rebuild the deterministic local snapshot:
+
+```bash
+npm run trend:check
+npm run trend
+```
+
+Run live collection only when Meta Hashtag Search or Naver DataLab credentials are available:
+
+```bash
+cp .env.example .env
+# Fill only the provider credentials you use.
+npm run trend:live
+```
+
+Import reviewed metadata batches from Google Trends, Pinterest Trends, Instagram Business Discovery, or editorial sources:
+
+```bash
+npm run trend -- --import=./local-trend-batch.json
+```
+
+Imports must use `metadata-only` rights. Image URLs, thumbnails, Base64, and image data URLs are rejected. `data/hair-trend-signals.json` is the source configuration and metadata ledger; `src/hairTrendData.mjs` is the deterministic browser-runtime snapshot.
+
+Official integration references: [Meta Hashtag Search](https://developers.facebook.com/docs/instagram-api/guides/hashtag-search/), [Meta App Review](https://developers.facebook.com/docs/instagram-platform/app-review), [Naver DataLab](https://developers.naver.com/docs/serviceapi/datalab/search/search.md), [Google Trends](https://trends.google.com/trends/), and [Pinterest Trends](https://trends.pinterest.com/).
+
 ## Verification
 
 ```bash
@@ -89,11 +119,12 @@ npm run verify
 Current baseline:
 
 ```text
-52 tests passing
+59 tests passing
 1,080-design taxonomy check passing
 6,500-design v2 master catalog check passing
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
 promptVersion: HLM-EXPLORE-PROMPT-2026-07-4
+trendRegistryVersion: HLM-TRENDS-2026-07-1
 ```
 
 ## Main files
@@ -103,7 +134,10 @@ index.html                         Explore and Design Lock UI
 consultation/                      PRO consultation UI
 src/exploreCore.mjs                Explore domain logic
 src/consultationCore.mjs           Consultation, feasibility, and queue logic
+src/trendRegistry.mjs              Trend validation, scoring, and catalog mapping
+src/hairTrendData.mjs              Generated 40-record runtime trend snapshot
 scripts/generateHairMasterCatalog.mjs  6,500-design catalog generator
+scripts/syncHairTrends.mjs         Local checks, imports, and optional live collection
 docs/hair-design-master/           Runtime catalog and generated documentation
 server.mjs                         Local-only static server
 ```
@@ -116,4 +150,5 @@ server.mjs                         Local-only static server
 - Horizontal mirroring exists only at the provider boundary; final results return to the original orientation.
 - PRO uses the provider result directly without source-pixel compositing.
 - High-damage profiles exclude perm and extension designs.
+- External social images are never stored, served, or used as generation inputs; only validated metadata signals are accepted.
 - Customer photos, generated images, API keys, and QA artifacts never belong in the repository.

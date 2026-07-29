@@ -15,6 +15,7 @@ Hairloom은 원본 인물 사진을 유지하면서 다양한 헤어 디자인�
 - PRO는 헤어 마스크 없이 준비된 원본 한 장을 Provider에 전달하고 얼굴·의상·배경 보존을 프롬프트로 제어
 - Explore, PRO, Design Lock 모두 자연스러운 저광택 새틴-매트 질감과 부드러운 분산 하이라이트를 기본으로 사용
 - 여성 디자인은 연결된 곡선·부드러운 페이스 프레임·유연한 끝선을, 남성 디자인은 방향성 있는 면·넓은 모발 섹션·절제된 템플과 네이프 라인을 별도 계약으로 사용
+- 버전된 트렌드 레지스트리가 Instagram·Naver·Google·Pinterest·전문가 신호를 안정된 카탈로그 ID에 연결하고 `RISING/WATCH` 근거를 표시
 - 생성 이미지를 다음 생성 입력으로 재사용하지 않는 원본 계보 유지
 
 ## 화면
@@ -80,6 +81,35 @@ window.HAIR_IMAGEN = {
 
 API 키, 고객 사진, 생성 고객 이미지, `.gjc/` QA 자료는 커밋하지 마세요.
 
+## 트렌드 레지스트리
+
+Hairloom은 외부 소셜 이미지를 생성 입력으로 사용하지 않습니다. 트렌드 수집기는 스타일명, 게시 시점, 공개 permalink, 표본 수와 상승 신호만 보관하고 이를 기존 `HLM-C-*` 구조 ID에 연결합니다. 현재 40개 스타일의 스타일리스트 검수 기준선을 포함하며, 트렌드는 Explore에서 최대 3점의 선택 보너스와 PRO 적합도에서 최대 5점만 차지합니다. 시술 가능성과 원본 계보가 항상 우선합니다.
+
+로컬 기준선과 생성 레지스트리를 검사하거나 다시 생성합니다.
+
+```bash
+npm run trend:check
+npm run trend
+```
+
+Meta Hashtag Search 또는 Naver DataLab 자격 증명이 있을 때만 라이브 수집을 실행합니다.
+
+```bash
+cp .env.example .env
+# .env에 사용할 Provider 자격 증명만 입력
+npm run trend:live
+```
+
+Google Trends, Pinterest Trends, Instagram Business Discovery 또는 전문 매체에서 검수한 메타데이터 배치는 다음처럼 가져옵니다.
+
+```bash
+npm run trend -- --import=./local-trend-batch.json
+```
+
+가져오기 데이터는 `metadata-only` 권한이어야 하며 이미지 URL, 썸네일, Base64 또는 이미지 데이터 URL이 있으면 거부됩니다. `data/hair-trend-signals.json`은 수집 설정과 메타데이터 신호의 원본이고, `src/hairTrendData.mjs`는 결정적으로 생성되는 브라우저 런타임 스냅샷입니다.
+
+공식 연동 자료: [Meta Hashtag Search](https://developers.facebook.com/docs/instagram-api/guides/hashtag-search/), [Meta App Review](https://developers.facebook.com/docs/instagram-platform/app-review), [Naver DataLab](https://developers.naver.com/docs/serviceapi/datalab/search/search.md), [Google Trends](https://trends.google.com/trends/), [Pinterest Trends](https://trends.pinterest.com/).
+
 ## 검증
 
 ```bash
@@ -89,11 +119,12 @@ npm run verify
 현재 기준:
 
 ```text
-52 tests passing
+59 tests passing
 1,080-design taxonomy check passing
 6,500-design v2 master catalog check passing
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
 promptVersion: HLM-EXPLORE-PROMPT-2026-07-4
+trendRegistryVersion: HLM-TRENDS-2026-07-1
 ```
 
 ## 주요 파일
@@ -103,7 +134,10 @@ index.html                         기본 Explore 및 Design Lock UI
 consultation/                      PRO 상담 UI
 src/exploreCore.mjs                Explore 도메인 로직
 src/consultationCore.mjs           상담·시술 가능성·큐 로직
+src/trendRegistry.mjs              트렌드 검증·점수·카탈로그 매핑
+src/hairTrendData.mjs              생성된 40개 런타임 트렌드 스냅샷
 scripts/generateHairMasterCatalog.mjs  6,500개 카탈로그 생성기
+scripts/syncHairTrends.mjs         로컬 검사·가져오기·선택적 라이브 수집
 docs/hair-design-master/           런타임 카탈로그와 생성 문서
 server.mjs                         로컬 전용 정적 서버
 ```
@@ -116,4 +150,5 @@ server.mjs                         로컬 전용 정적 서버
 - 좌우 반전은 Provider 입력에만 적용하고 결과는 원래 방향으로 복원합니다.
 - PRO 결과에는 원본 픽셀 합성을 적용하지 않고 Provider 결과를 직접 사용합니다.
 - 고손상 조건에서는 펌과 붙임머리를 제외합니다.
+- 외부 소셜 이미지는 저장·서빙·생성 입력으로 사용하지 않고 검증된 메타데이터 신호만 사용합니다.
 - 고객 사진, 생성 이미지, API 키와 QA 자료를 저장소에 포함하지 않습니다.

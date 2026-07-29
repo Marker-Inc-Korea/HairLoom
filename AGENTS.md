@@ -12,7 +12,7 @@ This is the machine-operable guide for work in the standalone Hairloom repositor
 - App URL: `http://127.0.0.1:4180/`
 - Health URL: `http://127.0.0.1:4180/healthz`
 - Main verification: `npm run verify`
-- Expected baseline: 52 tests passing
+- Expected baseline: 59 tests passing
 
 ## Hard project boundary
 
@@ -42,7 +42,7 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-`npm run verify` must cover syntax checks, both catalog drift checks, Explore/catalog/consultation/server tests, and the 51-test baseline.
+`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, Explore/catalog/consultation/server/trend tests, and the 59-test baseline.
 
 ## Product invariants
 
@@ -65,6 +65,10 @@ HOST=127.0.0.1 PORT=4180 npm run start
 - PRO does not create, confirm, or send hair masks; current and non-current natural tones use the same maskless provider path.
 - Explore, PRO, and Design Lock prompts must use the shared low-sheen satin-to-matte surface contract and reject wet, oily, glassy, plastic, metallic, lacquered, or synthetic-wig shine.
 - Core female and male records must receive distinct hair-only line-treatment prompts: feminine connected curves and blended face-framing versus masculine directional planes, broader sections, and controlled temple/nape transitions. The named design remains authoritative, and these rules must never alter face, body, or identity.
+- Trend signals are metadata-only and map to stable core design prefixes. External images, thumbnails, Base64, media URLs, and image data URLs must never be stored, served, or used as generation inputs.
+- Trend contributes at most 3 selection points in Explore and 5 suitability points in PRO; hard feasibility, damage safety, source lineage, and deterministic diversity remain authoritative.
+- `data/hair-trend-signals.json` is the reviewed source ledger and watch configuration. `src/hairTrendData.mjs` is generated only by `scripts/syncHairTrends.mjs`; never hand-edit it.
+- Instagram hashtag watch configuration must stay at or below 30 unique queries and live collection must fail visibly without configured Meta or Naver credentials.
 - PRO fixed 100-slot allocations remain deterministic, approximately balance supplied views, and retain view/mirror/color axes through retries.
 - Provider-side mirrored source images must be flipped back before display.
 - PRO displays the provider result directly after orientation restoration; it does not composite protected source pixels over the result.
@@ -80,6 +84,7 @@ Current runtime versions:
 schemaVersion: 1
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
 promptVersion: HLM-EXPLORE-PROMPT-2026-07-4
+trendRegistryVersion: HLM-TRENDS-2026-07-1
 consultation handoff schema: 2
 ```
 
@@ -96,6 +101,8 @@ Never commit:
 
 ```text
 imagen.web.js
+.env
+Meta and Naver trend credentials
 API keys
 customer photos
 generated customer images
@@ -111,6 +118,14 @@ Core or catalog changes:
 
 ```bash
 node --test exploreCore.test.mjs catalogRuntime.test.mjs
+npm run verify
+```
+
+Trend registry changes:
+
+```bash
+npm run trend:check
+node --test trendRegistry.test.mjs
 npm run verify
 ```
 

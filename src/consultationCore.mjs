@@ -8,6 +8,8 @@ import {
   selectNeighbor100,
   stableHash32,
 } from './exploreCore.mjs';
+import { TREND_STRUCTURE_BASES, trendPointsForCandidate } from './trendRegistry.mjs';
+export { TREND_STRUCTURE_BASES };
 
 export const CONSULTATION_HANDOFF_STORAGE_KEY = 'HAIRLOOM_CONSULTATION_HANDOFF';
 export const CONSULTATION_HANDOFF_QUERY_TRIGGER = '/?consultationHandoff=1';
@@ -36,11 +38,6 @@ export const FINISH_SHRINKAGE = Object.freeze({
   '히피 펌': 0.18
 });
 export const CONSULTATION_MOODS = Object.freeze(['자연스러운', '부드러운', '단정한', '우아한', '시크한', '로맨틱한', '경쾌한', '과감한']);
-export const TREND_STRUCTURE_BASES = Object.freeze([
-  '에어리 레이어드', '버터플라이 레이어', '롱 허쉬', '허쉬 미디', '페이스프레임 미디', '레이어드 미디', '버터플라이 로브', '블런트 로브', '샤기 보브', '미니 보브', '프렌치 보브', '울프 미디', '턱선 블런트 보브', '그래듀에이티드 보브', '이탈리안 보브', '원랭스 미디', '옥토퍼스 미디', 'U라인 롱', '롱 샤그', '블런트 롱',
-  '텍스처드 크롭', '프렌치 크롭', '리프컷', '소프트 투블럭', '쉼표머리', '미디엄 커튼', '브로 플로우', '미디엄 테이퍼', '소프트 멀릿', '울프컷', '텍스처드 퀴프', '아이비리그', '템플 페이드 크롭', '버스트 크롭', '댄디컷', '숏 모드컷', '미디엄 슬릭백', '미디엄 샤그', '레이어드 장발', '서퍼 롱'
-]);
-const TREND_STRUCTURE_RANK = new Map(TREND_STRUCTURE_BASES.map((name, index) => [name, index]));
 const STRUCTURE_FINISH_PRIORITY = new Map([
   ['내추럴 스트레이트', 0], ['내추럴 웨이브', 1], ['루트 볼륨 펌', 2], ['루즈 C컬 펌', 3], ['루즈 S컬 펌', 4], ['바디 웨이브 펌', 5], ['내추럴 컬', 6], ['타이트 C컬 펌', 7], ['워터 웨이브 펌', 8], ['타이트 S컬 펌', 9], ['스파이럴 펌', 10], ['내추럴 코일', 11], ['히피 펌', 12]
 ]);
@@ -469,7 +466,7 @@ export function scoreConsultationSuitability(candidate, rawDiagnosis, preference
   const moodTerms = [candidate.mood, ...(MOOD_ALIASES[candidate.mood] ?? []), candidate.baseKo, candidate.frontKo].filter(Boolean).map((value) => String(value).toLowerCase());
   const preference = moodText && moodTerms.some((term) => moodText.includes(term)) ? 10 : moodText ? 6 : 8;
   const maintenance = maintenanceScore(candidate, preferences.maintenance ?? 'medium');
-  const trend = TREND_STRUCTURE_RANK.has(candidate.baseKo) ? 5 : 2;
+  const trend = trendPointsForCandidate(candidate);
   const components = { lengthStructure, texture, damageChemical, density, preference, maintenance, trend };
   const total = Object.values(components).reduce((sum, value) => sum + value, 0);
   return { total, suitable: total >= SUITABILITY_FLOOR, components, reasons: [...evaluation.reasons, `적합도 ${total}/100`] };

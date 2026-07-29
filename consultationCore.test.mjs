@@ -229,6 +229,21 @@ test('suitability is auditable, hair-only, and reaches 100 for an exact preferen
   assert.equal(Object.keys(score.components).some((key) => /face|beauty|attract/i.test(key)), false);
 });
 
+test('trend registry stays bounded and never overrides impossible feasibility', () => {
+  const nonTrendGroup = groups.find((item) => item.baseKo === '클래식 픽시' && item.genderId === 'F' && item.lengthId === 'US');
+  const nonTrendRecord = nonTrendGroup.finishRecords.find((item) => item.finishKo === '내추럴 스트레이트');
+  const nonTrendCandidate = { ...nonTrendRecord, designId: nonTrendRecord.id, structureKey: nonTrendGroup.key, mood: '자연스러운', intensity: '균형 있게', finishRecord: nonTrendRecord };
+  const nonTrendScore = scoreConsultationSuitability(nonTrendCandidate, diagnosis({ actualLengthCm: 8 }), { mood: '자연', maintenance: 'low' });
+  assert.equal(nonTrendScore.components.trend, 2);
+  assert.ok(nonTrendScore.components.trend <= 5);
+
+  const maleRecord = maleShort.finishRecords.find((item) => item.finishKo === '내추럴 스트레이트');
+  const impossibleCandidate = { ...maleRecord, designId: maleRecord.id, structureKey: maleShort.key, mood: '자연스러운', intensity: '균형 있게', finishRecord: maleRecord };
+  const impossibleScore = scoreConsultationSuitability(impossibleCandidate, diagnosis({ profileGender: 'F', actualLengthCm: 18 }), { mood: '자연', maintenance: 'low' });
+  assert.equal(impossibleScore.total, 0);
+  assert.equal(impossibleScore.components.trend, 0);
+});
+
 test('diversity axes balance views, mirrors, colors, and retain retry ownership', () => {
   const profileGroups = groups.filter((group) => group.genderId === 'F');
   const current = diagnosis({ actualLengthCm: 80, damage: 'low' });
