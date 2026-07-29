@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const HAIR_TREND_SCHEDULE_LABEL = 'com.hairloom.trend-update';
-export const DEFAULT_TREND_INTERVAL_HOURS = 24;
+export const DEFAULT_TREND_INTERVAL_HOURS = 336;
 const managedMarker = 'Managed by Hairloom scripts/manageHairTrendSchedule.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const liveScriptPath = resolve(root, 'scripts/syncHairTrends.mjs');
@@ -16,7 +16,7 @@ const xmlEscape = (value) => String(value).replace(/[&<>"']/g, (character) => ({
 export function parseIntervalHours(argv = []) {
   const raw = argv.find((value) => value.startsWith('--interval-hours='));
   const hours = raw ? Number(raw.slice('--interval-hours='.length)) : DEFAULT_TREND_INTERVAL_HOURS;
-  if (!Number.isInteger(hours) || hours < 1 || hours > 168) throw new TypeError('Trend schedule interval must be an integer from 1 to 168 hours');
+  if (!Number.isInteger(hours) || hours < 1 || hours > 336) throw new TypeError('Trend schedule interval must be an integer from 1 to 336 hours');
   return hours;
 }
 
@@ -171,7 +171,7 @@ export async function main(argv = process.argv.slice(2)) {
   if (command === 'status') return status();
   if (command === 'remove' || command === 'uninstall') return removeSchedule();
   if (command === 'run-once') return runOnce();
-  throw new TypeError('Usage: manageHairTrendSchedule.mjs install [--dry-run] [--interval-hours=24] | status | remove | run-once');
+  throw new TypeError('Usage: manageHairTrendSchedule.mjs install [--dry-run] [--interval-hours=336] | status | remove | run-once');
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

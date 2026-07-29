@@ -12,7 +12,7 @@ This is the machine-operable guide for work in the standalone Hairloom repositor
 - App URL: `http://127.0.0.1:4180/`
 - Health URL: `http://127.0.0.1:4180/healthz`
 - Main verification: `npm run verify`
-- Expected baseline: 64 tests passing
+- Expected baseline: 68 tests passing
 
 ## Hard project boundary
 
@@ -42,7 +42,7 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, Explore/catalog/consultation/server/trend/scheduler tests, and the 64-test baseline.
+`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, Explore/catalog/consultation/server/trend/scheduler/automation tests, and the 68-test baseline.
 
 ## Product invariants
 
@@ -69,9 +69,12 @@ HOST=127.0.0.1 PORT=4180 npm run start
 - Trend contributes at most 3 selection points in Explore and 5 suitability points in PRO; hard feasibility, damage safety, source lineage, and deterministic diversity remain authoritative.
 - `data/hair-trend-signals.json` is the reviewed source ledger and watch configuration. `src/hairTrendData.mjs` is generated only by `scripts/syncHairTrends.mjs`; never hand-edit it.
 - Instagram hashtag watch configuration must stay at or below 30 unique queries and live collection must fail visibly without configured Meta or Naver credentials.
-- Periodic trend updates use the managed macOS launchd label `com.hairloom.trend-update`, default to 24 hours, and accept only integer intervals from 1 to 168 hours.
+- Periodic trend updates use the managed macOS launchd label `com.hairloom.trend-update`, default to 14 days (336 hours), and accept only integer intervals from 1 to 336 hours.
 - Schedule installation must require one complete Meta or Naver credential pair unless it is a dry-run. Credentials stay in ignored `.env` or the process environment and must never be embedded in the plist or printed.
 - The schedule manager must refuse to overwrite or remove an unmanaged plist at the same path. Logs remain under ignored `.gjc/logs/`.
+- GitHub trend refresh runs through `.github/workflows/hair-trend-refresh.yml`, checks a deterministic 14-day cadence anchored at `2026-08-03`, and permits manual dispatch to force a run.
+- Automated trend refreshes may commit changes only from `data/hair-trend-signals.json` and `src/hairTrendData.mjs` on `automation/hair-trends`, must target the default branch and run full verification first, and must fail on every other tracked change or non-ignored untracked file.
+- GitHub Actions credentials must remain repository secrets or variables. Never write them to generated data, workflow artifacts, commits, logs, or PR text.
 - PRO fixed 100-slot allocations remain deterministic, approximately balance supplied views, and retain view/mirror/color axes through retries.
 - Provider-side mirrored source images must be flipped back before display.
 - PRO displays the provider result directly after orientation restoration; it does not composite protected source pixels over the result.
@@ -131,7 +134,9 @@ npm run trend:check
 node --test trendRegistry.test.mjs
 npm run verify
 node --test trendSchedule.test.mjs
-npm run trend:schedule -- --dry-run --interval-hours=24
+npm run trend:schedule -- --dry-run --interval-hours=336
+npm run trend:cadence -- --date=2026-08-17
+node --test trendAutomation.test.mjs
 ```
 
 Server changes:

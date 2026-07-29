@@ -105,14 +105,14 @@ npm run trend:live
 스케줄이 만들 launchd 설정을 먼저 확인합니다. 이 명령은 파일이나 시스템 서비스를 변경하지 않습니다.
 
 ```bash
-npm run trend:schedule -- --dry-run --interval-hours=24
+npm run trend:schedule -- --dry-run --interval-hours=336
 ```
 
-`.env`에 완전한 Meta 또는 Naver 자격 증명 쌍이 있으면 기본 24시간 간격으로 설치합니다. 간격은 1–168시간 범위에서 변경할 수 있습니다.
+`.env`에 완전한 Meta 또는 Naver 자격 증명 쌍이 있으면 기본 격주(14일, 336시간) 간격으로 설치합니다. 간격은 1–336시간 범위에서 변경할 수 있습니다.
 
 ```bash
 npm run trend:schedule
-npm run trend:schedule -- --interval-hours=12
+npm run trend:schedule -- --interval-hours=168
 ```
 
 상태 확인, 즉시 한 번 실행, 제거 명령은 다음과 같습니다.
@@ -124,6 +124,35 @@ npm run trend:schedule:remove
 ```
 
 스케줄 label은 `com.hairloom.trend-update`입니다. launchd plist에는 API 키를 넣지 않고 Hairloom의 무시된 `.env`를 실행 시점에 읽습니다. 로그는 Git에서 제외되는 `.gjc/logs/hair-trends.log`와 `.gjc/logs/hair-trends.error.log`에 기록됩니다. 기존에 같은 경로를 사용하는 관리되지 않은 launch agent는 덮어쓰거나 삭제하지 않습니다. Node 실행 경로가 바뀌면 스케줄을 제거한 뒤 다시 설치합니다.
+
+### GitHub 격주 데이터 PR
+
+`.github/workflows/hair-trend-refresh.yml`은 매주 월요일 00:30 UTC(한국 시간 09:30)에 시작한 뒤 `2026-08-03`을 기준으로 14일 간격인지 결정적으로 검사합니다. `workflow_dispatch`로 수동 실행하면 날짜 게이트를 건너뜁니다.
+
+```bash
+npm run trend:cadence
+npm run trend:cadence -- --date=2026-08-17
+```
+
+저장소에 다음 GitHub Actions secrets를 설정합니다. Meta 또는 Naver 중 한 쌍만 완전해도 실행할 수 있습니다.
+
+```text
+HAIRLOOM_META_ACCESS_TOKEN
+HAIRLOOM_META_IG_USER_ID
+HAIRLOOM_NAVER_CLIENT_ID
+HAIRLOOM_NAVER_CLIENT_SECRET
+```
+
+선택적으로 repository variable `HAIRLOOM_META_API_VERSION`을 설정할 수 있습니다. Repository의 Actions 설정에서 `Allow GitHub Actions to create and approve pull requests`도 활성화해야 합니다. 완전한 provider 쌍이 없으면 라이브 수집 단계가 명시적으로 실패하고 PR을 만들지 않습니다.
+
+격주 실행은 전체 검증을 통과한 경우에만 `automation/hair-trends` 브랜치에 다음 두 파일에서 발생한 변경만 커밋하고 기본 브랜치 대상으로 PR을 생성하거나 기존 PR을 갱신합니다.
+
+```text
+data/hair-trend-signals.json
+src/hairTrendData.mjs
+```
+
+다른 tracked 파일이나 Git이 무시하지 않는 untracked 파일이 생기면 워크플로가 실패합니다. 트렌드 데이터가 변하지 않으면 커밋과 PR을 만들지 않습니다. API 키와 외부 이미지는 커밋 대상에 포함되지 않습니다.
 
 Google Trends, Pinterest Trends, Instagram Business Discovery 또는 전문 매체에서 검수한 메타데이터 배치는 다음처럼 가져옵니다.
 
@@ -144,7 +173,7 @@ npm run verify
 현재 기준:
 
 ```text
-64 tests passing
+68 tests passing
 1,080-design taxonomy check passing
 6,500-design v2 master catalog check passing
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
@@ -164,6 +193,9 @@ src/hairTrendData.mjs              생성된 40개 런타임 트렌드 스냅샷
 scripts/generateHairMasterCatalog.mjs  6,500개 카탈로그 생성기
 scripts/syncHairTrends.mjs         로컬 검사·가져오기·선택적 라이브 수집
 scripts/manageHairTrendSchedule.mjs macOS 주기 실행 설치·상태·제거
+scripts/checkHairTrendCadence.mjs   격주 실행 날짜 게이트
+scripts/checkHairTrendChanges.mjs   자동 커밋 파일 허용 목록 검사
+.github/workflows/hair-trend-refresh.yml 데이터 전용 자동 커밋·PR
 docs/hair-design-master/           런타임 카탈로그와 생성 문서
 server.mjs                         로컬 전용 정적 서버
 ```

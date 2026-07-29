@@ -14,12 +14,13 @@ import {
   trendCredentialStatus
 } from './scripts/manageHairTrendSchedule.mjs';
 
-test('trend schedule interval is bounded from one hour to one week', () => {
+test('trend schedule interval is bounded from one hour to two weeks', () => {
   assert.equal(parseIntervalHours([]), DEFAULT_TREND_INTERVAL_HOURS);
+  assert.equal(DEFAULT_TREND_INTERVAL_HOURS, 336);
   assert.equal(parseIntervalHours(['--interval-hours=6']), 6);
-  assert.throws(() => parseIntervalHours(['--interval-hours=0']), /1 to 168 hours/);
-  assert.throws(() => parseIntervalHours(['--interval-hours=169']), /1 to 168 hours/);
-  assert.throws(() => parseIntervalHours(['--interval-hours=1.5']), /1 to 168 hours/);
+  assert.throws(() => parseIntervalHours(['--interval-hours=0']), /1 to 336 hours/);
+  assert.throws(() => parseIntervalHours(['--interval-hours=337']), /1 to 336 hours/);
+  assert.throws(() => parseIntervalHours(['--interval-hours=1.5']), /1 to 336 hours/);
 });
 
 test('trend credential readiness requires one complete provider pair', () => {
@@ -34,12 +35,12 @@ test('launch agent plist contains only executable metadata and no credentials', 
   const plist = buildLaunchAgentPlist({
     nodePath: '/opt/Hair & Node/bin/node',
     repoPath: '/Users/test/Hairloom & Trends',
-    intervalHours: 6,
+    intervalHours: DEFAULT_TREND_INTERVAL_HOURS,
     stdoutPath: '/Users/test/logs/out.log',
     stderrPath: '/Users/test/logs/error.log'
   });
   assert.match(plist, new RegExp(HAIR_TREND_SCHEDULE_LABEL));
-  assert.match(plist, /<integer>21600<\/integer>/);
+  assert.match(plist, /<integer>1209600<\/integer>/);
   assert.match(plist, /Hair &amp; Node/);
   assert.match(plist, /Hairloom &amp; Trends/);
   assert.match(plist, /scripts\/syncHairTrends\.mjs/);

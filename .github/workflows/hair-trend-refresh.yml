@@ -1,0 +1,84 @@
+name: Refresh hair trend data
+
+on:
+  schedule:
+    - cron: '30 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: hair-trend-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Check biweekly cadence
+        id: cadence
+        shell: bash
+        run: |
+          args=()
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            args+=(--force)
+          fi
+          node scripts/checkHairTrendCadence.mjs --github-output="$GITHUB_OUTPUT" "${args[@]}"
+
+      - name: Collect live metadata-only trend signals
+        if: steps.cadence.outputs.due == 'true'
+        env:
+          HAIRLOOM_META_ACCESS_TOKEN: ${{ secrets.HAIRLOOM_META_ACCESS_TOKEN }}
+          HAIRLOOM_META_IG_USER_ID: ${{ secrets.HAIRLOOM_META_IG_USER_ID }}
+          HAIRLOOM_META_API_VERSION: ${{ vars.HAIRLOOM_META_API_VERSION || 'v25.0' }}
+          HAIRLOOM_NAVER_CLIENT_ID: ${{ secrets.HAIRLOOM_NAVER_CLIENT_ID }}
+          HAIRLOOM_NAVER_CLIENT_SECRET: ${{ secrets.HAIRLOOM_NAVER_CLIENT_SECRET }}
+        run: node scripts/syncHairTrends.mjs --live
+
+      - name: Verify Hairloom and trend registry
+        if: steps.cadence.outputs.due == 'true'
+        run: npm run verify
+
+      - name: Enforce data-only changes
+        if: steps.cadence.outputs.due == 'true'
+        id: changes
+        run: node scripts/checkHairTrendChanges.mjs --github-output="$GITHUB_OUTPUT"
+
+      - name: Commit data and create or update pull request
+        if: steps.cadence.outputs.due == 'true' && steps.changes.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+          UPDATE_BRANCH: automation/hair-trends
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin "$UPDATE_BRANCH:refs/remotes/origin/$UPDATE_BRANCH" || true
+          git switch -C "$UPDATE_BRANCH"
+          git add -- data/hair-trend-signals.json src/hairTrendData.mjs
+          node scripts/checkHairTrendChanges.mjs --staged --require-change
+          git commit -m 'chore: refresh hair trend data'
+          git push --force-with-lease origin "HEAD:$UPDATE_BRANCH"
+
+          body=$'Automated biweekly metadata-only hair trend refresh.\n\n- Commits changes only from `data/hair-trend-signals.json` and `src/hairTrendData.mjs`\n- Runs full Hairloom verification before publication\n- Never stores external images or provider credentials\n\nWorkflow run: '"$RUN_URL"
+          existing="$(gh pr list --repo "$GITHUB_REPOSITORY" --base "$BASE_BRANCH" --head "$UPDATE_BRANCH" --state open --json number --jq '.[0].number // empty')"
+          if [[ -z "$existing" ]]; then
+            gh pr create --repo "$GITHUB_REPOSITORY" --base "$BASE_BRANCH" --head "$UPDATE_BRANCH" --title 'chore: refresh hair trend data' --body "$body"
+          else
+            gh pr comment "$existing" --repo "$GITHUB_REPOSITORY" --body "Biweekly trend data refreshed by $RUN_URL"
+          fi

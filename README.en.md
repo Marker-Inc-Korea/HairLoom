@@ -105,14 +105,14 @@ npm run trend:live
 Preview the launchd configuration without changing files or system services:
 
 ```bash
-npm run trend:schedule -- --dry-run --interval-hours=24
+npm run trend:schedule -- --dry-run --interval-hours=336
 ```
 
-When `.env` contains one complete Meta or Naver credential pair, install the schedule at the default 24-hour interval. Intervals are bounded to 1–168 hours.
+When `.env` contains one complete Meta or Naver credential pair, install the schedule at the default biweekly interval of 14 days (336 hours). Intervals are bounded to 1–336 hours.
 
 ```bash
 npm run trend:schedule
-npm run trend:schedule -- --interval-hours=12
+npm run trend:schedule -- --interval-hours=168
 ```
 
 Inspect status, run one update immediately, or remove the schedule:
@@ -124,6 +124,35 @@ npm run trend:schedule:remove
 ```
 
 The launchd label is `com.hairloom.trend-update`. The plist never embeds credentials; the update command reads Hairloom's ignored `.env` at runtime. Logs go to ignored `.gjc/logs/hair-trends.log` and `.gjc/logs/hair-trends.error.log`. The manager refuses to overwrite or remove an unmanaged launch agent at the same path. Reinstall the schedule after changing the Node executable path.
+
+### GitHub biweekly data pull requests
+
+`.github/workflows/hair-trend-refresh.yml` starts every Monday at 00:30 UTC, then deterministically checks whether the date is on the 14-day cadence anchored at `2026-08-03`. A manual `workflow_dispatch` bypasses the date gate.
+
+```bash
+npm run trend:cadence
+npm run trend:cadence -- --date=2026-08-17
+```
+
+Configure these GitHub Actions secrets for the repository. One complete Meta or Naver pair is sufficient.
+
+```text
+HAIRLOOM_META_ACCESS_TOKEN
+HAIRLOOM_META_IG_USER_ID
+HAIRLOOM_NAVER_CLIENT_ID
+HAIRLOOM_NAVER_CLIENT_SECRET
+```
+
+Optionally configure the repository variable `HAIRLOOM_META_API_VERSION`. In the repository Actions settings, enable `Allow GitHub Actions to create and approve pull requests`. Without one complete provider pair, live collection fails visibly and creates no pull request.
+
+After full verification, the biweekly workflow commits changes only from these two files on `automation/hair-trends` and creates or updates a pull request against the default branch:
+
+```text
+data/hair-trend-signals.json
+src/hairTrendData.mjs
+```
+
+Any other tracked change or non-ignored untracked file fails the workflow. No data change means no commit and no pull request. Provider credentials and external images are never committed.
 
 Import reviewed metadata batches from Google Trends, Pinterest Trends, Instagram Business Discovery, or editorial sources:
 
@@ -144,7 +173,7 @@ npm run verify
 Current baseline:
 
 ```text
-64 tests passing
+68 tests passing
 1,080-design taxonomy check passing
 6,500-design v2 master catalog check passing
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
@@ -164,6 +193,9 @@ src/hairTrendData.mjs              Generated 40-record runtime trend snapshot
 scripts/generateHairMasterCatalog.mjs  6,500-design catalog generator
 scripts/syncHairTrends.mjs         Local checks, imports, and optional live collection
 scripts/manageHairTrendSchedule.mjs macOS periodic install, status, and removal
+scripts/checkHairTrendCadence.mjs   Deterministic biweekly date gate
+scripts/checkHairTrendChanges.mjs   Automated commit path allowlist guard
+.github/workflows/hair-trend-refresh.yml Data-only automated commit and PR
 docs/hair-design-master/           Runtime catalog and generated documentation
 server.mjs                         Local-only static server
 ```
