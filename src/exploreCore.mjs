@@ -1,8 +1,19 @@
 export const schemaVersion = 1;
 export const catalogVersion = 'HLM-MASTER-2026-07-EXPLORE-2';
-export const promptVersion = 'HLM-EXPLORE-PROMPT-2026-07-3';
+export const promptVersion = 'HLM-EXPLORE-PROMPT-2026-07-4';
 export const MAX_EXPLORE_ACTIVE = 32;
 export const EXPLORE_SELECTION_LIMIT = 100;
+
+const MASCULINE_LINE_TREATMENT_PROMPT = 'MASCULINE LINE TREATMENT: the named haircut remains authoritative. Use stronger directional planes, broader hair sections, controlled weight, compact side volume, deliberate temple and ear transitions, and a clean decisive nape. Avoid a diffuse rounded halo, fine decorative face-framing wisps, ornamental feathering, or uniformly soft curl edges unless the named design explicitly requires them. Apply this language to hair only; never alter the face, body, or identity.';
+const FEMININE_LINE_TREATMENT_PROMPT = 'FEMININE LINE TREATMENT: the named haircut remains authoritative. Use softer connected arcs, blended weight transitions, nuanced face-framing, gentle temple and ear transitions, fluid side-to-back movement, and tapered or feathered ends where the design allows. Avoid clipper-like boxiness, hard squared corners, rigid top planes, abrupt disconnected side panels, or a severe barbershop nape unless the named design explicitly requires them. Apply this language to hair only; never alter the face, body, or identity.';
+const GENDER_NEUTRAL_LINE_TREATMENT_PROMPT = 'GENDER-NEUTRAL LINE TREATMENT: follow the named design’s established contour and weight without imposing masculine or feminine facial cues. Apply the design language to hair only; never alter the face, body, or identity.';
+
+export function genderLineTreatmentPrompt(value) {
+  const gender = String(value ?? '').trim().toUpperCase();
+  if (gender === 'M' || gender === 'MALE' || gender === '남성') return MASCULINE_LINE_TREATMENT_PROMPT;
+  if (gender === 'F' || gender === 'FEMALE' || gender === '여성') return FEMININE_LINE_TREATMENT_PROMPT;
+  return GENDER_NEUTRAL_LINE_TREATMENT_PROMPT;
+}
 
 const DEFAULT_SETTINGS = Object.freeze({
   currentLength: 2,

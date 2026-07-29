@@ -12,7 +12,7 @@ This is the machine-operable guide for work in the standalone Hairloom repositor
 - App URL: `http://127.0.0.1:4180/`
 - Health URL: `http://127.0.0.1:4180/healthz`
 - Main verification: `npm run verify`
-- Expected baseline: 51 tests passing
+- Expected baseline: 52 tests passing
 
 ## Hard project boundary
 
@@ -64,6 +64,7 @@ HOST=127.0.0.1 PORT=4180 npm run start
 - PRO user-facing length choices are exactly `짧은 머리 / 중간 / 장발`.
 - PRO does not create, confirm, or send hair masks; current and non-current natural tones use the same maskless provider path.
 - Explore, PRO, and Design Lock prompts must use the shared low-sheen satin-to-matte surface contract and reject wet, oily, glassy, plastic, metallic, lacquered, or synthetic-wig shine.
+- Core female and male records must receive distinct hair-only line-treatment prompts: feminine connected curves and blended face-framing versus masculine directional planes, broader sections, and controlled temple/nape transitions. The named design remains authoritative, and these rules must never alter face, body, or identity.
 - PRO fixed 100-slot allocations remain deterministic, approximately balance supplied views, and retain view/mirror/color axes through retries.
 - Provider-side mirrored source images must be flipped back before display.
 - PRO displays the provider result directly after orientation restoration; it does not composite protected source pixels over the result.
@@ -78,7 +79,7 @@ Current runtime versions:
 ```text
 schemaVersion: 1
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
-promptVersion: HLM-EXPLORE-PROMPT-2026-07-3
+promptVersion: HLM-EXPLORE-PROMPT-2026-07-4
 consultation handoff schema: 2
 ```
 

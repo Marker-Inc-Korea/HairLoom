@@ -10,6 +10,7 @@ import {
   defaultExploreSettings,
   detectImageMime,
   filterFeasible,
+  genderLineTreatmentPrompt,
   normalizeProviderResult,
   normalizeSettings,
   passesDamageCondition,
@@ -86,6 +87,21 @@ test('settings normalize exact six defaults, damage alias, and reject seventh se
   assert.deepEqual(normalizeSettings({ damage: 'high' }), { ...defaultExploreSettings(), damageCondition: 'high' });
   assert.equal(Object.keys(normalizeSettings({})).length, 6);
   assert.throws(() => normalizeSettings({ tolerance: 'wide' }), /Unknown Explore setting/);
+});
+
+test('gender line treatment keeps distinct masculine and feminine hair geometry', () => {
+  const masculine = genderLineTreatmentPrompt('M');
+  const feminine = genderLineTreatmentPrompt('female');
+  assert.match(masculine, /MASCULINE LINE TREATMENT/);
+  assert.match(masculine, /stronger directional planes/);
+  assert.match(masculine, /clean decisive nape/);
+  assert.match(feminine, /FEMININE LINE TREATMENT/);
+  assert.match(feminine, /softer connected arcs/);
+  assert.match(feminine, /nuanced face-framing/);
+  assert.notEqual(masculine, feminine);
+  assert.match(masculine, /hair only; never alter the face, body, or identity/);
+  assert.match(feminine, /hair only; never alter the face, body, or identity/);
+  assert.match(genderLineTreatmentPrompt('U'), /GENDER-NEUTRAL LINE TREATMENT/);
 });
 
 test('banned face keys are rejected without rejecting hair landmarks', () => {
@@ -167,7 +183,7 @@ test('cache key and stable settings string use dc=', () => {
   assert.match(serialized, /dc=high/);
   assert.doesNotMatch(serialized, /damage=/);
   const key = buildExploreCacheKey({ sourcePhotoKey: 'abc123', settings: { damage: 'high' } });
-  assert.match(key, /^hlm:explore:v2:HLM-MASTER-2026-07-EXPLORE-2:HLM-EXPLORE-PROMPT-2026-07-3:abc123:/);
+  assert.match(key, /^hlm:explore:v2:HLM-MASTER-2026-07-EXPLORE-2:HLM-EXPLORE-PROMPT-2026-07-4:abc123:/);
 });
 
 test('queue enforces max 32, supersession, stale guards, and out-of-order stable slots', () => {

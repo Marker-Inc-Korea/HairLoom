@@ -57,6 +57,8 @@ test('serves Hairloom page and isolated static assets', async () => {
     assert.match(rootHtml, /low-sheen satin-to-matte/);
     assert.match(rootHtml, /synthetic wig sheen/);
     assert.match(rootHtml, /자연스러운 저광택/);
+    assert.match(rootHtml, /genderLineTreatmentPrompt\(record\.genderId\)/);
+    assert.match(rootHtml, /genderLine=ExploreCore\.genderLineTreatmentPrompt/);
     assert.equal(rootResponse.headers.get('x-content-type-options'), 'nosniff');
     assert.match(rootResponse.headers.get('cache-control') || '', /no-store/);
 
@@ -99,7 +101,7 @@ test('serves only consultation route and allowlisted consultation assets', async
       assert.match(response.headers.get('cache-control') || '', /no-store/);
       const html = await response.text();
       assert.match(html, /styles\.css\?v=20260727-maskless-v9/);
-      assert.match(html, /app\.mjs\?v=20260727-low-sheen-v10/);
+      assert.match(html, /app\.mjs\?v=20260729-gender-lines-v11/);
     }
     for (const [path, mime] of [['/consultation/styles.css', /^text\/css/], ['/consultation/app.mjs', /^text\/javascript/], ['/src/consultationCore.mjs', /^text\/javascript/]]) {
       const response = await fetch(`http://127.0.0.1:${port}${path}`);
@@ -110,7 +112,13 @@ test('serves only consultation route and allowlisted consultation assets', async
     }
     const appSource = await (await fetch(`http://127.0.0.1:${port}/consultation/app.mjs`)).text();
     const coreSource = await (await fetch(`http://127.0.0.1:${port}/src/consultationCore.mjs`)).text();
+    const exploreCoreSource = await (await fetch(`http://127.0.0.1:${port}/src/exploreCore.mjs`)).text();
     assert.match(coreSource, /export function classifyHairColorSamples/);
+    assert.match(exploreCoreSource, /MASCULINE LINE TREATMENT/);
+    assert.match(exploreCoreSource, /stronger directional planes/);
+    assert.match(exploreCoreSource, /FEMININE LINE TREATMENT/);
+    assert.match(exploreCoreSource, /softer connected arcs/);
+    assert.match(exploreCoreSource, /hair only; never alter the face, body, or identity/);
     assert.match(appSource, /\['SOURCE', 'PROFILE', 'STRUCTURE', 'VARIATION', 'COMPARE', 'LOCK'\]/);
     assert.match(appSource, /FRONT REQUIRED/);
     assert.match(appSource, /purpose: 'structure'/);
@@ -175,6 +183,7 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /low-sheen satin-to-matte/);
     assert.match(appSource, /glassy or plastic shine/);
     assert.match(appSource, /synthetic wig sheen/);
+    assert.match(appSource, /genderLineTreatmentPrompt\(record\.genderId\)/);
     assert.match(appSource, /태슬 단발/);
     assert.match(appSource, /TREND ·/);
     assert.match(appSource, /id="currentLength"/);

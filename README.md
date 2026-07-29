@@ -14,6 +14,7 @@ Hairloom은 원본 인물 사진을 유지하면서 다양한 헤어 디자인�
 - PRO의 선택 원본 뷰 균형 배분, 좌우 반전 증강, 자연색 범위 선택
 - PRO는 헤어 마스크 없이 준비된 원본 한 장을 Provider에 전달하고 얼굴·의상·배경 보존을 프롬프트로 제어
 - Explore, PRO, Design Lock 모두 자연스러운 저광택 새틴-매트 질감과 부드러운 분산 하이라이트를 기본으로 사용
+- 여성 디자인은 연결된 곡선·부드러운 페이스 프레임·유연한 끝선을, 남성 디자인은 방향성 있는 면·넓은 모발 섹션·절제된 템플과 네이프 라인을 별도 계약으로 사용
 - 생성 이미지를 다음 생성 입력으로 재사용하지 않는 원본 계보 유지
 
 ## 화면
@@ -88,11 +89,11 @@ npm run verify
 현재 기준:
 
 ```text
-51 tests passing
+52 tests passing
 1,080-design taxonomy check passing
 6,500-design v2 master catalog check passing
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
-promptVersion: HLM-EXPLORE-PROMPT-2026-07-3
+promptVersion: HLM-EXPLORE-PROMPT-2026-07-4
 ```
 
 ## 주요 파일

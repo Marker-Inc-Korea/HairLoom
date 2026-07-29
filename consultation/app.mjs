@@ -1,4 +1,4 @@
-import { catalogVersion, promptVersion, hydrateCatalogPayload, normalizeProviderResult, normalizeSettings, sourcePhotoKey } from '../src/exploreCore.mjs';
+import { catalogVersion, promptVersion, hydrateCatalogPayload, normalizeProviderResult, normalizeSettings, sourcePhotoKey, genderLineTreatmentPrompt } from '../src/exploreCore.mjs';
 import {
   CONSULTATION_HANDOFF_STORAGE_KEY,
   CONSULTATION_HANDOFF_QUERY_TRIGGER,
@@ -970,6 +970,7 @@ function consultationPrompt(record, item) {
     'PRESERVE SOURCE FRAME: no crop, zoom, enlargement, reframing, collage, split screen, duplicate person, inset or border.',
     textureControlPrompt(record),
     NATURAL_SURFACE_FINISH_PROMPT,
+    genderLineTreatmentPrompt(record.genderId),
     colorRule,
     `DESIGN ID: ${record.id}`,
     `STYLE: ${familiarStyleName(record.promptAtoms?.titleKo || record.nameKo)}`,
