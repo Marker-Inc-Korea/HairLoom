@@ -100,6 +100,31 @@ cp .env.example .env
 npm run trend:live
 ```
 
+### macOS 주기 업데이트
+
+스케줄이 만들 launchd 설정을 먼저 확인합니다. 이 명령은 파일이나 시스템 서비스를 변경하지 않습니다.
+
+```bash
+npm run trend:schedule -- --dry-run --interval-hours=24
+```
+
+`.env`에 완전한 Meta 또는 Naver 자격 증명 쌍이 있으면 기본 24시간 간격으로 설치합니다. 간격은 1–168시간 범위에서 변경할 수 있습니다.
+
+```bash
+npm run trend:schedule
+npm run trend:schedule -- --interval-hours=12
+```
+
+상태 확인, 즉시 한 번 실행, 제거 명령은 다음과 같습니다.
+
+```bash
+npm run trend:schedule:status
+npm run trend:update
+npm run trend:schedule:remove
+```
+
+스케줄 label은 `com.hairloom.trend-update`입니다. launchd plist에는 API 키를 넣지 않고 Hairloom의 무시된 `.env`를 실행 시점에 읽습니다. 로그는 Git에서 제외되는 `.gjc/logs/hair-trends.log`와 `.gjc/logs/hair-trends.error.log`에 기록됩니다. 기존에 같은 경로를 사용하는 관리되지 않은 launch agent는 덮어쓰거나 삭제하지 않습니다. Node 실행 경로가 바뀌면 스케줄을 제거한 뒤 다시 설치합니다.
+
 Google Trends, Pinterest Trends, Instagram Business Discovery 또는 전문 매체에서 검수한 메타데이터 배치는 다음처럼 가져옵니다.
 
 ```bash
@@ -119,7 +144,7 @@ npm run verify
 현재 기준:
 
 ```text
-59 tests passing
+64 tests passing
 1,080-design taxonomy check passing
 6,500-design v2 master catalog check passing
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
@@ -138,6 +163,7 @@ src/trendRegistry.mjs              트렌드 검증·점수·카탈로그 매핑
 src/hairTrendData.mjs              생성된 40개 런타임 트렌드 스냅샷
 scripts/generateHairMasterCatalog.mjs  6,500개 카탈로그 생성기
 scripts/syncHairTrends.mjs         로컬 검사·가져오기·선택적 라이브 수집
+scripts/manageHairTrendSchedule.mjs macOS 주기 실행 설치·상태·제거
 docs/hair-design-master/           런타임 카탈로그와 생성 문서
 server.mjs                         로컬 전용 정적 서버
 ```

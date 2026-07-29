@@ -100,6 +100,31 @@ cp .env.example .env
 npm run trend:live
 ```
 
+### Periodic updates on macOS
+
+Preview the launchd configuration without changing files or system services:
+
+```bash
+npm run trend:schedule -- --dry-run --interval-hours=24
+```
+
+When `.env` contains one complete Meta or Naver credential pair, install the schedule at the default 24-hour interval. Intervals are bounded to 1–168 hours.
+
+```bash
+npm run trend:schedule
+npm run trend:schedule -- --interval-hours=12
+```
+
+Inspect status, run one update immediately, or remove the schedule:
+
+```bash
+npm run trend:schedule:status
+npm run trend:update
+npm run trend:schedule:remove
+```
+
+The launchd label is `com.hairloom.trend-update`. The plist never embeds credentials; the update command reads Hairloom's ignored `.env` at runtime. Logs go to ignored `.gjc/logs/hair-trends.log` and `.gjc/logs/hair-trends.error.log`. The manager refuses to overwrite or remove an unmanaged launch agent at the same path. Reinstall the schedule after changing the Node executable path.
+
 Import reviewed metadata batches from Google Trends, Pinterest Trends, Instagram Business Discovery, or editorial sources:
 
 ```bash
@@ -119,7 +144,7 @@ npm run verify
 Current baseline:
 
 ```text
-59 tests passing
+64 tests passing
 1,080-design taxonomy check passing
 6,500-design v2 master catalog check passing
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
@@ -138,6 +163,7 @@ src/trendRegistry.mjs              Trend validation, scoring, and catalog mappin
 src/hairTrendData.mjs              Generated 40-record runtime trend snapshot
 scripts/generateHairMasterCatalog.mjs  6,500-design catalog generator
 scripts/syncHairTrends.mjs         Local checks, imports, and optional live collection
+scripts/manageHairTrendSchedule.mjs macOS periodic install, status, and removal
 docs/hair-design-master/           Runtime catalog and generated documentation
 server.mjs                         Local-only static server
 ```
