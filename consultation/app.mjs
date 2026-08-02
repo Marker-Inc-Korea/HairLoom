@@ -1,5 +1,6 @@
 import { catalogVersion, promptVersion, hydrateCatalogPayload, normalizeProviderResult, normalizeSettings, sourcePhotoKey, genderLineTreatmentPrompt } from '../src/exploreCore.mjs';
 import { trendBadgeForCandidate } from '../src/trendRegistry.mjs';
+import { listModelPreviews, selectModelPreview } from '../src/modelPreviewRegistry.mjs';
 import {
   CONSULTATION_HANDOFF_STORAGE_KEY,
   CONSULTATION_HANDOFF_QUERY_TRIGGER,
@@ -56,6 +57,8 @@ const state = {
   groupsByKey: new Map(),
   structureSlots: [],
   structureActiveLimit: CONSULTATION_INITIAL_ACTIVE,
+  modelPreviews: [],
+  modelPreviewUrls: new Map(),
   structureStatus: '',
   structurePreparing: false,
   selectedGroup: null,
@@ -215,6 +218,29 @@ function sourceViewPreview(key = 'front') {
   return state.sourceViews[key] || state.originalJpegDataUrl || state.originalDataUrl;
 }
 
+function releaseModelPreviewUrls() {
+  for (const url of state.modelPreviewUrls.values()) URL.revokeObjectURL(url);
+  state.modelPreviewUrls.clear();
+}
+
+async function refreshModelPreviews() {
+  releaseModelPreviewUrls();
+  try {
+    state.modelPreviews = await listModelPreviews();
+  } catch {
+    state.modelPreviews = [];
+  }
+  return state.modelPreviews;
+}
+
+function registeredModelPreview(slot, record) {
+  if (!record || slot.status === 'done' || !state.modelPreviews.length) return null;
+  const preview = selectModelPreview(state.modelPreviews, record, slot.slotIndex);
+  if (!preview?.blob) return null;
+  if (!state.modelPreviewUrls.has(preview.id)) state.modelPreviewUrls.set(preview.id, URL.createObjectURL(preview.blob));
+  return { ...preview, url: state.modelPreviewUrls.get(preview.id) };
+}
+
 function assignBatchSourceViews(batch, purpose) {
   return assignConsultationSourceViews(batch, availableSourceViewKeys(), `${state.sourceKey}:${purpose}`);
 }
@@ -252,6 +278,7 @@ function renderDiagnosisProfile() {
   return `<section class="profile-step"><div class="profile-page-head"><b>PROFILE</b><span>1 / 2</span></div>
     <div class="settings-grid">${currentLengthSetting()}${DIAGNOSIS_DEFINITIONS.map(rangeSetting).join('')}</div>
     <label class="mood-field" for="mood"><span>MOOD</span><textarea id="mood" placeholder="SOFT · CLEAN">${esc(state.mood)}</textarea></label>
+    <a class="model-preview-link" href="/model-previews/" target="_blank" rel="noopener">대기 모델 이미지 관리 ↗</a>
     <details class="provider"><summary>API</summary><div class="cfg"><input id="baseURL" aria-label="API URL" placeholder="API URL" value="${esc(state.cfg.baseURL)}"><input id="model" aria-label="Model" placeholder="MODEL" value="${esc(state.cfg.model)}"><input id="size" aria-label="Size" placeholder="SIZE" value="${esc(state.cfg.size)}"><input id="apiKey" aria-label="API key" placeholder="API KEY" type="password" value="${esc(state.cfg.apiKey)}"></div></details>
     <div class="actions"><button class="next-button" id="toColor">NEXT</button></div>
   </section>`;
@@ -304,11 +331,13 @@ function generationAxisLabel(slot) {
 function structureTile(slot) {
   const record = state.recordsById.get(slot.designId);
   const group = record ? state.groupsByKey.get(recordGroupKey(record)) : null;
-  const source = slot.previewUrl || sourceViewPreview(slot.sourceViewKey);
+  const preview = registeredModelPreview(slot, record);
+  const source = slot.previewUrl || preview?.url || sourceViewPreview(slot.sourceViewKey);
   const selected = group && state.selectedGroup?.key === group.key;
   const ready = slot.status === 'done' && group;
   const trend = group ? trendBadgeForCandidate(group) : '';
-  return `<button class="structure-tile ${slot.status} ${selected ? 'selected' : ''}" data-structure-slot="${slot.slotIndex}" style="--tile-ratio:${structureTileRatio(slot.slotIndex)}" ${ready ? '' : 'disabled'}><img src="${esc(source)}" alt="${ready ? esc(groupLabel(group)) : ''}"><span class="structure-meta"><b>${ready ? esc(groupLabel(group)) : String(slot.slotIndex + 1).padStart(2, '0')}</b><small>${trend ? `${esc(trend)} · ` : ''}${esc(generationAxisLabel(slot))}</small></span></button>`;
+  const previewLabel = preview ? `<span class="registered-model-label">등록 모델 · 생성 대기</span>` : '';
+  return `<button class="structure-tile ${slot.status} ${preview ? 'registered-preview' : ''} ${selected ? 'selected' : ''}" data-structure-slot="${slot.slotIndex}" style="--tile-ratio:${structureTileRatio(slot.slotIndex)}" ${ready ? '' : 'disabled'}><img src="${esc(source)}" alt="${preview ? esc(`${preview.title} · 등록 모델 미리보기`) : ready ? esc(groupLabel(group)) : ''}">${previewLabel}<span class="structure-meta"><b>${ready ? esc(groupLabel(group)) : String(slot.slotIndex + 1).padStart(2, '0')}</b><small>${trend ? `${esc(trend)} · ` : ''}${esc(generationAxisLabel(slot))}</small></span></button>`;
 }
 
 function groupLabel(group) { return `${group.lengthKo} · ${familiarStyleName(group.baseKo)} · ${group.frontKo}`; }
@@ -338,9 +367,12 @@ function renderCompare() {
   return panel('COMPARE', `<div class="toolbar"><div class="stats"><span class="pill">${state.slots.length || 100} SLOTS</span><span class="pill">ACTIVE ${state.batch?.activeLimit ?? state.activeLimit}</span><span class="pill">RUN ${state.running.size}</span><span class="pill ok">DONE ${done}</span><span class="pill impossible">FAIL ${failed}</span></div><button class="next-button" id="toAgreement" ${state.shortlist.size ? '' : 'disabled'}>NEXT</button></div><div class="slots">${(state.slots.length ? state.slots : Array.from({ length: 100 }, (_, index) => ({ slotIndex: index, status: 'queued' }))).map(slotCard).join('')}</div>`);
 }
 function slotCard(slot) {
-  const source = slot.previewUrl || sourceViewPreview(slot.sourceViewKey);
+  const record = state.recordsById.get(slot.designId);
+  const preview = registeredModelPreview(slot, record);
+  const source = slot.previewUrl || preview?.url || sourceViewPreview(slot.sourceViewKey);
   const checked = state.shortlist.has(slot.designId) ? 'checked' : '';
-  return `<div class="slot ${slot.status}" data-slot="${slot.slotIndex}"><div class="image"><img src="${esc(source)}" alt="${slot.status === 'done' ? esc(slot.designId) : ''}"></div><input type="checkbox" aria-label="후보 선택 ${slot.slotIndex + 1}" data-short="${esc(slot.designId || '')}" ${checked} ${slot.status === 'done' ? '' : 'disabled'}><div class="meta">${String(slot.slotIndex + 1).padStart(2, '0')} · ${esc(generationAxisLabel(slot))} · ${esc(slot.designId || '대기')}</div></div>`;
+  const previewLabel = preview ? '<span class="registered-model-label">등록 모델 · 생성 대기</span>' : '';
+  return `<div class="slot ${slot.status} ${preview ? 'registered-preview' : ''}" data-slot="${slot.slotIndex}"><div class="image"><img src="${esc(source)}" alt="${preview ? esc(`${preview.title} · 등록 모델 미리보기`) : slot.status === 'done' ? esc(slot.designId) : ''}"></div>${previewLabel}<input type="checkbox" aria-label="후보 선택 ${slot.slotIndex + 1}" data-short="${esc(slot.designId || '')}" ${checked} ${slot.status === 'done' ? '' : 'disabled'}><div class="meta">${String(slot.slotIndex + 1).padStart(2, '0')} · ${esc(generationAxisLabel(slot))} · ${esc(slot.designId || '대기')}</div></div>`;
 }
 
 function renderAgreement() {
@@ -568,7 +600,7 @@ async function startStructureExplore() {
     state.structurePreparing = true;
     render();
     await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
-    await ensureCatalog();
+    await Promise.all([ensureCatalog(), refreshModelPreviews()]);
     state.filteredGroups = filterGroups();
     prepareGroupSummaries();
     const selection = selectConsultationStructureDesignIds(state.filteredGroups, state.diagnosis, {
@@ -829,6 +861,7 @@ async function startCompare() {
     render();
     return;
   }
+  await refreshModelPreviews();
   cancelActiveBatch('new-batch');
   const selected = selectConsultationDesignIds(state.records, state.settings, { seedInput: `${state.sourceKey}:${state.mood}`, centerDesignId: state.selectedVariation?.designId, diagnosis: state.diagnosis, mood: state.selectedVariation?.mood, intensity: state.selectedVariation?.intensity });
   const candidates = selected.designIds.map((designId) => {
@@ -1029,5 +1062,6 @@ function handoff() { const payload = buildConsultationHandoff(agreementPayload(t
 function loadProviderConfig() { try { const cfg = JSON.parse(localStorage.getItem('HAIR_IMAGEN_CFG') || '{}'); return { baseURL: cfg.baseURL || '', model: cfg.model || 'gpt-image-2', size: cfg.size || '1024x1024', apiKey: sessionStorage.getItem('HAIR_IMAGEN_KEY') || '' }; } catch { localStorage.removeItem('HAIR_IMAGEN_CFG'); return { baseURL: '', model: 'gpt-image-2', size: '1024x1024', apiKey: '' }; } }
 function saveProviderConfig(cfg) { localStorage.setItem('HAIR_IMAGEN_CFG', JSON.stringify({ baseURL: cfg.baseURL, model: cfg.model, size: cfg.size })); if (cfg.apiKey) sessionStorage.setItem('HAIR_IMAGEN_KEY', cfg.apiKey); else sessionStorage.removeItem('HAIR_IMAGEN_KEY'); }
 
+window.addEventListener('pagehide', releaseModelPreviewUrls);
 render();
 (globalThis.requestIdleCallback || ((callback) => setTimeout(callback, 120)))(() => ensureCatalog().catch(() => {}));

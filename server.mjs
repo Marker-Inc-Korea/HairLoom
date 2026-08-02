@@ -35,12 +35,17 @@ function resolveStaticPath(pathname) {
     decoded === '/consultation/index.html' ||
     decoded === '/consultation/styles.css' ||
     decoded === '/consultation/app.mjs' ||
+    decoded === '/model-previews/' ||
+    decoded === '/model-previews/index.html' ||
+    decoded === '/model-previews/styles.css' ||
+    decoded === '/model-previews/app.mjs' ||
     decoded === '/imagen.web.js' ||
     decoded === '/imagen.web.example.js' ||
     decoded === '/src/exploreCore.mjs' ||
     decoded === '/src/trendRegistry.mjs' ||
     decoded === '/src/hairTrendData.mjs' ||
     decoded === '/src/consultationCore.mjs' ||
+    decoded === '/src/modelPreviewRegistry.mjs' ||
     decoded === '/docs/hair-design-master/catalog.json' ||
     decoded === '/docs/hair-design-master/catalog-index.json' ||
     /^\/docs\/assets\/(?:samples|test-mannequin|test-mannequin-female)\/[a-z0-9._-]+\.(?:jpg|jpeg|png|webp)$/i.test(decoded) ||
@@ -48,6 +53,7 @@ function resolveStaticPath(pathname) {
 
   if (!allowed) return null;
   if (decoded === '/consultation/') decoded = '/consultation/index.html';
+  if (decoded === '/model-previews/') decoded = '/model-previews/index.html';
   const filePath = resolve(root, `.${decoded}`);
   return filePath.startsWith(root) ? filePath : null;
 }

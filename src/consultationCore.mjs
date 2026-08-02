@@ -802,7 +802,7 @@ export function applyConsultationCompletion(batch, result) {
 function rejectGenerated(value, path = 'handoff') {
   if (!value || typeof value !== 'object') return;
   for (const [key, child] of Object.entries(value)) {
-    if (/generated|result|output|imageUrl|artifact/i.test(key)) throw new TypeError(`${path} must not include generated artifacts`);
+    if (/generated|result|output|imageUrl|artifact|modelPreview|registeredPreview/i.test(key)) throw new TypeError(`${path} must not include generated artifacts`);
     rejectGenerated(child, `${path}.${key}`);
   }
 }

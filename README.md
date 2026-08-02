@@ -81,6 +81,17 @@ window.HAIR_IMAGEN = {
 
 API 키, 고객 사진, 생성 고객 이미지, `.gjc/` QA 자료는 커밋하지 마세요.
 
+## 생성 대기 모델 이미지
+
+`http://127.0.0.1:4180/model-previews/`에서 AI 생성 결과가 도착하기 전 Explore와 PRO의 대기 카드에 표시할 실제 모델 사진을 등록할 수 있습니다. 기본 화면의 연결 설정과 PRO `PROFILE 1/2`에서도 관리 화면을 열 수 있습니다.
+
+- 살롱 촬영 파일 또는 사용 권리가 확인된 HTTPS 이미지를 등록합니다.
+- 성별, 기장, 질감을 지정하면 디자인 후보와 가장 가까운 등록 모델을 결정적으로 선택합니다.
+- 인터넷 URL은 브라우저가 CORS로 가져올 수 있을 때 로컬 IndexedDB에 복사합니다. 실패하면 이미지를 다운로드한 뒤 살롱 파일로 등록합니다. 등록 시 메타데이터를 제거한 최대 변 1,400px JPEG로 정규화하며 라이브러리는 최대 80장·160MB로 제한됩니다.
+- 권리 근거, 출처·크레딧, 모델 초상 사용 동의를 반드시 기록합니다.
+- 등록 사진은 현재 브라우저에만 저장되며 서버, Git, 트렌드 데이터에 업로드되지 않습니다.
+- 등록 사진은 `DISPLAY ONLY`입니다. Provider 입력, 생성 재입력, Design Lock handoff에는 절대 포함되지 않으며 실제 생성 결과가 도착하면 같은 고정 슬롯에서 교체됩니다.
+
 ## 트렌드 레지스트리
 
 Hairloom은 외부 소셜 이미지를 생성 입력으로 사용하지 않습니다. 트렌드 수집기는 스타일명, 게시 시점, 공개 permalink, 표본 수와 상승 신호만 보관하고 이를 기존 `HLM-C-*` 구조 ID에 연결합니다. 현재 40개 스타일의 스타일리스트 검수 기준선을 포함하며, 트렌드는 Explore에서 최대 3점의 선택 보너스와 PRO 적합도에서 최대 5점만 차지합니다. 시술 가능성과 원본 계보가 항상 우선합니다.
@@ -173,7 +184,7 @@ npm run verify
 현재 기준:
 
 ```text
-68 tests passing
+71 tests passing
 1,080-design taxonomy check passing
 6,500-design v2 master catalog check passing
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
@@ -186,10 +197,12 @@ trendRegistryVersion: HLM-TRENDS-2026-07-1
 ```text
 index.html                         기본 Explore 및 Design Lock UI
 consultation/                      PRO 상담 UI
+model-previews/                      대기 모델 사진 로컬 등록 UI
 src/exploreCore.mjs                Explore 도메인 로직
 src/consultationCore.mjs           상담·시술 가능성·큐 로직
 src/trendRegistry.mjs              트렌드 검증·점수·카탈로그 매핑
 src/hairTrendData.mjs              생성된 40개 런타임 트렌드 스냅샷
+src/modelPreviewRegistry.mjs        권리 검증·IndexedDB·결정적 모델 매칭
 scripts/generateHairMasterCatalog.mjs  6,500개 카탈로그 생성기
 scripts/syncHairTrends.mjs         로컬 검사·가져오기·선택적 라이브 수집
 scripts/manageHairTrendSchedule.mjs macOS 주기 실행 설치·상태·제거

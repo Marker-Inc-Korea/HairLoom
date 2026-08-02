@@ -446,7 +446,7 @@ export function validateShortlist(selectedDesignIds, catalogRecordsById, setting
 export function validateExploreHandoffPayload(payload) {
   assertNoBannedFaceKeys(payload);
   if (!payload?.frontOriginalDataUrl || !String(payload.frontOriginalDataUrl).startsWith('data:image/')) throw new TypeError('Original front photo is required');
-  const forbidden = ['imageUrl', 'objectUrl', 'generatedImageUrl', 'generatedBlob', 'exploreResultUrl'];
+  const forbidden = ['imageUrl', 'objectUrl', 'generatedImageUrl', 'generatedBlob', 'exploreResultUrl', 'modelPreviewUrl', 'registeredModelPreview', 'modelPreviewBlob'];
   for (const key of forbidden) if (key in payload) throw new TypeError('Generated Explore artifacts cannot be handoff inputs');
   if (payload.catalogVersion !== catalogVersion) throw new TypeError(`Explore handoff catalogVersion must be ${catalogVersion}`);
   if (payload.promptVersion !== promptVersion) throw new TypeError(`Explore handoff promptVersion must be ${promptVersion}`);

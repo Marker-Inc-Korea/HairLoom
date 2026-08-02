@@ -379,6 +379,7 @@ test('handoff validates exact versioned payload and rejects unknown or generated
   assert.throws(() => validateConsultationHandoffPayload({ ...handoff, sourceViews: { side: 'https://example.test/not-original.jpg' } }), /original image/);
   assert.throws(() => validateConsultationHandoffPayload({ ...handoff, sourceViews: { extra: 'data:image/jpeg;base64,DDDD' } }), /Unexpected source view/);
   assert.throws(() => validateConsultationHandoffPayload({ ...handoff, generatedImageUrl: 'https://example.test/image.png' }), /Unexpected|generated artifacts/);
+  assert.throws(() => buildConsultationHandoff({ ...handoff, registeredModelPreview: { id: 'HLM-MP-1234ABCD' } }), /generated artifacts/);
   assert.throws(() => buildConsultationHandoff({ ...handoff, currentDesignIds: [] }), /1-6/);
   assert.equal(CONSULTATION_HANDOFF_STORAGE_KEY, 'HAIRLOOM_CONSULTATION_HANDOFF');
 });

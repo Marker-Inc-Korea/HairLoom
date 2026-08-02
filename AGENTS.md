@@ -12,7 +12,7 @@ This is the machine-operable guide for work in the standalone Hairloom repositor
 - App URL: `http://127.0.0.1:4180/`
 - Health URL: `http://127.0.0.1:4180/healthz`
 - Main verification: `npm run verify`
-- Expected baseline: 68 tests passing
+- Expected baseline: 71 tests passing
 
 ## Hard project boundary
 
@@ -42,7 +42,7 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, Explore/catalog/consultation/server/trend/scheduler/automation tests, and the 68-test baseline.
+`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, Explore/catalog/consultation/server/trend/scheduler/automation/model-preview tests, and the 71-test baseline.
 
 ## Product invariants
 
@@ -53,6 +53,9 @@ HOST=127.0.0.1 PORT=4180 npm run start
 - High damage excludes every perm and extension/piece design regardless of other toggles.
 - Every Explore request uses the prepared original front photo.
 - Generated pixels and catalog model photos are never subsequent request inputs.
+- Registered loading model photos are display-only browser-local assets. They may replace queued/active card visuals but must never become provider inputs, generated-image inputs, catalog records, trend records, cache keys, exports, or handoff fields.
+- Model preview registration must require an explicit rights basis, attribution, and confirmed model-image consent. Web registration accepts credential-free HTTPS only and stores a normalized metadata-free local JPEG rather than runtime hotlinking; cap the browser library at 80 images and 160MB.
+- Explore and PRO must deterministically match registered previews by gender, length, and texture where supplied, preserve 100 fixed-slot ownership, label previews as registered/loading, and replace them in place when provider output arrives.
 - Explore concurrency is capped at 32 per tab.
 - Results use 100 fixed slots and must not reorder on completion.
 - Shortlists contain 1–6 current `HLM-*` design IDs.
@@ -138,6 +141,15 @@ npm run trend:schedule -- --dry-run --interval-hours=336
 npm run trend:cadence -- --date=2026-08-17
 node --test trendAutomation.test.mjs
 ```
+
+Model preview changes:
+
+```bash
+node --test modelPreviewRegistry.test.mjs server.test.mjs exploreCore.test.mjs consultationCore.test.mjs
+npm run verify
+```
+
+Use Aside to register an ignored test model through `/model-previews/`, hold provider requests, and verify Explore and PRO show 32 active / 68 queued registered previews at 1440×1000, 834×1112, and 390×844 with zero horizontal overflow.
 
 Server changes:
 

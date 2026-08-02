@@ -100,10 +100,10 @@ test('serves only consultation route and allowlisted consultation assets', async
       assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
       assert.match(response.headers.get('cache-control') || '', /no-store/);
       const html = await response.text();
-      assert.match(html, /styles\.css\?v=20260727-maskless-v9/);
-      assert.match(html, /app\.mjs\?v=20260729-trend-registry-v12/);
+      assert.match(html, /styles\.css\?v=20260802-model-previews-v13/);
+      assert.match(html, /app\.mjs\?v=20260802-model-previews-v13/);
     }
-    for (const [path, mime] of [['/consultation/styles.css', /^text\/css/], ['/consultation/app.mjs', /^text\/javascript/], ['/src/consultationCore.mjs', /^text\/javascript/], ['/src/trendRegistry.mjs', /^text\/javascript/], ['/src/hairTrendData.mjs', /^text\/javascript/]]) {
+    for (const [path, mime] of [['/consultation/styles.css', /^text\/css/], ['/consultation/app.mjs', /^text\/javascript/], ['/src/consultationCore.mjs', /^text\/javascript/], ['/src/trendRegistry.mjs', /^text\/javascript/], ['/src/hairTrendData.mjs', /^text\/javascript/], ['/src/modelPreviewRegistry.mjs', /^text\/javascript/]]) {
       const response = await fetch(`http://127.0.0.1:${port}${path}`);
       assert.equal(response.status, 200, path);
       assert.match(response.headers.get('content-type') || '', mime, path);
@@ -126,6 +126,16 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(trendDataSource, /"sourcePolicy": "metadata-only"/);
     assert.doesNotMatch(trendDataSource, /"(?:imageUrl|media_url|thumbnail|base64|dataUrl)"\s*:/);
     assert.equal((await fetch(`http://127.0.0.1:${port}/data/hair-trend-signals.json`)).status, 404);
+    for (const [path, mime] of [['/model-previews/', /^text\/html/], ['/model-previews/index.html', /^text\/html/], ['/model-previews/styles.css', /^text\/css/], ['/model-previews/app.mjs', /^text\/javascript/]]) {
+      const response = await fetch(`http://127.0.0.1:${port}${path}`);
+      assert.equal(response.status, 200, path);
+      assert.match(response.headers.get('content-type') || '', mime, path);
+      assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+      assert.match(response.headers.get('cache-control') || '', /no-store/);
+    }
+    const modelPreviewHtml = await (await fetch(`http://127.0.0.1:${port}/model-previews/`)).text();
+    assert.match(modelPreviewHtml, /Loading Model Library/);
+    assert.match(modelPreviewHtml, /생성 입력이나 Design Lock에 사용되지 않습니다/);
     assert.match(appSource, /\['SOURCE', 'PROFILE', 'STRUCTURE', 'VARIATION', 'COMPARE', 'LOCK'\]/);
     assert.match(appSource, /FRONT REQUIRED/);
     assert.match(appSource, /purpose: 'structure'/);

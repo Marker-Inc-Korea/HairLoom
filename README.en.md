@@ -81,6 +81,17 @@ window.HAIR_IMAGEN = {
 
 Never commit API keys, customer photos, generated customer images, or `.gjc/` QA artifacts.
 
+## Loading model images
+
+Open `http://127.0.0.1:4180/model-previews/` to register real model photos shown in Explore and PRO cards until generated results arrive. The manager is also linked from the root connection settings and PRO `PROFILE 1/2`.
+
+- Register a salon-owned photo file or an HTTPS image with confirmed usage rights.
+- Gender, length, and texture metadata deterministically match the closest registered model to each design candidate.
+- Internet URLs are copied into local IndexedDB when the remote server permits CORS. Otherwise download the photo and register it as a salon file. Registration strips image metadata and normalizes the copy to a JPEG with a 1,400px maximum edge; the library is capped at 80 images and 160MB.
+- Record the rights basis, attribution, and confirmed model-image consent.
+- Photos remain only in the current browser and are never uploaded to the server, Git, or trend data.
+- Registered photos are `DISPLAY ONLY`. They never enter provider requests, generation chains, or Design Lock handoffs, and each fixed slot replaces the photo when its generated result arrives.
+
 ## Trend registry
 
 Hairloom never uses external social images as generation inputs. The trend collector retains only style names, publication timestamps, public permalinks, sample counts, and momentum signals, then maps them to existing `HLM-C-*` structure IDs. The initial registry contains 40 stylist-reviewed baseline styles. Trend contributes at most a 0–3 Explore selection bonus and 5 PRO suitability points; feasibility and original-source lineage always win.
@@ -173,7 +184,7 @@ npm run verify
 Current baseline:
 
 ```text
-68 tests passing
+71 tests passing
 1,080-design taxonomy check passing
 6,500-design v2 master catalog check passing
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
@@ -186,10 +197,12 @@ trendRegistryVersion: HLM-TRENDS-2026-07-1
 ```text
 index.html                         Explore and Design Lock UI
 consultation/                      PRO consultation UI
+model-previews/                      Local loading-model registration UI
 src/exploreCore.mjs                Explore domain logic
 src/consultationCore.mjs           Consultation, feasibility, and queue logic
 src/trendRegistry.mjs              Trend validation, scoring, and catalog mapping
 src/hairTrendData.mjs              Generated 40-record runtime trend snapshot
+src/modelPreviewRegistry.mjs        Rights validation, IndexedDB, and deterministic matching
 scripts/generateHairMasterCatalog.mjs  6,500-design catalog generator
 scripts/syncHairTrends.mjs         Local checks, imports, and optional live collection
 scripts/manageHairTrendSchedule.mjs macOS periodic install, status, and removal
