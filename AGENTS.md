@@ -12,7 +12,7 @@ This is the machine-operable guide for work in the standalone Hairloom repositor
 - App URL: `http://127.0.0.1:4180/`
 - Health URL: `http://127.0.0.1:4180/healthz`
 - Main verification: `npm run verify`
-- Expected baseline: 71 tests passing
+- Expected baseline: 83 tests passing
 
 ## Hard project boundary
 
@@ -42,7 +42,7 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, Explore/catalog/consultation/server/trend/scheduler/automation/model-preview tests, and the 71-test baseline.
+`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, Explore/catalog/consultation/server/trend/scheduler/automation/model-preview tests, and the 83-test baseline.
 
 ## Product invariants
 
@@ -53,9 +53,13 @@ HOST=127.0.0.1 PORT=4180 npm run start
 - High damage excludes every perm and extension/piece design regardless of other toggles.
 - Every Explore request uses the prepared original front photo.
 - Generated pixels and catalog model photos are never subsequent request inputs.
-- Registered loading model photos are display-only browser-local assets. They may replace queued/active card visuals but must never become provider inputs, generated-image inputs, catalog records, trend records, cache keys, exports, or handoff fields.
-- Model preview registration must require an explicit rights basis, attribution, and confirmed model-image consent. Web registration accepts credential-free HTTPS only and stores a normalized metadata-free local JPEG rather than runtime hotlinking; cap the browser library at 80 images and 160MB.
-- Explore and PRO must deterministically match registered previews by gender, length, and texture where supplied, preserve 100 fixed-slot ownership, label previews as registered/loading, and replace them in place when provider output arrives.
+- Registered loading model photos are display-only browser-local assets. They may replace only `queued` or `active` card visuals and must never become provider inputs, generated-image inputs, catalog records, trend records, cache keys, customer/generation exports, or handoff fields. The only permitted photo export is the explicit passphrase-encrypted operator library archive.
+- Model preview registration must require an explicit rights basis, attribution, confirmed model-image consent, consent verification date, and optional expiry/revocation audit data. Web registration accepts credential-free HTTPS only and stores a normalized metadata-free local JPEG rather than runtime hotlinking; cap the browser library at 80 images and 160MB.
+- Explore and PRO must deterministically match registered previews by gender, length, texture, and optional stable design IDs/prefixes, preserve 100 fixed-slot ownership, distinguish queued from active labels, and replace previews in place when provider output arrives.
+- Add/update/delete/import changes must propagate to open same-origin tabs, revoke stale object URLs, and rerender without restarting generation. Expired, revoked, disabled, failed, aborted, superseded, ready, and done records/slots must not display loading previews.
+- Registered preview loading is optional and must fail safely to customer source previews without blocking Explore or PRO generation.
+- The local operator library supports metadata editing, enable/disable, atomic multi-file upload, focal positioning, duplicate rejection, search/filter, storage status, atomic selected-record design-tag/status/delete operations, and passphrase-encrypted export/import. Passphrases must never persist.
+- The authoritative model-preview lifecycle, data-boundary diagram, rights operations, and remaining intentional limitations are documented in `docs/MODEL-PREVIEW-FLOW.md`.
 - Explore concurrency is capped at 32 per tab.
 - Results use 100 fixed slots and must not reorder on completion.
 - Shortlists contain 1–6 current `HLM-*` design IDs.

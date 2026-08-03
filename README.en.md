@@ -85,12 +85,17 @@ Never commit API keys, customer photos, generated customer images, or `.gjc/` QA
 
 Open `http://127.0.0.1:4180/model-previews/` to register real model photos shown in Explore and PRO cards until generated results arrive. The manager is also linked from the root connection settings and PRO `PROFILE 1/2`.
 
-- Register a salon-owned photo file or an HTTPS image with confirmed usage rights.
-- Gender, length, and texture metadata deterministically match the closest registered model to each design candidate.
-- Internet URLs are copied into local IndexedDB when the remote server permits CORS. Otherwise download the photo and register it as a salon file. Registration strips image metadata and normalizes the copy to a JPEG with a 1,400px maximum edge; the library is capped at 80 images and 160MB.
-- Record the rights basis, attribution, and confirmed model-image consent.
+- Register salon-owned files or rights-cleared HTTPS images; salon mode supports multi-file registration.
+- Gender, length, texture, and optional stable `HLM-*` design IDs/prefixes deterministically match the closest registered model.
+- Internet URLs are copied into local IndexedDB only when CORS permits. Registration strips metadata and normalizes each copy to a JPEG with a 1,400px maximum edge; the library is capped at 80 images and 160MB.
+- Record the rights basis, attribution, confirmed model-image consent, and consent verification date, with optional expiry, rights-reference, and reviewer metadata. Expired, revoked, or disabled photos are automatically excluded.
+- The manager supports editing, disable/re-enable, confirmed deletion, search/status filters, focal positioning, duplicate rejection, and storage status. Select the visible list to atomically apply design tags, activation state, or deletion across multiple records.
+- Export or transfer the local library only through the passphrase-protected AES-GCM archive. Passphrases are never persisted.
+- Add/update/delete/import changes propagate to open Explore and PRO tabs. Registry or IndexedDB failures fall back to customer source previews without blocking generation.
 - Photos remain only in the current browser and are never uploaded to the server, Git, or trend data.
-- Registered photos are `DISPLAY ONLY`. They never enter provider requests, generation chains, or Design Lock handoffs, and each fixed slot replaces the photo when its generated result arrives.
+- Registered photos are `DISPLAY ONLY`: they appear only for `queued` or `active` slots, never enter provider requests, generation chains, normal exports, or Design Lock handoffs, and are replaced in the same fixed slot when provider output arrives.
+
+See [`docs/MODEL-PREVIEW-FLOW.md`](./docs/MODEL-PREVIEW-FLOW.md) for the render-safe flow, data boundaries, rights operations, and intentionally retained limitations.
 
 ## Trend registry
 
@@ -184,7 +189,7 @@ npm run verify
 Current baseline:
 
 ```text
-71 tests passing
+83 tests passing
 1,080-design taxonomy check passing
 6,500-design v2 master catalog check passing
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2

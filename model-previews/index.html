@@ -4,31 +4,91 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HAIRLOOM · MODEL PREVIEWS</title>
-  <link rel="stylesheet" href="/model-previews/styles.css?v=20260802-model-previews-v1">
+  <link rel="stylesheet" href="/model-previews/styles.css?v=20260803-model-previews-v4">
 </head>
 <body>
   <main>
-    <header><div><small>HAIRLOOM OPERATOR</small><h1>Loading Model Library</h1></div><a href="/">HAIRLOOM ↗</a></header>
-    <p class="intro">AI 결과를 기다리는 동안 표시할 실제 모델 사진을 이 브라우저에만 등록합니다. 사진은 생성 입력이나 Design Lock에 사용되지 않습니다.</p>
+    <header>
+      <div><small>HAIRLOOM OPERATOR</small><h1>Loading Model Library</h1></div>
+      <a href="/">HAIRLOOM ↗</a>
+    </header>
+    <p class="intro">AI 결과를 기다리는 동안 표시할 실제 모델 사진을 현재 브라우저에 등록합니다. 등록 사진은 생성 입력이나 Design Lock에 사용되지 않습니다. 브라우저 데이터를 삭제하면 라이브러리도 사라지므로 암호화 보관 파일을 함께 관리하세요.</p>
+
+    <section class="storage-panel" aria-labelledby="storageTitle">
+      <div><small>LOCAL STORAGE</small><h2 id="storageTitle">브라우저 저장 상태</h2></div>
+      <p id="storageStatus">저장 공간을 확인하는 중입니다.</p>
+      <button id="persistStorage" type="button">영구 저장 요청</button>
+    </section>
+
     <section class="workspace">
       <form id="previewForm">
-        <h2>모델 사진 등록</h2>
+        <input id="editingId" type="hidden">
+        <div class="form-heading"><div><small id="formMode">NEW RECORD</small><h2>모델 사진 등록</h2></div><button id="cancelEdit" type="button" hidden>수정 취소</button></div>
+
         <label>표시 이름<input id="title" maxlength="80" placeholder="예: 강남점 여성 미디엄 웨이브" required></label>
-        <div class="row"><label>성별<select id="gender"><option value="U">전체</option><option value="F">여성</option><option value="M">남성</option></select></label><label>기장<select id="length"><option value="">전체</option><option value="US">초단기장</option><option value="S">단기장</option><option value="MD">중간기장</option><option value="L">장기장</option><option value="XL">초장기장</option></select></label></div>
+        <div class="row">
+          <label>성별<select id="gender"><option value="U">전체</option><option value="F">여성</option><option value="M">남성</option></select></label>
+          <label>기장<select id="length"><option value="">전체</option><option value="US">초단기장</option><option value="S">단기장</option><option value="MD">중간기장</option><option value="L">장기장</option><option value="XL">초장기장</option></select></label>
+        </div>
         <label>질감<select id="texture"><option value="">전체</option><option value="0">스트레이트</option><option value="1">웨이브</option><option value="2">컬</option><option value="3">코일</option></select></label>
-        <div class="source-tabs"><button type="button" class="on" data-source-tab="salon">살롱 파일</button><button type="button" data-source-tab="web">인터넷 URL</button></div>
+        <label>연결 디자인 ID 또는 접두어<textarea id="designRefs" rows="3" placeholder="HLM-C-F-MD-01-NH 또는 전체 DESIGN ID를 줄바꿈/쉼표로 입력"></textarea><small>입력하면 해당 ID 또는 접두어와 일치하는 후보에만 이 사진을 표시합니다. 비워두면 성별·기장·질감만 사용합니다.</small></label>
+
+        <div class="source-tabs" role="group" aria-label="사진 출처"><button type="button" class="on" data-source-tab="salon">살롱 파일</button><button type="button" data-source-tab="web">인터넷 URL</button></div>
         <input id="sourceKind" type="hidden" value="salon">
-        <label id="fileField">사진 파일<input id="imageFile" type="file" accept="image/jpeg,image/png,image/webp" required></label>
+        <label id="fileField">사진 파일<input id="imageFile" type="file" accept="image/jpeg,image/png,image/webp" multiple required><small>신규 등록에서는 여러 파일을 한 번에 선택할 수 있습니다. 수정 중에는 첫 번째 파일로 사진을 교체합니다.</small></label>
         <label id="urlField" hidden>HTTPS 이미지 URL<input id="imageUrl" type="url" placeholder="https://..."><small>CORS로 가져올 수 없는 사이트는 사진을 다운로드한 뒤 살롱 파일로 등록하세요.</small></label>
+
+        <section id="cropPreview" class="crop-preview" hidden aria-label="카드 초점 미리보기">
+          <div class="crop-frame"><img id="cropImage" alt="등록 모델 카드 초점 미리보기"></div>
+          <div class="row">
+            <label>가로 초점<input id="focalX" type="range" min="0" max="100" value="50"><output id="focalXValue">50%</output></label>
+            <label>세로 초점<input id="focalY" type="range" min="0" max="100" value="50"><output id="focalYValue">50%</output></label>
+          </div>
+        </section>
+
         <label>권리 근거<select id="rights"><option value="salon-owned">살롱 소유 촬영물</option><option value="model-consented">모델 사용 동의</option><option value="licensed-stock">라이선스 스톡</option><option value="public-domain">퍼블릭 도메인</option></select></label>
         <label>출처·크레딧<input id="attribution" maxlength="160" placeholder="살롱명 · 모델/촬영 동의 기록 또는 라이선스 출처" required></label>
+        <div class="row">
+          <label>권리 기록 번호<input id="rightsReference" maxlength="120" placeholder="MODEL-RELEASE-2026-001"></label>
+          <label>검토자<input id="reviewedBy" maxlength="80" placeholder="담당 미용사 또는 관리자"></label>
+        </div>
+        <div class="row">
+          <label>동의 확인일<input id="consentVerifiedAt" type="date" required></label>
+          <label>권리 만료일<input id="rightsExpiresAt" type="date"><small>만료일이 지나면 자동으로 대기 카드에서 제외됩니다.</small></label>
+        </div>
         <label class="confirm"><input id="consent" type="checkbox" required><span>표시 권리와 모델 초상 사용 동의를 확인했습니다.</span></label>
-        <button class="save" type="submit">이 브라우저에 등록</button>
+
+        <div class="form-actions"><button class="save" type="submit">이 브라우저에 등록</button><button id="disableFromForm" class="secondary" type="button" hidden>사용 중지</button></div>
         <div id="status" aria-live="polite"></div>
       </form>
-      <section class="library"><div class="library-head"><div><small>DISPLAY ONLY</small><h2>등록된 모델</h2></div><b id="count">0</b></div><div id="previewList" class="preview-list"></div></section>
+
+      <section class="library">
+        <div class="library-head"><div><small>DISPLAY ONLY</small><h2>등록된 모델</h2></div><b id="count">0</b></div>
+        <div class="library-tools">
+          <label>검색<input id="search" type="search" placeholder="이름 · 출처 · 디자인 ID"></label>
+          <label>상태<select id="statusFilter"><option value="all">전체</option><option value="active">사용 중</option><option value="expired">만료</option><option value="revoked">중지·철회</option></select></label>
+        </div>
+        <section class="bulk-tools" aria-label="선택 모델 일괄 관리">
+          <label class="bulk-select"><input id="selectVisible" type="checkbox"><span>현재 목록 선택</span></label>
+          <b id="selectedCount" aria-live="polite">0개 선택</b>
+          <div class="bulk-actions"><button id="bulkEnable" type="button" disabled>선택 재활성화</button><button id="bulkDisable" type="button" disabled>선택 사용 중지</button><button id="bulkDelete" class="danger" type="button" disabled>선택 삭제</button></div>
+          <details class="bulk-design-tools">
+            <summary>선택 디자인 태그 일괄 설정</summary>
+            <label>디자인 ID 또는 접두어<textarea id="bulkDesignRefs" rows="2" placeholder="비우고 적용하면 선택 모델의 디자인 제한을 해제합니다."></textarea></label>
+            <button id="bulkApplyDesignRefs" type="button" disabled>선택 모델에 적용</button>
+          </details>
+        </section>
+        <details class="archive-tools">
+          <summary>암호화 보관 파일 · 기기 이동</summary>
+          <p>10자 이상의 암호로 AES-GCM 보관 파일을 만듭니다. 암호는 저장되지 않으며 분실하면 복구할 수 없습니다.</p>
+          <label>보관 암호<input id="archivePassphrase" type="password" minlength="10" autocomplete="new-password"></label>
+          <div class="archive-actions"><button id="exportArchive" type="button">암호화 내보내기</button><label class="import-button">암호화 가져오기<input id="importArchive" type="file" accept="application/json,.json,.hairloom"></label></div>
+        </details>
+        <div id="libraryWarning" class="library-warning" aria-live="polite"></div>
+        <div id="previewList" class="preview-list"></div>
+      </section>
     </section>
   </main>
-  <script type="module" src="/model-previews/app.mjs?v=20260802-model-previews-v1"></script>
+  <script type="module" src="/model-previews/app.mjs?v=20260803-model-previews-v4"></script>
 </body>
 </html>

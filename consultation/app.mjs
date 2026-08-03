@@ -1,6 +1,9 @@
 import { catalogVersion, promptVersion, hydrateCatalogPayload, normalizeProviderResult, normalizeSettings, sourcePhotoKey, genderLineTreatmentPrompt } from '../src/exploreCore.mjs';
 import { trendBadgeForCandidate } from '../src/trendRegistry.mjs';
-import { listModelPreviews, selectModelPreview } from '../src/modelPreviewRegistry.mjs';
+let ModelPreviewRegistry = null;
+let modelPreviewDisposed = false;
+let modelPreviewUnsubscribe = () => {};
+const modelPreviewRegistryReady = import('../src/modelPreviewRegistry.mjs').then((registry) => (ModelPreviewRegistry = registry)).catch(() => null);
 import {
   CONSULTATION_HANDOFF_STORAGE_KEY,
   CONSULTATION_HANDOFF_QUERY_TRIGGER,
@@ -226,16 +229,19 @@ function releaseModelPreviewUrls() {
 async function refreshModelPreviews() {
   releaseModelPreviewUrls();
   try {
-    state.modelPreviews = await listModelPreviews();
+    const registry = await modelPreviewRegistryReady;
+    if (!registry) { state.modelPreviews = []; return false; }
+    state.modelPreviews = await registry.listModelPreviews();
+    return true;
   } catch {
     state.modelPreviews = [];
+    return false;
   }
-  return state.modelPreviews;
 }
 
 function registeredModelPreview(slot, record) {
-  if (!record || slot.status === 'done' || !state.modelPreviews.length) return null;
-  const preview = selectModelPreview(state.modelPreviews, record, slot.slotIndex);
+  if (!record || !ModelPreviewRegistry?.modelPreviewAllowedForSlot(slot.status) || !state.modelPreviews.length) return null;
+  const preview = ModelPreviewRegistry.selectModelPreview(state.modelPreviews, record, slot.slotIndex);
   if (!preview?.blob) return null;
   if (!state.modelPreviewUrls.has(preview.id)) state.modelPreviewUrls.set(preview.id, URL.createObjectURL(preview.blob));
   return { ...preview, url: state.modelPreviewUrls.get(preview.id) };
@@ -336,8 +342,10 @@ function structureTile(slot) {
   const selected = group && state.selectedGroup?.key === group.key;
   const ready = slot.status === 'done' && group;
   const trend = group ? trendBadgeForCandidate(group) : '';
-  const previewLabel = preview ? `<span class="registered-model-label">등록 모델 · 생성 대기</span>` : '';
-  return `<button class="structure-tile ${slot.status} ${preview ? 'registered-preview' : ''} ${selected ? 'selected' : ''}" data-structure-slot="${slot.slotIndex}" style="--tile-ratio:${structureTileRatio(slot.slotIndex)}" ${ready ? '' : 'disabled'}><img src="${esc(source)}" alt="${preview ? esc(`${preview.title} · 등록 모델 미리보기`) : ready ? esc(groupLabel(group)) : ''}">${previewLabel}<span class="structure-meta"><b>${ready ? esc(groupLabel(group)) : String(slot.slotIndex + 1).padStart(2, '0')}</b><small>${trend ? `${esc(trend)} · ` : ''}${esc(generationAxisLabel(slot))}</small></span></button>`;
+  const previewState = slot.status === 'active' ? '생성 중' : '생성 대기';
+  const previewLabel = preview ? `<span class="registered-model-label">등록 모델 · ${previewState}</span>` : '';
+  const previewPosition = preview ? ` style="object-position:${preview.focalX * 100}% ${preview.focalY * 100}%"` : '';
+  return `<button class="structure-tile ${slot.status} ${preview ? 'registered-preview' : ''} ${selected ? 'selected' : ''}" data-structure-slot="${slot.slotIndex}" style="--tile-ratio:${structureTileRatio(slot.slotIndex)}" ${ready ? '' : 'disabled'}><img src="${esc(source)}" alt="${preview ? esc(`${preview.title} · 등록 모델 미리보기 · ${previewState}`) : ready ? esc(groupLabel(group)) : ''}"${previewPosition}>${previewLabel}<span class="structure-meta"><b>${ready ? esc(groupLabel(group)) : String(slot.slotIndex + 1).padStart(2, '0')}</b><small>${trend ? `${esc(trend)} · ` : ''}${esc(generationAxisLabel(slot))}</small></span></button>`;
 }
 
 function groupLabel(group) { return `${group.lengthKo} · ${familiarStyleName(group.baseKo)} · ${group.frontKo}`; }
@@ -371,8 +379,10 @@ function slotCard(slot) {
   const preview = registeredModelPreview(slot, record);
   const source = slot.previewUrl || preview?.url || sourceViewPreview(slot.sourceViewKey);
   const checked = state.shortlist.has(slot.designId) ? 'checked' : '';
-  const previewLabel = preview ? '<span class="registered-model-label">등록 모델 · 생성 대기</span>' : '';
-  return `<div class="slot ${slot.status} ${preview ? 'registered-preview' : ''}" data-slot="${slot.slotIndex}"><div class="image"><img src="${esc(source)}" alt="${preview ? esc(`${preview.title} · 등록 모델 미리보기`) : slot.status === 'done' ? esc(slot.designId) : ''}"></div>${previewLabel}<input type="checkbox" aria-label="후보 선택 ${slot.slotIndex + 1}" data-short="${esc(slot.designId || '')}" ${checked} ${slot.status === 'done' ? '' : 'disabled'}><div class="meta">${String(slot.slotIndex + 1).padStart(2, '0')} · ${esc(generationAxisLabel(slot))} · ${esc(slot.designId || '대기')}</div></div>`;
+  const previewState = slot.status === 'active' ? '생성 중' : '생성 대기';
+  const previewLabel = preview ? `<span class="registered-model-label">등록 모델 · ${previewState}</span>` : '';
+  const previewPosition = preview ? ` style="object-position:${preview.focalX * 100}% ${preview.focalY * 100}%"` : '';
+  return `<div class="slot ${slot.status} ${preview ? 'registered-preview' : ''}" data-slot="${slot.slotIndex}"><div class="image"><img src="${esc(source)}" alt="${preview ? esc(`${preview.title} · 등록 모델 미리보기 · ${previewState}`) : slot.status === 'done' ? esc(slot.designId) : ''}"${previewPosition}></div>${previewLabel}<input type="checkbox" aria-label="후보 선택 ${slot.slotIndex + 1}" data-short="${esc(slot.designId || '')}" ${checked} ${slot.status === 'done' ? '' : 'disabled'}><div class="meta">${String(slot.slotIndex + 1).padStart(2, '0')} · ${esc(generationAxisLabel(slot))} · ${esc(slot.designId || '대기')}</div></div>`;
 }
 
 function renderAgreement() {
@@ -1062,6 +1072,19 @@ function handoff() { const payload = buildConsultationHandoff(agreementPayload(t
 function loadProviderConfig() { try { const cfg = JSON.parse(localStorage.getItem('HAIR_IMAGEN_CFG') || '{}'); return { baseURL: cfg.baseURL || '', model: cfg.model || 'gpt-image-2', size: cfg.size || '1024x1024', apiKey: sessionStorage.getItem('HAIR_IMAGEN_KEY') || '' }; } catch { localStorage.removeItem('HAIR_IMAGEN_CFG'); return { baseURL: '', model: 'gpt-image-2', size: '1024x1024', apiKey: '' }; } }
 function saveProviderConfig(cfg) { localStorage.setItem('HAIR_IMAGEN_CFG', JSON.stringify({ baseURL: cfg.baseURL, model: cfg.model, size: cfg.size })); if (cfg.apiKey) sessionStorage.setItem('HAIR_IMAGEN_KEY', cfg.apiKey); else sessionStorage.removeItem('HAIR_IMAGEN_KEY'); }
 
-window.addEventListener('pagehide', releaseModelPreviewUrls);
+modelPreviewRegistryReady.then((registry) => {
+  if (!registry || modelPreviewDisposed) return;
+  modelPreviewUnsubscribe = registry.subscribeModelPreviewChanges(async () => {
+    if (modelPreviewDisposed) return;
+    await refreshModelPreviews();
+    if (state.stage === 2 || state.stage === 4) render();
+  });
+});
+window.addEventListener('pagehide', (event) => {
+  if (event.persisted) return;
+  modelPreviewDisposed = true;
+  modelPreviewUnsubscribe();
+  releaseModelPreviewUrls();
+});
 render();
 (globalThis.requestIdleCallback || ((callback) => setTimeout(callback, 120)))(() => ensureCatalog().catch(() => {}));

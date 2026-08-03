@@ -100,8 +100,8 @@ test('serves only consultation route and allowlisted consultation assets', async
       assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
       assert.match(response.headers.get('cache-control') || '', /no-store/);
       const html = await response.text();
-      assert.match(html, /styles\.css\?v=20260802-model-previews-v13/);
-      assert.match(html, /app\.mjs\?v=20260802-model-previews-v13/);
+      assert.match(html, /styles\.css\?v=20260803-model-previews-v14/);
+      assert.match(html, /app\.mjs\?v=20260803-model-previews-v14/);
     }
     for (const [path, mime] of [['/consultation/styles.css', /^text\/css/], ['/consultation/app.mjs', /^text\/javascript/], ['/src/consultationCore.mjs', /^text\/javascript/], ['/src/trendRegistry.mjs', /^text\/javascript/], ['/src/hairTrendData.mjs', /^text\/javascript/], ['/src/modelPreviewRegistry.mjs', /^text\/javascript/]]) {
       const response = await fetch(`http://127.0.0.1:${port}${path}`);
@@ -136,6 +136,13 @@ test('serves only consultation route and allowlisted consultation assets', async
     const modelPreviewHtml = await (await fetch(`http://127.0.0.1:${port}/model-previews/`)).text();
     assert.match(modelPreviewHtml, /Loading Model Library/);
     assert.match(modelPreviewHtml, /생성 입력이나 Design Lock에 사용되지 않습니다/);
+    assert.match(modelPreviewHtml, /styles\.css\?v=20260803-model-previews-v4/);
+    assert.match(modelPreviewHtml, /app\.mjs\?v=20260803-model-previews-v4/);
+    assert.match(modelPreviewHtml, /암호화 보관 파일/);
+    assert.match(modelPreviewHtml, /동의 확인일/);
+    assert.match(modelPreviewHtml, /연결 디자인 ID/);
+    assert.match(modelPreviewHtml, /선택 모델 일괄 관리/);
+    assert.match(modelPreviewHtml, /bulkApplyDesignRefs/);
     assert.match(appSource, /\['SOURCE', 'PROFILE', 'STRUCTURE', 'VARIATION', 'COMPARE', 'LOCK'\]/);
     assert.match(appSource, /FRONT REQUIRED/);
     assert.match(appSource, /purpose: 'structure'/);
