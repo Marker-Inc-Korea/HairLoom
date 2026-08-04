@@ -186,14 +186,19 @@ test('cache key and stable settings string use dc=', () => {
   assert.match(key, /^hlm:explore:v2:HLM-MASTER-2026-07-EXPLORE-2:HLM-EXPLORE-PROMPT-2026-07-4:abc123:/);
 });
 
-test('queue enforces max 32, supersession, stale guards, and out-of-order stable slots', () => {
-  const batch = createExploreBatch({ batchId: 'b1', designIds: catalog(40).map((record) => record.id), sourcePhotoKey: 'src', settings });
-  const active = startQueuedItems(batch, 99);
+test('queue starts deterministic random positions, caps at 32, and preserves stable slots', () => {
+  const input = { batchId: 'b1', designIds: catalog(40).map((record) => record.id), sourcePhotoKey: 'src', settings };
+  const active = startQueuedItems(createExploreBatch(input), 99);
+  const repeated = startQueuedItems(createExploreBatch(input), 99);
+  const activeIndices = active.queue.filter((item) => item.status === 'active').map((item) => item.slotIndex).sort((a, b) => a - b);
   assert.equal(active.activeCount, MAX_EXPLORE_ACTIVE);
-  assert.equal(active.queue.filter((item) => item.status === 'active').length, 32);
-  const completed = applyQueueCompletion(active, { ok: true, batchId: 'b1', designId: active.slots[5].designId, slotIndex: 5, sourcePhotoKey: 'src', promptVersion: active.promptVersion, url: 'blob:5' });
-  assert.equal(completed.slots[5].status, 'ready');
-  assert.equal(completed.slots[5].imageUrl, 'blob:5');
+  assert.equal(activeIndices.length, 32);
+  assert.deepEqual(activeIndices, repeated.queue.filter((item) => item.status === 'active').map((item) => item.slotIndex).sort((a, b) => a - b));
+  assert.notDeepEqual(activeIndices, Array.from({ length: 32 }, (_, index) => index));
+  const activeSlotIndex = activeIndices[5];
+  const completed = applyQueueCompletion(active, { ok: true, batchId: 'b1', designId: active.slots[activeSlotIndex].designId, slotIndex: activeSlotIndex, sourcePhotoKey: 'src', promptVersion: active.promptVersion, url: 'blob:ready' });
+  assert.equal(completed.slots[activeSlotIndex].status, 'ready');
+  assert.equal(completed.slots[activeSlotIndex].imageUrl, 'blob:ready');
   const stale = applyQueueCompletion(completed, { ok: true, batchId: 'old', designId: completed.slots[6].designId, slotIndex: 6, sourcePhotoKey: 'src', promptVersion: completed.promptVersion, url: 'blob:old' });
   assert.equal(stale.staleIgnored, 1);
   assert.notEqual(stale.slots[6].imageUrl, 'blob:old');

@@ -420,9 +420,13 @@ test('Explore and PRO keep previews optional, queued/active-only, synchronized, 
   assert.match(manager, /navigator\.storage/);
   assert.match(manager, /multiple/);
   assert.match(manager, /setModelPreviewsEnabled/);
-  assert.match(manager, /setModelPreviewsDesignRefs/);
+  assert.doesNotMatch(managerHtml, /bulkApplyDesignRefs|디자인 ID|DISPLAY ONLY|Design Lock/);
   assert.match(manager, /deleteModelPreviews/);
   assert.match(manager, /selectVisible/);
+  assert.match(managerHtml, /class="photo-picker"/);
+  assert.match(managerHtml, /사진 사용 정보/);
+  assert.match(manager, /const requestedTitle/);
+  assert.match(manager, /fileTitle\(file\)/);
   assert.match(proStyles, /font-size:9px/);
   assert.match(manager, /AbortController/);
   assert.match(manager, /20000/);

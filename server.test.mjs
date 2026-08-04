@@ -59,6 +59,19 @@ test('serves Hairloom page and isolated static assets', async () => {
     assert.match(rootHtml, /자연스러운 저광택/);
     assert.match(rootHtml, /genderLineTreatmentPrompt\(record\.genderId\)/);
     assert.match(rootHtml, /genderLine=ExploreCore\.genderLineTreatmentPrompt/);
+    assert.match(rootHtml, /id="exploreColorGrid"/);
+    assert.match(rootHtml, /TARGET HAIR COLOR/);
+    assert.match(rootHtml, /mosaic-3x3/);
+    assert.match(rootHtml, /RANDOM FILL/);
+    assert.doesNotMatch(rootHtml, /id="exploreProgress"/);
+    assert.match(rootHtml, /id="exploreImageLightbox"/);
+    assert.match(rootHtml, /class="explore-similar"/);
+    assert.match(rootHtml, /openExploreImageLightbox/);
+    assert.match(rootHtml, /tile\.querySelector\('\.tile-id'\)\.textContent=number/);
+    assert.doesNotMatch(rootHtml, /tile\.querySelector\('\.tile-id'\)\.textContent=slot\?\.designId/);
+    assert.match(rootHtml, /registered-preview\.active img\{object-fit:contain/);
+    assert.match(rootHtml, /function fitExploreMosaicTile/);
+    assert.match(rootHtml, /aspectRatio>0&&aspectRatio<\.9/);
     assert.equal(rootResponse.headers.get('x-content-type-options'), 'nosniff');
     assert.match(rootResponse.headers.get('cache-control') || '', /no-store/);
 
@@ -71,7 +84,7 @@ test('serves Hairloom page and isolated static assets', async () => {
     const health = await fetch(`http://127.0.0.1:${port}/healthz`);
     assert.deepEqual(await health.json(), { ok: true, service: 'hairloom', localOnly: true });
     assert.equal((await fetch(`http://127.0.0.1:${port}/package.json`)).status, 404);
-    for (const path of ['/src/exploreCore.mjs', '/docs/hair-design-master/catalog.json', '/docs/hair-design-master/catalog-index.json']) {
+    for (const path of ['/src/exploreCore.mjs', '/src/hairColorPalette.mjs', '/docs/hair-design-master/catalog.json', '/docs/hair-design-master/catalog-index.json']) {
       const response = await fetch(`http://127.0.0.1:${port}${path}`);
       assert.equal(response.status, 200, path);
       assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
@@ -100,10 +113,14 @@ test('serves only consultation route and allowlisted consultation assets', async
       assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
       assert.match(response.headers.get('cache-control') || '', /no-store/);
       const html = await response.text();
-      assert.match(html, /styles\.css\?v=20260803-model-previews-v14/);
-      assert.match(html, /app\.mjs\?v=20260803-model-previews-v14/);
+      assert.match(html, /styles\.css\?v=20260804-lightbox-color-v18/);
+      assert.match(html, /app\.mjs\?v=20260804-lightbox-color-v18/);
+      assert.match(html, /id="imageLightbox"/);
+      assert.match(html, /class="image-lightbox-shell"/);
+      assert.match(html, /class="lightbox-variation-options"/);
+      assert.match(html, /이 스타일로 더 생성해보기/);
     }
-    for (const [path, mime] of [['/consultation/styles.css', /^text\/css/], ['/consultation/app.mjs', /^text\/javascript/], ['/src/consultationCore.mjs', /^text\/javascript/], ['/src/trendRegistry.mjs', /^text\/javascript/], ['/src/hairTrendData.mjs', /^text\/javascript/], ['/src/modelPreviewRegistry.mjs', /^text\/javascript/]]) {
+    for (const [path, mime] of [['/consultation/styles.css', /^text\/css/], ['/consultation/app.mjs', /^text\/javascript/], ['/src/consultationCore.mjs', /^text\/javascript/], ['/src/hairColorPalette.mjs', /^text\/javascript/], ['/src/trendRegistry.mjs', /^text\/javascript/], ['/src/hairTrendData.mjs', /^text\/javascript/], ['/src/modelPreviewRegistry.mjs', /^text\/javascript/]]) {
       const response = await fetch(`http://127.0.0.1:${port}${path}`);
       assert.equal(response.status, 200, path);
       assert.match(response.headers.get('content-type') || '', mime, path);
@@ -115,7 +132,11 @@ test('serves only consultation route and allowlisted consultation assets', async
     const exploreCoreSource = await (await fetch(`http://127.0.0.1:${port}/src/exploreCore.mjs`)).text();
     const trendRegistrySource = await (await fetch(`http://127.0.0.1:${port}/src/trendRegistry.mjs`)).text();
     const trendDataSource = await (await fetch(`http://127.0.0.1:${port}/src/hairTrendData.mjs`)).text();
+    const paletteSource = await (await fetch(`http://127.0.0.1:${port}/src/hairColorPalette.mjs`)).text();
     assert.match(coreSource, /export function classifyHairColorSamples/);
+    assert.match(paletteSource, /export const HAIR_COLOR_TONES/);
+    assert.match(paletteSource, /lavender-ash/);
+    assert.equal((paletteSource.match(/Object\.freeze\(\{ id:/g) || []).length, 19);
     assert.match(exploreCoreSource, /MASCULINE LINE TREATMENT/);
     assert.match(exploreCoreSource, /stronger directional planes/);
     assert.match(exploreCoreSource, /FEMININE LINE TREATMENT/);
@@ -134,16 +155,20 @@ test('serves only consultation route and allowlisted consultation assets', async
       assert.match(response.headers.get('cache-control') || '', /no-store/);
     }
     const modelPreviewHtml = await (await fetch(`http://127.0.0.1:${port}/model-previews/`)).text();
-    assert.match(modelPreviewHtml, /Loading Model Library/);
-    assert.match(modelPreviewHtml, /생성 입력이나 Design Lock에 사용되지 않습니다/);
-    assert.match(modelPreviewHtml, /styles\.css\?v=20260803-model-previews-v4/);
-    assert.match(modelPreviewHtml, /app\.mjs\?v=20260803-model-previews-v4/);
-    assert.match(modelPreviewHtml, /암호화 보관 파일/);
-    assert.match(modelPreviewHtml, /동의 확인일/);
-    assert.match(modelPreviewHtml, /연결 디자인 ID/);
-    assert.match(modelPreviewHtml, /선택 모델 일괄 관리/);
-    assert.match(modelPreviewHtml, /bulkApplyDesignRefs/);
-    assert.match(appSource, /\['SOURCE', 'PROFILE', 'STRUCTURE', 'VARIATION', 'COMPARE', 'LOCK'\]/);
+    assert.match(modelPreviewHtml, /대기 모델 사진/);
+    assert.match(modelPreviewHtml, /사진을 선택하고 사용 권리만 확인하면 바로 사용할 수 있습니다/);
+    assert.match(modelPreviewHtml, /styles\.css\?v=20260804-stylist-compact-v5/);
+    assert.match(modelPreviewHtml, /app\.mjs\?v=20260804-stylist-compact-v5/);
+    assert.match(modelPreviewHtml, /class="photo-picker"/);
+    assert.match(modelPreviewHtml, /사진 사용 정보/);
+    assert.match(modelPreviewHtml, /표시 조건과 기록 더보기/);
+    assert.match(modelPreviewHtml, /사진 백업·복원/);
+    assert.match(modelPreviewHtml, /선택 사진 관리/);
+    assert.doesNotMatch(modelPreviewHtml, /Loading Model Library|DISPLAY ONLY|LOCAL STORAGE|Design Lock|AES-GCM|디자인 ID|인터넷 URL|bulkApplyDesignRefs/);
+    assert.match(appSource, /const visibleStages = Object\.freeze/);
+    assert.match(appSource, /\{ label: 'COMPARE', stateIndex: 4 \}/);
+    assert.doesNotMatch(appSource, /\{ label: 'VARIATION', stateIndex:/);
+    assert.match(appSource, /\/ 05/);
     assert.match(appSource, /FRONT REQUIRED/);
     assert.match(appSource, /purpose: 'structure'/);
     assert.match(appSource, /id="backToList"/);
@@ -169,6 +194,13 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /AUTO \$\{Math\.round\(detection\.confidence \* 100\)\}%/);
     assert.match(appSource, /직접 수정 가능/);
     assert.match(appSource, /state\.sourceProcessing = true/);
+    assert.match(appSource, /let sourceLoadVersion = 0/);
+    assert.match(appSource, /성별과 다른 뷰는 계속 조작할 수 있습니다/);
+    assert.match(appSource, /aria-busy="\$\{processing \? 'true' : 'false'\}"/);
+    assert.match(appSource, /const preparationPromise = prepareOriginalJpeg\(file\)/);
+    assert.match(appSource, /state\.sourceProcessing = false;\n\s*state\.hairColorDetection = \{ status: 'detecting'/);
+    assert.match(appSource, /detectCurrentHairTone\('front'\)\.catch/);
+    assert.doesNotMatch(appSource, /state\.sourceProcessing \? 'disabled aria-busy="true"'/);
     assert.match(appSource, /function goToProfile/);
     assert.match(appSource, /function handleNextAction/);
     assert.match(appSource, /app\.addEventListener\('click', handleNextAction, true\)/);
@@ -178,6 +210,13 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /data-ready=/);
     assert.match(appSource, /aria-describedby=/);
     assert.match(appSource, /data-target-tone/);
+    assert.match(appSource, /--tone-color:/);
+    assert.match(appSource, /팔레트에서 직접 수정 가능/);
+    assert.match(appSource, /evaluateHairColorFeasibility/);
+    assert.match(appSource, /선택 색상 유사도/);
+    assert.match(appSource, /vivid: Object\.freeze/);
+    assert.match(appSource, /axes\.colorIntensity \|\| state\.hairColorProfile\.intensity/);
+    assert.match(appSource, /RESEMBLANCE STRENGTH/);
     assert.doesNotMatch(appSource, /data-mask-tool/);
     assert.doesNotMatch(appSource, /HAIR MASK CONFIRMATION REQUIRED/);
     assert.match(appSource, /MASKLESS · 헤어 마스크 없이 원본 전체를 기준으로 생성합니다/);
@@ -199,8 +238,22 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /No global color grading/);
     assert.doesNotMatch(appSource, /const protectedFace =/);
     assert.match(appSource, /preserveScroll/);
-    assert.match(appSource, /STRUCTURE_TILE_RATIOS/);
-    assert.match(appSource, /--tile-ratio/);
+    assert.match(appSource, /function mosaicTileClass/);
+    assert.match(appSource, /mosaic-3x3/);
+    assert.match(appSource, /RANDOM FILL/);
+    assert.match(appSource, /function currentStageStatus\(\) \{ return ''; \}/);
+    assert.match(appSource, /function openStructureLightbox/);
+    assert.match(appSource, /minimalVariationsForSelectedGroup/);
+    assert.match(appSource, /lightboxGenerate\.onclick/);
+    assert.match(appSource, /data-preview-image/);
+    assert.doesNotMatch(appSource, /id="toVariations"/);
+    assert.doesNotMatch(appSource, /id="toCompare"/);
+    assert.doesNotMatch(appSource, /function generationAxisLabel/);
+    assert.match(appSource, /function fitMosaicTileToImage/);
+    assert.match(appSource, /aspectRatio > 0 && aspectRatio < 0\.9/);
+    assert.doesNotMatch(appSource, /DONE \$\{done\}/);
+    assert.doesNotMatch(appSource, /STRUCTURE_TILE_RATIOS/);
+    assert.doesNotMatch(appSource, /--tile-ratio/);
     assert.match(appSource, /textureControlPrompt/);
     assert.match(appSource, /no micro-crimping/);
     assert.match(appSource, /SURFACE FINISH LOCK/);
@@ -209,7 +262,7 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /synthetic wig sheen/);
     assert.match(appSource, /genderLineTreatmentPrompt\(record\.genderId\)/);
     assert.match(appSource, /태슬 단발/);
-    assert.match(appSource, /trendBadgeForCandidate\(group\)/);
+    assert.doesNotMatch(appSource, /trendBadgeForCandidate\(group\)/);
     assert.doesNotMatch(appSource, /TREND_BASE_SET/);
     assert.match(appSource, /id="currentLength"/);
     assert.match(appSource, /짧은 머리/);
@@ -227,8 +280,11 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(consultationCss, /\.single-view-upload\{/);
     assert.match(consultationCss, /\.single-view-upload:focus-visible/);
     assert.match(consultationCss, /\.source-view-dots\{/);
-    assert.match(consultationCss, /stable varied result masonry/);
-    assert.match(consultationCss, /aspect-ratio:var\(--tile-ratio/);
+    assert.match(consultationCss, /deterministic random-fill mosaics/);
+    assert.match(consultationCss, /grid-auto-flow:dense/);
+    assert.match(consultationCss, /\.structure-tile\.mosaic-3x3/);
+    assert.match(consultationCss, /expanded visible hair palette/);
+    assert.match(consultationCss, /background:var\(--tone-color/);
     assert.match(consultationCss, /maskless color profile/);
     assert.match(consultationCss, /\.tone-grid\{/);
     assert.match(consultationCss, /\.maskless-notice\{/);
@@ -236,6 +292,10 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(consultationCss, /explicit button response and preparation states/);
     assert.match(consultationCss, /\.color-continue-note\.busy/);
     assert.match(consultationCss, /\.source-next\{/);
+    assert.match(consultationCss, /aspect-safe image review and in-place variation/);
+    assert.match(consultationCss, /registered-preview \.image img\{object-fit:contain/);
+    assert.match(consultationCss, /\.image-lightbox\{/);
+    assert.match(consultationCss, /\.lightbox-variation-options\{/);
 
     for (const path of ['/consultation.html', '/consultation/prototype.html', '/consultation/deleted-prototype.html', '/docs/ux-segments/stylist-consultation/prototype.html', '/consultation/../package.json', '/consultation/notes.md', '/src/modules.mjs']) {
       assert.equal((await fetch(`http://127.0.0.1:${port}${path}`)).status, 404, path);

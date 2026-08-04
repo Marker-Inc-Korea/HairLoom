@@ -45,6 +45,7 @@ function resolveStaticPath(pathname) {
     decoded === '/src/trendRegistry.mjs' ||
     decoded === '/src/hairTrendData.mjs' ||
     decoded === '/src/consultationCore.mjs' ||
+    decoded === '/src/hairColorPalette.mjs' ||
     decoded === '/src/modelPreviewRegistry.mjs' ||
     decoded === '/docs/hair-design-master/catalog.json' ||
     decoded === '/docs/hair-design-master/catalog-index.json' ||

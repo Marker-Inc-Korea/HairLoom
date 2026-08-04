@@ -182,26 +182,35 @@ test('special catalog IDs receive deterministic stable generation axes', () => {
   const record = catalog.records.find((item) => item.kind === 'special');
   assert.match(canonicalStructureKey(record), /^U\|SP\|S-[A-Z]{2}-\d{2}\|NA$/);
   const candidate = { ...record, designId: record.id, structureKey: canonicalStructureKey(record), mood: '자연스러운', intensity: '은은하게' };
-  const options = { diagnosis: diagnosis({ damage: 'low' }), sourceViewKeys: ['front'], hairColorProfile: { currentToneId: 'natural-black', selectedToneIds: ['natural-black'] }, seedInput: 'special' };
+  const options = { diagnosis: diagnosis({ damage: 'low' }), sourceViewKeys: ['front'], hairColorProfile: { currentToneId: 'natural-black', selectedToneIds: ['natural-black'], intensity: 'subtle' }, seedInput: 'special' };
   const first = assignConsultationGenerationAxes([candidate], options)[0].generationAxes;
   const second = assignConsultationGenerationAxes([candidate], options)[0].generationAxes;
   assert.deepEqual(first, second);
   assert.equal(first.suitabilityScore, 60);
   assert.equal(first.sourceViewKey, 'front');
+  assert.equal(first.colorIntensity, 'subtle');
+  assert.equal(first.version, CONSULTATION_GENERATION_AXES_VERSION);
+  assert.equal(CONSULTATION_GENERATION_AXES_VERSION, 3);
 });
 
-test('natural color profile bounds black to adjacent tones without mask gating', () => {
-  const current = diagnosis({ damage: 'low' });
-  const profile = normalizeHairColorProfile({ currentToneId: 'natural-black', selectedToneIds: ['natural-black', 'dark-brown'] });
-  assert.deepEqual(deriveAllowedHairColorTones(profile, current).map((tone) => tone.id), ['natural-black', 'soft-black', 'dark-brown']);
-  assert.equal(evaluateHairColorFeasibility('dark-brown', profile, current, 'front').status, 'possible');
-  assert.equal(evaluateHairColorFeasibility('dark-brown', profile, current, 'side').status, 'possible');
-  assert.equal(evaluateHairColorFeasibility('warm-brown', profile, current, 'front').status, 'impossible');
+test('natural color profile exposes a broad palette with damage-aware bounds', () => {
+  const lowDamage = diagnosis({ damage: 'low' });
+  const mediumDamage = diagnosis({ damage: 'medium' });
+  const highDamage = diagnosis({ damage: 'high' });
+  const profile = normalizeHairColorProfile({ currentToneId: 'natural-black', selectedToneIds: ['natural-black', 'warm-brown'] });
+  assert.equal(deriveAllowedHairColorTones(profile, lowDamage).length, 19);
+  assert.ok(deriveAllowedHairColorTones(profile, mediumDamage).some((tone) => tone.id === 'caramel-brown'));
+  assert.ok(!deriveAllowedHairColorTones(profile, mediumDamage).some((tone) => tone.id === 'honey-blonde'));
+  assert.deepEqual(deriveAllowedHairColorTones(profile, highDamage).map((tone) => tone.id), ['natural-black', 'soft-black', 'blue-black', 'dark-brown']);
+  assert.equal(evaluateHairColorFeasibility('dark-brown', profile, lowDamage, 'front').status, 'possible');
+  assert.equal(evaluateHairColorFeasibility('warm-brown', profile, lowDamage, 'front').status, 'conditional');
+  assert.equal(evaluateHairColorFeasibility('ash-gray', profile, highDamage, 'front').status, 'impossible');
   assert.equal(Object.hasOwn(profile, 'sourceViewMasks'), false);
   const legacy = normalizeHairColorProfile({});
   assert.equal(legacy.currentToneId, 'unknown');
   assert.deepEqual(legacy.selectedToneIds, [PRESERVE_CURRENT_TONE_ID]);
-  assert.equal(HAIR_COLOR_TONES.length, 7);
+  assert.equal(HAIR_COLOR_TONES.length, 19);
+  assert.ok(HAIR_COLOR_TONES.every((tone) => /^#[0-9a-f]{6}$/i.test(tone.hex)));
 });
 
 test('hair color samples classify dark and natural brown tones deterministically', () => {
@@ -247,7 +256,7 @@ test('trend registry stays bounded and never overrides impossible feasibility', 
 test('diversity axes balance views, mirrors, colors, and retain retry ownership', () => {
   const profileGroups = groups.filter((group) => group.genderId === 'F');
   const current = diagnosis({ actualLengthCm: 80, damage: 'low' });
-  const hairColorProfile = { currentToneId: 'natural-black', selectedToneIds: ['natural-black', 'dark-brown'] };
+  const hairColorProfile = { currentToneId: 'natural-black', selectedToneIds: ['natural-black', 'dark-brown'], intensity: 'vivid' };
   const pool = buildConsultationCandidatePool(profileGroups, current, { mood: '자연', maintenance: 'medium' });
   const allocation = allocateConsultationDiversity(pool, { count: 100, diagnosis: current, sourceViewKeys: ['front', 'side', 'back'], hairColorProfile, seedInput: 'axes' });
   const validation = validateConsultationGenerationAxes(allocation.generationAxes, { count: 100 });
@@ -256,6 +265,8 @@ test('diversity axes balance views, mirrors, colors, and retain retry ownership'
   for (const counts of Object.values(validation.mirrorCounts)) assert.equal(Math.abs(counts.mirrored - counts.original) <= 1, true);
   const toneCounts = allocation.generationAxes.reduce((counts, axes) => ({ ...counts, [axes.colorToneId]: (counts[axes.colorToneId] ?? 0) + 1 }), {});
   assert.deepEqual(toneCounts, { 'dark-brown': 80, 'natural-black': 20 });
+  assert.equal(allocation.generationAxes.every((axes) => axes.colorIntensity === 'vivid'), true);
+  assert.throws(() => validateConsultationGenerationAxes([{ ...allocation.generationAxes[0], colorIntensity: 'maximum' }]), /Invalid color resemblance strength/);
   assert.equal(new Set(allocation.structureKeys).size, 100);
   let batch = createConsultationBatch({ batchId: 'axes-retry', designIds: allocation.designIds, generationAxes: allocation.generationAxes, sourcePhotoKey: 'source', settings: {} });
   batch = startConsultationQueuedItems(batch);
@@ -291,17 +302,24 @@ test('consultation retry retains its original source view ownership', () => {
   const ids = Array.from({ length: 100 }, (_, index) => `HLM-R-${String(index).padStart(3, '0')}`);
   let batch = assignConsultationSourceViews(createConsultationBatch({ batchId: 'retry-view', designIds: ids, sourcePhotoKey: 'source', settings: {} }), ['front', 'side', 'back'], 'retry');
   batch = startConsultationQueuedItems(batch);
-  const original = batch.slots[0];
+  const original = batch.slots.find((slot) => slot.status === 'active');
   const pressured = applyConsultationCompletion(batch, { batchId: batch.batchId, sourcePhotoKey: batch.sourcePhotoKey, slotIndex: original.slotIndex, designId: original.designId, generation: original.generation, ok: false, statusCode: 429 });
-  const retried = startConsultationQueuedItems(pressured.batch).slots[0];
+  const retriedBatch = startConsultationQueuedItems(pressured.batch);
+  const retried = retriedBatch.slots[original.slotIndex];
+  assert.equal(retried.status, 'active');
   assert.equal(retried.sourceViewKey, original.sourceViewKey);
 });
 
-test('adaptive consultation batch starts at 32 and can rise only to hard max 100', () => {
+test('adaptive consultation batch starts at 32 random positions and stays bounded', () => {
   const ids = Array.from({ length: 100 }, (_, index) => `HLM-C-${String(index).padStart(3, '0')}`);
-  let batch = startConsultationQueuedItems(createConsultationBatch({ batchId: 'b1', designIds: ids, sourcePhotoKey: 'front', settings: {} }));
+  const input = { batchId: 'b1', designIds: ids, sourcePhotoKey: 'front', settings: {} };
+  let batch = startConsultationQueuedItems(createConsultationBatch(input));
+  const repeated = startConsultationQueuedItems(createConsultationBatch(input));
+  const activeIndices = batch.slots.filter((slot) => slot.status === 'active').map((slot) => slot.slotIndex);
   assert.equal(batch.activeLimit, CONSULTATION_INITIAL_ACTIVE);
-  assert.equal(batch.slots.filter((slot) => slot.status === 'active').length, 32);
+  assert.equal(activeIndices.length, 32);
+  assert.deepEqual(activeIndices, repeated.slots.filter((slot) => slot.status === 'active').map((slot) => slot.slotIndex));
+  assert.notDeepEqual(activeIndices, Array.from({ length: 32 }, (_, index) => index));
   for (let i = 0; i < 80; i += 1) {
     const slot = batch.slots.find((item) => item.status === 'active');
     const applied = applyConsultationCompletion(batch, { slotIndex: slot.slotIndex, designId: slot.designId, generation: slot.generation, ok: true });
@@ -317,37 +335,37 @@ test('429 and network pressure backs off with one bounded retry', () => {
   let batch = createConsultationBatch({ batchId: 'b2', designIds: ids, sourcePhotoKey: 'front', settings: {} });
   batch.activeLimit = 80;
   batch = startConsultationQueuedItems(batch);
-  const slot = batch.slots[0];
-  const pressured = applyConsultationCompletion(batch, { batchId: 'b2', sourcePhotoKey: 'front', slotIndex: 0, designId: slot.designId, generation: slot.generation, ok: false, statusCode: 429 });
+  const slot = batch.slots.find((item) => item.status === 'active');
+  const pressured = applyConsultationCompletion(batch, { batchId: 'b2', sourcePhotoKey: 'front', slotIndex: slot.slotIndex, designId: slot.designId, generation: slot.generation, ok: false, statusCode: 429 });
   assert.equal(pressured.batch.activeLimit, 60);
-  assert.equal(pressured.batch.slots[0].status, 'queued');
+  assert.equal(pressured.batch.slots[slot.slotIndex].status, 'queued');
   let drained = pressured.batch;
   for (const activeSlot of drained.slots.filter((item) => item.status === 'active')) {
     drained = applyConsultationCompletion(drained, { batchId: 'b2', sourcePhotoKey: 'front', slotIndex: activeSlot.slotIndex, designId: activeSlot.designId, generation: activeSlot.generation, ok: true }).batch;
   }
   const retry = startConsultationQueuedItems(drained);
-  const retrySlot = retry.slots[0];
+  const retrySlot = retry.slots[slot.slotIndex];
   assert.equal(retrySlot.status, 'active');
-  const network = applyConsultationCompletion(retry, { batchId: 'b2', sourcePhotoKey: 'front', slotIndex: 0, designId: retrySlot.designId, generation: retrySlot.generation, ok: false, errorType: 'network' });
+  const network = applyConsultationCompletion(retry, { batchId: 'b2', sourcePhotoKey: 'front', slotIndex: retrySlot.slotIndex, designId: retrySlot.designId, generation: retrySlot.generation, ok: false, errorType: 'network' });
   assert.ok(network.batch.activeLimit >= CONSULTATION_INITIAL_ACTIVE);
-  assert.equal(network.batch.slots[0].status, 'failed');
-  assert.equal(network.batch.slots[0].attempts, 2);
+  assert.equal(network.batch.slots[retrySlot.slotIndex].status, 'failed');
+  assert.equal(network.batch.slots[retrySlot.slotIndex].attempts, 2);
 });
 
 test('stable slots reject stale, superseded, wrong-batch, wrong-source, and duplicate completions', () => {
   const ids = Array.from({ length: 100 }, (_, index) => `HLM-C-${String(index).padStart(3, '0')}`);
   const batch = startConsultationQueuedItems(createConsultationBatch({ batchId: 'b3', designIds: ids, sourcePhotoKey: 'front', settings: {} }));
-  const slot = batch.slots[0];
-  assert.equal(applyConsultationCompletion(batch, { batchId: 'b3', sourcePhotoKey: 'front', slotIndex: 0, designId: slot.designId, generation: 0, ok: true }).accepted, false);
-  assert.equal(applyConsultationCompletion(batch, { batchId: 'wrong', sourcePhotoKey: 'front', slotIndex: 0, designId: slot.designId, generation: slot.generation, ok: true }).accepted, false);
-  assert.equal(applyConsultationCompletion(batch, { batchId: 'b3', sourcePhotoKey: 'wrong', slotIndex: 0, designId: slot.designId, generation: slot.generation, ok: true }).accepted, false);
+  const slot = batch.slots.find((item) => item.status === 'active');
+  assert.equal(applyConsultationCompletion(batch, { batchId: 'b3', sourcePhotoKey: 'front', slotIndex: slot.slotIndex, designId: slot.designId, generation: 0, ok: true }).accepted, false);
+  assert.equal(applyConsultationCompletion(batch, { batchId: 'wrong', sourcePhotoKey: 'front', slotIndex: slot.slotIndex, designId: slot.designId, generation: slot.generation, ok: true }).accepted, false);
+  assert.equal(applyConsultationCompletion(batch, { batchId: 'b3', sourcePhotoKey: 'wrong', slotIndex: slot.slotIndex, designId: slot.designId, generation: slot.generation, ok: true }).accepted, false);
   const superseded = supersedeConsultationBatch(batch, 'b4');
-  assert.equal(applyConsultationCompletion(superseded, { batchId: 'b3', sourcePhotoKey: 'front', slotIndex: 0, designId: slot.designId, generation: slot.generation, ok: true }).accepted, false);
-  const accepted = applyConsultationCompletion(batch, { batchId: 'b3', sourcePhotoKey: 'front', slotIndex: 0, designId: slot.designId, generation: slot.generation, ok: true });
+  assert.equal(applyConsultationCompletion(superseded, { batchId: 'b3', sourcePhotoKey: 'front', slotIndex: slot.slotIndex, designId: slot.designId, generation: slot.generation, ok: true }).accepted, false);
+  const accepted = applyConsultationCompletion(batch, { batchId: 'b3', sourcePhotoKey: 'front', slotIndex: slot.slotIndex, designId: slot.designId, generation: slot.generation, ok: true });
   assert.equal(accepted.accepted, true);
-  assert.equal(applyConsultationCompletion(accepted.batch, { batchId: 'b3', sourcePhotoKey: 'front', slotIndex: 0, designId: slot.designId, generation: slot.generation, ok: true }).accepted, false);
-  assert.equal(accepted.batch.slots[0].slotIndex, 0);
-  assert.equal(accepted.batch.slots[0].designId, slot.designId);
+  assert.equal(applyConsultationCompletion(accepted.batch, { batchId: 'b3', sourcePhotoKey: 'front', slotIndex: slot.slotIndex, designId: slot.designId, generation: slot.generation, ok: true }).accepted, false);
+  assert.equal(accepted.batch.slots[slot.slotIndex].slotIndex, slot.slotIndex);
+  assert.equal(accepted.batch.slots[slot.slotIndex].designId, slot.designId);
 });
 
 test('handoff validates exact versioned payload and rejects unknown or generated fields', () => {

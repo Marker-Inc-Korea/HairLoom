@@ -322,7 +322,7 @@ export function createExploreBatch({ batchId, designIds, sourcePhotoKey, setting
     promptVersion,
     settings: normalizeSettings(settings),
     slots: ordered.map((designId, slotIndex) => ({ batchId, designId, slotIndex, status: 'queued', imageUrl: null })),
-    queue: ordered.map((designId, slotIndex) => ({ batchId, designId, slotIndex, sourcePhotoKey, promptVersion, priority: slotIndex === 0 && priorityDesignId === designId ? 1 : 0, status: 'queued' })),
+    queue: ordered.map((designId, slotIndex) => ({ batchId, designId, slotIndex, sourcePhotoKey, promptVersion, priority: slotIndex === 0 && priorityDesignId === designId ? 1 : 0, startRank: stableHash32(`${batchId}:${sourcePhotoKey}:${designId}:${slotIndex}:start`), status: 'queued' })),
     activeCount: 0,
     completedCount: 0,
     failedCount: 0,
@@ -333,7 +333,7 @@ export function createExploreBatch({ batchId, designIds, sourcePhotoKey, setting
 export function startQueuedItems(batch, maxActive = MAX_EXPLORE_ACTIVE) {
   const next = structuredClone(batch);
   const capacity = Math.max(0, Math.min(MAX_EXPLORE_ACTIVE, maxActive) - next.activeCount);
-  const queued = next.queue.filter((item) => item.status === 'queued').sort((a, b) => b.priority - a.priority || a.slotIndex - b.slotIndex).slice(0, capacity);
+  const queued = next.queue.filter((item) => item.status === 'queued').sort((a, b) => b.priority - a.priority || a.startRank - b.startRank || a.slotIndex - b.slotIndex).slice(0, capacity);
   for (const item of queued) {
     item.status = 'active';
     next.slots[item.slotIndex].status = 'active';

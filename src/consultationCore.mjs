@@ -9,7 +9,9 @@ import {
   stableHash32,
 } from './exploreCore.mjs';
 import { TREND_STRUCTURE_BASES, trendPointsForCandidate } from './trendRegistry.mjs';
+import { HAIR_COLOR_TONES, PRESERVE_CURRENT_TONE_ID } from './hairColorPalette.mjs';
 export { TREND_STRUCTURE_BASES };
+export { HAIR_COLOR_TONES, PRESERVE_CURRENT_TONE_ID };
 
 export const CONSULTATION_HANDOFF_STORAGE_KEY = 'HAIRLOOM_CONSULTATION_HANDOFF';
 export const CONSULTATION_HANDOFF_QUERY_TRIGGER = '/?consultationHandoff=1';
@@ -17,7 +19,7 @@ export const CONSULTATION_SLOT_COUNT = 100;
 export const CONSULTATION_INITIAL_ACTIVE = MAX_EXPLORE_ACTIVE;
 export const CONSULTATION_HARD_MAX_ACTIVE = 100;
 export const CONSULTATION_HANDOFF_SCHEMA_VERSION = 2;
-export const CONSULTATION_GENERATION_AXES_VERSION = 2;
+export const CONSULTATION_GENERATION_AXES_VERSION = 3;
 export const CONSULTATION_SOURCE_TRANSFORM_VERSION = 1;
 export const CONSULTATION_LEGACY_CATALOG_VERSION = 'HLM-MASTER-2026-07-EXPLORE-1';
 export const CONSULTATION_LEGACY_PROMPT_VERSION = 'HLM-EXPLORE-PROMPT-2026-07-1';
@@ -43,16 +45,6 @@ const STRUCTURE_FINISH_PRIORITY = new Map([
 ]);
 export const CONSULTATION_INTENSITIES = Object.freeze(['은은하게', '균형 있게', '확실하게']);
 
-export const HAIR_COLOR_TONES = Object.freeze([
-  Object.freeze({ id: 'natural-black', labelKo: '자연 흑색', level: 1, undertone: 'neutral' }),
-  Object.freeze({ id: 'soft-black', labelKo: '소프트 블랙', level: 2, undertone: 'neutral' }),
-  Object.freeze({ id: 'dark-brown', labelKo: '다크 브라운', level: 3, undertone: 'neutral' }),
-  Object.freeze({ id: 'chocolate-brown', labelKo: '초콜릿 브라운', level: 4, undertone: 'warm' }),
-  Object.freeze({ id: 'mocha-brown', labelKo: '모카 브라운', level: 4, undertone: 'neutral' }),
-  Object.freeze({ id: 'muted-ash-brown', labelKo: '뮤트 애쉬 브라운', level: 5, undertone: 'cool' }),
-  Object.freeze({ id: 'warm-brown', labelKo: '웜 브라운', level: 5, undertone: 'warm' })
-]);
-export const PRESERVE_CURRENT_TONE_ID = 'preserve-current';
 const HAIR_COLOR_TONE_BY_ID = new Map(HAIR_COLOR_TONES.map((tone) => [tone.id, tone]));
 const SOURCE_VIEW_KEYS = Object.freeze(['front', 'side', 'back', 'crown', 'nape', 'detail']);
 const CORE_ID_PATTERN = /^HLM-C-([FM])-(US|S|MD|L|XL)-(\d{2})-([A-Z]{2})-([A-Z]{2})$/;
@@ -147,7 +139,7 @@ export function normalizeHairColorProfile(raw = {}) {
   const validSelected = requested.filter((toneId) => toneId === PRESERVE_CURRENT_TONE_ID || HAIR_COLOR_TONE_BY_ID.has(toneId));
   const defaultTone = currentToneId === 'unknown' ? PRESERVE_CURRENT_TONE_ID : currentToneId;
   const selectedToneIds = [...new Set(validSelected.length ? validSelected : [defaultTone])];
-  const intensity = raw.intensity === 'balanced' ? 'balanced' : 'subtle';
+  const intensity = ['subtle', 'balanced', 'vivid'].includes(raw.intensity) ? raw.intensity : 'subtle';
   return Object.freeze({
     currentToneId,
     selectedToneIds: Object.freeze(selectedToneIds),
@@ -202,13 +194,10 @@ export function classifyHairColorSamples(rawSamples = []) {
 
 export function deriveAllowedHairColorTones(rawProfile = {}, rawDiagnosis = {}) {
   const profile = normalizeHairColorProfile(rawProfile);
-  if (profile.currentToneId === 'unknown') return Object.freeze([{ id: PRESERVE_CURRENT_TONE_ID, labelKo: '현재 색상 유지', level: null, undertone: 'source' }]);
+  if (profile.currentToneId === 'unknown') return Object.freeze([{ id: PRESERVE_CURRENT_TONE_ID, labelKo: '현재 색상 유지', hex: 'transparent', level: null, undertone: 'source' }]);
   const diagnosis = normalizeDiagnosis(rawDiagnosis);
   const current = HAIR_COLOR_TONE_BY_ID.get(profile.currentToneId);
-  if (profile.currentToneId === 'natural-black') {
-    return Object.freeze(['natural-black', 'soft-black', 'dark-brown'].map((id) => HAIR_COLOR_TONE_BY_ID.get(id)));
-  }
-  const maxDelta = diagnosis.damage === 'high' ? 1 : 2;
+  const maxDelta = diagnosis.damage === 'high' ? 2 : diagnosis.damage === 'medium' ? 5 : 7;
   return Object.freeze(HAIR_COLOR_TONES.filter((tone) => Math.abs(tone.level - current.level) <= maxDelta));
 }
 
@@ -221,16 +210,16 @@ export function evaluateHairColorFeasibility(targetToneId, rawProfile = {}, rawD
   if (targetId === PRESERVE_CURRENT_TONE_ID || targetId === profile.currentToneId) return { status: 'possible', reasons: ['현재 색상 유지'], levelDelta: 0 };
   if (profile.currentToneId === 'unknown') return { status: 'impossible', reasons: ['현재 머리색 선택 필요'], levelDelta: null };
   const allowed = new Set(deriveAllowedHairColorTones(profile, diagnosis).map((tone) => tone.id));
-  if (!allowed.has(targetId)) return { status: 'impossible', reasons: ['현재 모발 상태에서 허용되지 않는 색상'], levelDelta: null };
+  if (!allowed.has(targetId)) return { status: 'impossible', reasons: ['현재 모발 손상도에서 권장 범위를 벗어남'], levelDelta: null };
   const current = HAIR_COLOR_TONE_BY_ID.get(profile.currentToneId);
   const target = HAIR_COLOR_TONE_BY_ID.get(targetId);
   const levelDelta = Math.abs(target.level - current.level);
   let status = 'possible';
-  if (diagnosis.damage === 'high' || (diagnosis.damage === 'medium' && levelDelta >= 2) || diagnosis.bleachCount >= 2) {
+  if ((diagnosis.damage === 'medium' && levelDelta >= 2) || levelDelta >= 3 || target.level >= 7 || diagnosis.bleachCount >= 2) {
     status = 'conditional';
-    reasons.push('저자극 색상 시술 확인 필요');
+    reasons.push(target.level >= 7 || levelDelta >= 3 ? '리프트·탈색 가능성과 단계 시술 확인 필요' : '저자극 색상 시술 확인 필요');
   }
-  if (!reasons.length) reasons.push('자연 색상 범위 적합');
+  if (!reasons.length) reasons.push('색상 범위 적합');
   return { status, reasons, levelDelta, currentTone: current, targetTone: target };
 }
 
@@ -567,6 +556,7 @@ export function assignConsultationGenerationAxes(candidates, options = {}) {
         finishFamily: candidate.finishFamily ?? finishFamily(candidate),
         intensity: candidate.intensity === '은은하게' ? 'subtle' : 'balanced',
         colorToneId,
+        colorIntensity: profile.intensity,
         suitabilityScore: candidate.suitability?.total ?? (candidate.kind === 'special' ? SUITABILITY_FLOOR : scoreConsultationSuitability(candidate, diagnosis, options.preferences).total)
       })
     };
@@ -582,8 +572,9 @@ export function validateConsultationGenerationAxes(items, options = {}) {
     const axes = item.generationAxes ?? item;
     if (axes.version !== CONSULTATION_GENERATION_AXES_VERSION) throw new TypeError('Generation axes version mismatch');
     if (!SOURCE_VIEW_KEYS.includes(axes.sourceViewKey)) throw new TypeError('Invalid generation source view');
+    if (!['subtle', 'balanced', 'vivid'].includes(axes.colorIntensity)) throw new TypeError('Invalid color resemblance strength');
     if (axes.suitabilityScore < SUITABILITY_FLOOR) throw new TypeError('Generation axes suitability below floor');
-    const signature = [axes.structureKey, axes.finishId, axes.intensity, axes.colorToneId, axes.sourceViewKey, axes.mirrored].join('|');
+    const signature = [axes.structureKey, axes.finishId, axes.intensity, axes.colorToneId, axes.colorIntensity, axes.sourceViewKey, axes.mirrored].join('|');
     if (signatures.has(signature)) throw new TypeError(`Duplicate generation axes signature: ${signature}`);
     signatures.add(signature);
     viewCounts.set(axes.sourceViewKey, (viewCounts.get(axes.sourceViewKey) ?? 0) + 1);
@@ -706,7 +697,8 @@ function makeSlots(designIds, generationAxes = []) {
 export function createConsultationBatch({ batchId, designIds, sourcePhotoKey, settings, metadata = {}, generationAxes = [] }) {
   if (!batchId || !sourcePhotoKey) throw new TypeError('batchId and sourcePhotoKey are required');
   if (generationAxes.length) validateConsultationGenerationAxes(generationAxes, { count: CONSULTATION_SLOT_COUNT });
-  return { batchId, sourcePhotoKey, settings: normalizeSettings(settings), metadata: { ...metadata, generationAxesVersion: generationAxes.length ? CONSULTATION_GENERATION_AXES_VERSION : null, originalPhotoLineage: 'prepared-original-front-photo' }, slots: makeSlots(designIds, generationAxes), activeLimit: CONSULTATION_INITIAL_ACTIVE, successWindow: 0, pressureWindow: 0 };
+  const slots = makeSlots(designIds, generationAxes).map((slot) => ({ ...slot, startRank: stableHash32(`${batchId}:${sourcePhotoKey}:${slot.designId}:${slot.slotIndex}:start`) }));
+  return { batchId, sourcePhotoKey, settings: normalizeSettings(settings), metadata: { ...metadata, generationAxesVersion: generationAxes.length ? CONSULTATION_GENERATION_AXES_VERSION : null, originalPhotoLineage: 'prepared-original-front-photo' }, slots, activeLimit: CONSULTATION_INITIAL_ACTIVE, successWindow: 0, pressureWindow: 0 };
 }
 
 export function assignConsultationSourceViews(batch, rawViewKeys, seedInput = '') {
@@ -737,14 +729,13 @@ export function startConsultationQueuedItems(batch) {
   if (next.supersededBy) return next;
   const active = next.slots.filter((slot) => slot.status === 'active').length;
   let capacity = Math.max(0, Math.min(next.activeLimit, CONSULTATION_HARD_MAX_ACTIVE) - active);
-  for (const slot of next.slots) {
+  const queued = next.slots.filter((slot) => slot.status === 'queued').sort((a, b) => b.attempts - a.attempts || (a.startRank ?? stableHash32(`${next.batchId}:${next.sourcePhotoKey}:${a.designId}:${a.slotIndex}:start`)) - (b.startRank ?? stableHash32(`${next.batchId}:${next.sourcePhotoKey}:${b.designId}:${b.slotIndex}:start`)) || a.slotIndex - b.slotIndex);
+  for (const slot of queued) {
     if (capacity <= 0) break;
-    if (slot.status === 'queued') {
-      slot.status = 'active';
-      slot.generation += 1;
-      slot.attempts += 1;
-      capacity -= 1;
-    }
+    slot.status = 'active';
+    slot.generation += 1;
+    slot.attempts += 1;
+    capacity -= 1;
   }
   return next;
 }

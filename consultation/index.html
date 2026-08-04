@@ -4,11 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>HAIRLOOM · PRO</title>
-  <link rel="stylesheet" href="/consultation/styles.css?v=20260803-model-previews-v14">
+  <link rel="stylesheet" href="/consultation/styles.css?v=20260804-lightbox-color-v18">
 </head>
 <body>
   <main id="app" class="shell"></main>
+  <div class="image-lightbox" id="imageLightbox" hidden role="dialog" aria-modal="true" aria-label="이미지 크게 보기">
+    <div class="image-lightbox-shell">
+      <button class="image-lightbox-close" id="imageLightboxClose" type="button" aria-label="닫기">×</button>
+      <div class="image-lightbox-frame"><img id="imageLightboxImage" alt=""></div>
+      <section class="lightbox-variations" id="lightboxVariations" hidden>
+        <div class="lightbox-variation-head"><b>작은 변화</b><small>원하는 마무리만 선택하세요.</small></div>
+        <div class="lightbox-variation-options" id="lightboxVariationOptions"></div>
+        <button id="lightboxGenerate" type="button">이 스타일로 더 생성해보기</button>
+      </section>
+    </div>
+  </div>
   <script src="/imagen.web.js" defer></script>
-  <script type="module" src="/consultation/app.mjs?v=20260803-model-previews-v14"></script>
+  <script type="module" src="/consultation/app.mjs?v=20260804-lightbox-color-v18"></script>
 </body>
 </html>

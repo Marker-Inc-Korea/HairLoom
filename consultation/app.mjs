@@ -1,5 +1,4 @@
 import { catalogVersion, promptVersion, hydrateCatalogPayload, normalizeProviderResult, normalizeSettings, sourcePhotoKey, genderLineTreatmentPrompt } from '../src/exploreCore.mjs';
-import { trendBadgeForCandidate } from '../src/trendRegistry.mjs';
 let ModelPreviewRegistry = null;
 let modelPreviewDisposed = false;
 let modelPreviewUnsubscribe = () => {};
@@ -16,6 +15,7 @@ import {
   normalizeDiagnosis,
   normalizeHairColorProfile,
   deriveAllowedHairColorTones,
+  evaluateHairColorFeasibility,
   classifyHairColorSamples,
   canonicalStructureKey,
   buildConsultationGroups,
@@ -35,7 +35,19 @@ import {
 } from '../src/consultationCore.mjs';
 
 const app = document.querySelector('#app');
-const stages = ['SOURCE', 'PROFILE', 'STRUCTURE', 'VARIATION', 'COMPARE', 'LOCK'];
+const imageLightbox = document.querySelector('#imageLightbox');
+const imageLightboxImage = document.querySelector('#imageLightboxImage');
+const lightboxVariations = document.querySelector('#lightboxVariations');
+const lightboxVariationOptions = document.querySelector('#lightboxVariationOptions');
+const lightboxGenerate = document.querySelector('#lightboxGenerate');
+const stageLabels = ['SOURCE', 'PROFILE', 'STRUCTURE', 'VARIATION', 'COMPARE', 'LOCK'];
+const visibleStages = Object.freeze([
+  { label: 'SOURCE', stateIndex: 0 },
+  { label: 'PROFILE', stateIndex: 1 },
+  { label: 'STRUCTURE', stateIndex: 2 },
+  { label: 'COMPARE', stateIndex: 4 },
+  { label: 'LOCK', stateIndex: 5 }
+]);
 const state = {
   stage: 0,
   profileStep: 0,
@@ -93,6 +105,7 @@ const statusClass = (s) => s === 'possible' ? 'ok' : s === 'conditional' ? 'cond
 const densityToThickness = { low: 'fine', normal: 'normal', high: 'thick' };
 const damageMap = { low: 'low', medium: 'medium', high: 'high' };
 let moodRankTimer = 0;
+let sourceLoadVersion = 0;
 const STYLE_NAME_REPLACEMENTS = [
   ['턱선 블런트 보브', '태슬 단발'],
   ['그래듀에이티드 보브', 'A라인 단발'],
@@ -137,30 +150,29 @@ function stageEnabled(index) {
   return index === 0
     || (index === 1 && requiredSourceViewsReady())
     || (index === 2 && state.structureSlots.length > 0)
-    || (index === 3 && Boolean(state.selectedGroup))
     || (index === 4 && state.batch?.metadata?.purpose === 'compare')
     || (index === 5 && state.shortlist.size > 0);
 }
 
 function currentStageLabel() {
   if (state.stage === 1) return state.profileStep === 0 ? 'PROFILE 1/2' : 'COLOR 2/2';
-  return stages[state.stage];
+  return stageLabels[state.stage];
 }
 
 function render() {
   const currentContent = app.querySelector('.content');
   const preserveScroll = currentContent?.dataset.stage === String(state.stage);
   const scrollTop = preserveScroll ? currentContent.scrollTop : 0;
-  const step = state.stage + 1;
+  const step = Math.max(1, visibleStages.findIndex((item) => item.stateIndex === state.stage) + 1);
   const stageMarkup = [renderSource, renderProfile, renderStructure, renderVariations, renderCompare, renderAgreement][state.stage]();
   app.innerHTML = h`<div class="workspace">
     <aside class="rail">
       <button class="brand" id="backToList" type="button" aria-label="Back to structure list">H</button>
-      <nav class="stages" aria-label="Progress">${stages.map((label, index) => `<button class="stage" aria-label="${label}" aria-current="${state.stage === index}" data-stage="${index}" ${stageEnabled(index) ? '' : 'disabled'}><i></i></button>`).join('')}</nav>
-      <div class="rail-count"><b>${String(step).padStart(2, '0')}</b><span>/ 06</span></div>
+      <nav class="stages" aria-label="Progress">${visibleStages.map(({ label, stateIndex }) => `<button class="stage" aria-label="${label}" aria-current="${state.stage === stateIndex}" data-stage="${stateIndex}" ${stageEnabled(stateIndex) ? '' : 'disabled'}><i></i></button>`).join('')}</nav>
+      <div class="rail-count"><b>${String(step).padStart(2, '0')}</b><span>/ 05</span></div>
     </aside>
     <main class="content" data-stage="${state.stage}">
-      <header class="content-head"><b>HAIRLOOM PRO</b><span>${String(step).padStart(2, '0')} / 06 · ${currentStageLabel()}</span></header>
+      <header class="content-head"><b>HAIRLOOM PRO</b><span>${String(step).padStart(2, '0')} / 05 · ${currentStageLabel()}</span></header>
       ${state.error ? `<div class="status-banner error" role="alert">${esc(state.error)}</div>` : currentStageStatus() ? `<div class="status-banner" role="status">${esc(currentStageStatus())}</div>` : ''}
       ${stageMarkup}
     </main>
@@ -257,15 +269,22 @@ function renderSource() {
   const source = sourceViewSource(view);
   const required = state.originalJpegDataUrl ? 1 : 0;
   const processing = state.sourceProcessing && view.id === 'front';
-  const uploadContent = source ? `<img src="${esc(source)}" alt="${view.label}">` : processing ? '<span class="source-processing-mark">···</span><small>ANALYZING PHOTO</small>' : `<span>＋</span><small>ADD ${view.label}</small>`;
-  const continueLabel = state.sourceProcessing ? '사진과 현재 컬러를 분석하고 있습니다.' : required ? 'FRONT 준비 완료' : 'FRONT 사진을 먼저 추가하세요.';
-  return `<section class="source-step single-source"><div class="source-view-head"><b>VIEWS</b><span>${required} / 1 REQUIRED</span></div><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><button class="single-view-upload ${source ? 'filled' : ''}" type="button" data-upload-view="${view.id}" aria-label="${source ? 'Replace' : 'Add'} ${view.label} photo" ${state.sourceProcessing ? 'disabled' : ''}>${uploadContent}</button><input id="view-${view.id}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label}"><div class="source-view-nav"><button type="button" data-source-step="-1" aria-label="Previous view">←</button><nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => `<button type="button" data-source-view="${index}" class="${index === state.sourceViewIndex ? 'on' : ''} ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav><button type="button" data-source-step="1" aria-label="Next view">→</button></div></div><div class="source-footer"><div class="profile-switch" aria-label="Profile"><button data-gender="F" class="${gender === 'F' ? 'on' : ''}">FEMALE</button><button data-gender="M" class="${gender === 'M' ? 'on' : ''}">MALE</button></div><div class="source-next"><small id="sourceContinueStatus">${continueLabel}</small><button class="next-button" id="toProfile" data-ready="${requiredSourceViewsReady() ? 'true' : 'false'}" aria-describedby="sourceContinueStatus" ${state.sourceProcessing ? 'disabled aria-busy="true"' : ''}>${state.sourceProcessing ? 'PROCESSING…' : 'NEXT'}</button></div></div></section>`;
+  const detectingColor = state.hairColorDetection.status === 'detecting';
+  const uploadContent = source ? `<img src="${esc(source)}" alt="${view.label}">` : processing ? '<span class="source-processing-mark">···</span><small>PREPARING PHOTO</small>' : `<span>＋</span><small>ADD ${view.label}</small>`;
+  const continueLabel = state.sourceProcessing ? '사진을 준비 중입니다. 성별과 다른 뷰는 계속 조작할 수 있습니다.' : required && detectingColor ? 'FRONT 준비 완료 · 현재 컬러는 백그라운드에서 분석 중입니다.' : required ? 'FRONT 준비 완료' : 'FRONT 사진을 먼저 추가하세요.';
+  return `<section class="source-step single-source"><div class="source-view-head"><b>VIEWS</b><span>${required} / 1 REQUIRED</span></div><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><button class="single-view-upload ${source ? 'filled' : ''}" type="button" data-upload-view="${view.id}" aria-label="${source ? 'Replace' : 'Add'} ${view.label} photo" aria-busy="${processing ? 'true' : 'false'}">${uploadContent}</button><input id="view-${view.id}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label}"><div class="source-view-nav"><button type="button" data-source-step="-1" aria-label="Previous view">←</button><nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => `<button type="button" data-source-view="${index}" class="${index === state.sourceViewIndex ? 'on' : ''} ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav><button type="button" data-source-step="1" aria-label="Next view">→</button></div></div><div class="source-footer"><div class="profile-switch" aria-label="Profile"><button data-gender="F" class="${gender === 'F' ? 'on' : ''}">FEMALE</button><button data-gender="M" class="${gender === 'M' ? 'on' : ''}">MALE</button></div><div class="source-next"><small id="sourceContinueStatus" role="status">${continueLabel}</small><button class="next-button" id="toProfile" data-ready="${requiredSourceViewsReady() ? 'true' : 'false'}" aria-describedby="sourceContinueStatus" ${requiredSourceViewsReady() ? '' : 'disabled'}>NEXT</button></div></div></section>`;
 }
 
 function toneLabel(toneId) {
   if (toneId === PRESERVE_CURRENT_TONE_ID) return '현재 색상 유지';
   return HAIR_COLOR_TONES.find((tone) => tone.id === toneId)?.labelKo || toneId || '미선택';
 }
+const COLOR_RESEMBLANCE = Object.freeze({
+  subtle: Object.freeze({ label: '은은하게', percent: 55, prompt: 'softly approximate the selected swatch while retaining some of the current undertone' }),
+  balanced: Object.freeze({ label: '적당히 비슷하게', percent: 75, prompt: 'clearly resemble the selected swatch while preserving natural depth and variation' }),
+  vivid: Object.freeze({ label: '선택색에 가깝게', percent: 90, prompt: 'closely match the selected swatch without flattening natural roots, depth or highlights' })
+});
+function colorResemblance(value) { return COLOR_RESEMBLANCE[value] || COLOR_RESEMBLANCE.subtle; }
 
 function selectedTargetToneIds() {
   const current = state.hairColorProfile.currentToneId;
@@ -298,41 +317,102 @@ function renderColorProfile() {
   const emptyMessage = state.hairColorDetection.status === 'detecting' ? '원본 사진에서 현재 머리색을 분석 중입니다.' : '자동 감지 실패 · 현재 머리색을 직접 선택하세요.';
   const continueMessage = state.structurePreparing ? '100개 구조 후보를 준비하고 있습니다. 잠시만 기다려 주세요.' : profile.currentToneId === 'unknown' ? '현재 머리색을 선택해야 다음 단계로 갈 수 있습니다.' : '준비 완료 · NEXT를 누르면 STRUCTURE 단계가 시작됩니다.';
   const continueStatus = state.structurePreparing ? 'busy' : canContinue ? 'ready' : 'blocked';
-  return `<section class="profile-step color-step"><div class="profile-page-head"><b>COLOR</b><span>2 / 2</span></div><section class="color-section"><div class="color-section-head"><div><b>CURRENT</b><small>${currentColorDetectionLabel()} · 직접 수정 가능</small></div><span>${esc(toneLabel(profile.currentToneId))}</span></div><div class="tone-grid current-tones">${HAIR_COLOR_TONES.map((tone) => `<button type="button" data-current-tone="${tone.id}" class="tone-chip ${profile.currentToneId === tone.id ? 'on' : ''}"><i style="--tone-level:${tone.level}"></i><span>${esc(tone.labelKo)}</span></button>`).join('')}</div></section>${profile.currentToneId === 'unknown' ? `<div class="color-empty">${emptyMessage}</div>` : `<section class="color-section"><div class="color-section-head"><div><b>TARGET</b><small>복수 선택</small></div><span>${profile.intensity === 'balanced' ? 'BALANCED' : 'SUBTLE'}</span></div><div class="tone-grid target-tones">${allowed.map((tone) => `<button type="button" data-target-tone="${tone.id}" class="tone-chip ${selected.has(tone.id) ? 'on' : ''} ${tone.id === profile.currentToneId ? 'fixed' : ''}"><i style="--tone-level:${tone.level}"></i><span>${esc(tone.labelKo)}</span></button>`).join('')}</div><div class="intensity-switch"><button type="button" data-color-intensity="subtle" class="${profile.intensity === 'subtle' ? 'on' : ''}">SUBTLE</button><button type="button" data-color-intensity="balanced" class="${profile.intensity === 'balanced' ? 'on' : ''}">BALANCED</button></div></section><div class="color-empty maskless-notice">MASKLESS · 헤어 마스크 없이 원본 전체를 기준으로 생성합니다.</div>`}<div class="color-continue-note ${continueStatus}" id="colorContinueStatus" role="status">${continueMessage}</div><div class="actions profile-actions"><button class="secondary" id="backToDiagnosis">BACK</button><button class="next-button" id="toStructures" data-ready="${canContinue ? 'true' : 'false'}" aria-describedby="colorContinueStatus" ${state.structurePreparing ? 'disabled aria-busy="true"' : ''}>${state.structurePreparing ? 'PREPARING…' : 'NEXT'}</button></div></section>`;
+  const currentPalette = HAIR_COLOR_TONES.map((tone) => `<button type="button" data-current-tone="${tone.id}" class="tone-chip ${profile.currentToneId === tone.id ? 'on' : ''}" aria-pressed="${profile.currentToneId === tone.id}"><i style="--tone-color:${tone.hex}"></i><span>${esc(tone.labelKo)}</span></button>`).join('');
+  const targetPalette = allowed.map((tone) => {
+    const evaluation = evaluateHairColorFeasibility(tone.id, profile, state.diagnosis, 'front');
+    const active = selected.has(tone.id);
+    return `<button type="button" data-target-tone="${tone.id}" class="tone-chip ${active ? 'on' : ''} ${tone.id === profile.currentToneId ? 'fixed' : ''} ${evaluation.status}" aria-pressed="${active}" title="${esc(evaluation.reasons.join(' · '))}"><i style="--tone-color:${tone.hex}"></i><span>${esc(tone.labelKo)}</span><small>${statusKo(evaluation.status)}</small></button>`;
+  }).join('');
+  const resemblance = colorResemblance(profile.intensity);
+  return `<section class="profile-step color-step"><div class="profile-page-head"><b>COLOR</b><span>2 / 2</span></div><section class="color-section"><div class="color-section-head"><div><b>CURRENT</b><small>${currentColorDetectionLabel()} · 팔레트에서 직접 수정 가능</small></div><span>${esc(toneLabel(profile.currentToneId))}</span></div><div class="tone-grid current-tones">${currentPalette}</div></section>${profile.currentToneId === 'unknown' ? `<div class="color-empty">${emptyMessage}</div>` : `<section class="color-section"><div class="color-section-head"><div><b>TARGET</b><small>복수 선택 · ${allowed.length}색 사용 가능</small></div><span>${resemblance.label} · ${resemblance.percent}%</span></div><div class="tone-grid target-tones">${targetPalette}</div><div class="resemblance-label"><b>선택 색상 유사도</b><small>생성 이미지가 고른 색상과 닮는 정도</small></div><div class="intensity-switch resemblance-switch">${Object.entries(COLOR_RESEMBLANCE).map(([id, option]) => `<button type="button" data-color-intensity="${id}" class="${profile.intensity === id ? 'on' : ''}"><span>${option.label}</span><small>${option.percent}%</small></button>`).join('')}</div></section><div class="color-empty maskless-notice">MASKLESS · 헤어 마스크 없이 원본 전체를 기준으로 생성합니다.</div>`}<div class="color-continue-note ${continueStatus}" id="colorContinueStatus" role="status">${continueMessage}</div><div class="actions profile-actions"><button class="secondary" id="backToDiagnosis">BACK</button><button class="next-button" id="toStructures" data-ready="${canContinue ? 'true' : 'false'}" aria-describedby="colorContinueStatus" ${state.structurePreparing ? 'disabled aria-busy="true"' : ''}>${state.structurePreparing ? 'PREPARING…' : 'NEXT'}</button></div></section>`;
 }
 
 function renderProfile() {
   return state.profileStep === 0 ? renderDiagnosisProfile() : renderColorProfile();
 }
 
-function currentStageStatus() {
-  if (state.stage === 2) return state.structureStatus;
-  if (state.stage === 4) return state.status;
-  return '';
-}
+function currentStageStatus() { return ''; }
 
 function renderStructure() {
   const slots = state.structureSlots.length ? state.structureSlots : Array.from({ length: 100 }, (_, slotIndex) => ({ slotIndex, status: 'queued' }));
-  const done = slots.filter((slot) => slot.status === 'done').length;
-  const failed = slots.filter((slot) => slot.status === 'failed').length;
-  const running = state.batch?.metadata?.purpose === 'structure' ? state.running.size : 0;
-  return panel('STRUCTURE', `<div class="toolbar"><div class="stats"><span class="pill">ALL 500</span><span class="pill">PROFILE ${state.filteredGroups.length}</span><span class="pill">100 PICKS</span><span class="pill">ACTIVE ${state.structureActiveLimit}</span><span class="pill">RUN ${running}</span><span class="pill ok">DONE ${done}</span><span class="pill impossible">FAIL ${failed}</span></div><button class="next-button" id="toVariations" ${state.selectedGroup ? '' : 'disabled'}>NEXT</button></div><div class="structure-board">${slots.map(structureTile).join('')}</div>`);
+  return panel('STRUCTURE', `<div class="toolbar"><div class="stats"><span class="pill">ALL 500</span><span class="pill">PROFILE ${state.filteredGroups.length}</span><span class="pill">100 PICKS</span><span class="pill">RANDOM FILL</span></div></div><div class="structure-board">${slots.map(structureTile).join('')}</div>`);
 }
 
-const STRUCTURE_TILE_RATIOS = [0.66, 0.82, 0.6, 0.74, 0.9, 0.69, 0.57, 0.78, 0.63, 0.86, 0.71, 0.55, 0.8, 0.65, 0.76];
-function structureTileRatio(slotIndex) {
-  return STRUCTURE_TILE_RATIOS[(Math.imul(Number(slotIndex) + 5, 11) + 7) % STRUCTURE_TILE_RATIOS.length];
+function visualHash(value) {
+  let hash = 2166136261;
+  for (const character of String(value)) { hash ^= character.charCodeAt(0); hash = Math.imul(hash, 16777619); }
+  return hash >>> 0;
+}
+const MOSAIC_TILE_CLASSES = Object.freeze(['mosaic-3x3', 'mosaic-2x3', 'mosaic-2x2', 'mosaic-2x1', 'mosaic-1x2']);
+function mosaicTileClass(slot, aspectRatio = 0) {
+  const variant = (slot.startRank ?? visualHash(`${state.sourceKey}:${slot.designId || ''}:${slot.slotIndex}:mosaic`)) % 20;
+  if (aspectRatio > 0 && aspectRatio < 0.9) return variant % 4 === 0 ? 'mosaic-2x3' : 'mosaic-1x2';
+  if (aspectRatio >= 0.9 && aspectRatio < 1.25) return ['mosaic-1x2', 'mosaic-2x3', 'mosaic-2x2'][variant % 3];
+  if (aspectRatio >= 1.25) return ['mosaic-2x1', 'mosaic-2x2', 'mosaic-3x3'][variant % 3];
+  if (variant < 2) return 'mosaic-3x3';
+  if (variant < 5) return 'mosaic-2x3';
+  if (variant < 9) return 'mosaic-2x2';
+  if (variant < 13) return 'mosaic-2x1';
+  return 'mosaic-1x2';
+}
+function fitMosaicTileToImage(image) {
+  if (!image?.naturalWidth || !image.naturalHeight) return;
+  const tile = image.closest('.structure-tile, .slot');
+  if (!tile) return;
+  const slotIndex = Number(tile.dataset.structureTile ?? tile.dataset.slot);
+  const slot = tile.matches('.structure-tile') ? state.structureSlots[slotIndex] : state.slots[slotIndex];
+  if (!slot) return;
+  tile.classList.remove(...MOSAIC_TILE_CLASSES);
+  tile.classList.add(mosaicTileClass(slot, image.naturalWidth / image.naturalHeight));
+}
+function openImageLightbox(button) {
+  const image = button?.querySelector('img');
+  if (!image?.src) return;
+  imageLightboxImage.src = image.src;
+  imageLightboxImage.alt = image.alt || '확대 이미지';
+  lightboxVariations.hidden = true;
+  lightboxVariationOptions.innerHTML = '';
+  lightboxGenerate.onclick = null;
+  imageLightbox.hidden = false;
+  document.body.classList.add('lightbox-open');
+  document.querySelector('#imageLightboxClose')?.focus();
+}
+function closeImageLightbox() {
+  imageLightbox.hidden = true;
+  imageLightboxImage.removeAttribute('src');
+  document.body.classList.remove('lightbox-open');
+}
+function minimalVariationsForSelectedGroup() {
+  hydrateVariations();
+  const choices = [];
+  const seen = new Set();
+  for (const variation of state.ranked) {
+    if (evaluateVariation(variation, state.diagnosis).status === 'impossible' || seen.has(variation.finishKo)) continue;
+    seen.add(variation.finishKo);
+    choices.push(variation);
+    if (choices.length >= 4) break;
+  }
+  return choices;
+}
+function openStructureLightbox(button, slotIndex) {
+  const slot = state.structureSlots[slotIndex];
+  if (!slot || slot.status !== 'done') return openImageLightbox(button);
+  const record = state.recordsById.get(slot.designId);
+  const group = record ? state.groupsByKey.get(recordGroupKey(record)) : null;
+  if (!group) return openImageLightbox(button);
+  state.selectedGroup = group;
+  const choices = minimalVariationsForSelectedGroup();
+  state.selectedVariation = choices[0] || null;
+  openImageLightbox(button);
+  lightboxVariations.hidden = choices.length === 0;
+  lightboxVariationOptions.innerHTML = choices.map((variation, index) => `<button type="button" data-lightbox-variation="${esc(variation.id)}" class="${index === 0 ? 'on' : ''}">${esc(variation.finishKo)}</button>`).join('');
+  lightboxVariationOptions.querySelectorAll('[data-lightbox-variation]').forEach((option) => option.addEventListener('click', () => {
+    state.selectedVariation = choices.find((variation) => String(variation.id) === option.dataset.lightboxVariation) || choices[0];
+    lightboxVariationOptions.querySelectorAll('button').forEach((item) => item.classList.toggle('on', item === option));
+  }));
+  lightboxGenerate.onclick = () => { if (state.selectedVariation) { closeImageLightbox(); startCompare(); } };
 }
 
-function generationAxisLabel(slot) {
-  const axes = slot.generationAxes || {};
-  return [
-    String(slot.sourceViewKey || axes.sourceViewKey || 'front').toUpperCase(),
-    axes.mirrored ? 'MIRROR' : 'ORIGINAL',
-    axes.colorToneId ? toneLabel(axes.colorToneId) : '',
-    statusKo(slot.status)
-  ].filter(Boolean).join(' · ');
-}
 
 function structureTile(slot) {
   const record = state.recordsById.get(slot.designId);
@@ -341,11 +421,12 @@ function structureTile(slot) {
   const source = slot.previewUrl || preview?.url || sourceViewPreview(slot.sourceViewKey);
   const selected = group && state.selectedGroup?.key === group.key;
   const ready = slot.status === 'done' && group;
-  const trend = group ? trendBadgeForCandidate(group) : '';
   const previewState = slot.status === 'active' ? '생성 중' : '생성 대기';
   const previewLabel = preview ? `<span class="registered-model-label">등록 모델 · ${previewState}</span>` : '';
   const previewPosition = preview ? ` style="object-position:${preview.focalX * 100}% ${preview.focalY * 100}%"` : '';
-  return `<button class="structure-tile ${slot.status} ${preview ? 'registered-preview' : ''} ${selected ? 'selected' : ''}" data-structure-slot="${slot.slotIndex}" style="--tile-ratio:${structureTileRatio(slot.slotIndex)}" ${ready ? '' : 'disabled'}><img src="${esc(source)}" alt="${preview ? esc(`${preview.title} · 등록 모델 미리보기 · ${previewState}`) : ready ? esc(groupLabel(group)) : ''}"${previewPosition}>${previewLabel}<span class="structure-meta"><b>${ready ? esc(groupLabel(group)) : String(slot.slotIndex + 1).padStart(2, '0')}</b><small>${trend ? `${esc(trend)} · ` : ''}${esc(generationAxisLabel(slot))}</small></span></button>`;
+  const number = String(slot.slotIndex + 1).padStart(2, '0');
+  const previewAttribute = ready ? ` data-structure-preview="${slot.slotIndex}"` : '';
+  return `<article class="structure-tile ${mosaicTileClass(slot)} ${slot.status} ${preview ? 'registered-preview' : ''} ${selected ? 'selected' : ''}" data-structure-tile="${slot.slotIndex}"><button type="button" class="tile-image-button" data-preview-image${previewAttribute} aria-label="${number}번 이미지 크게 보기"><img src="${esc(source)}" alt="${preview ? esc(`${preview.title} · 등록 모델 미리보기 · ${previewState}`) : ready ? esc(groupLabel(group)) : ''}"${previewPosition}></button>${previewLabel}<span class="structure-meta"><b>${number}</b></span></article>`;
 }
 
 function groupLabel(group) { return `${group.lengthKo} · ${familiarStyleName(group.baseKo)} · ${group.frontKo}`; }
@@ -361,7 +442,7 @@ function renderVariations() {
   const pageSize = 72;
   const totalPages = Math.max(1, Math.ceil(state.ranked.length / pageSize));
   const list = state.ranked.slice(state.variationPage * pageSize, (state.variationPage + 1) * pageSize);
-  return panel('VARIATION', `<div class="toolbar"><div class="stats"><span class="pill">ALL ${state.variations.length}</span><span class="pill">SHOW ${list.length}</span></div><div><textarea id="mood2" placeholder="MOOD">${esc(state.mood)}</textarea><button id="prevVariation" class="secondary">←</button><span class="pill">${state.variationPage + 1}/${totalPages}</span><button id="nextVariation" class="secondary">→</button></div></div><div class="cards">${list.map(variationCard).join('')}</div><div class="actions"><button class="next-button" id="toCompare" ${state.selectedVariation ? '' : 'disabled'}>NEXT</button></div>`);
+  return panel('VARIATION', `<div class="toolbar"><div class="stats"><span class="pill">ALL ${state.variations.length}</span><span class="pill">SHOW ${list.length}</span></div><div><textarea id="mood2" placeholder="MOOD">${esc(state.mood)}</textarea><button id="prevVariation" class="secondary">←</button><span class="pill">${state.variationPage + 1}/${totalPages}</span><button id="nextVariation" class="secondary">→</button></div></div><div class="cards">${list.map(variationCard).join('')}</div>`);
 }
 function variationCard(variation) {
   const evaluation = evaluateVariation(variation, state.diagnosis);
@@ -370,9 +451,7 @@ function variationCard(variation) {
 }
 
 function renderCompare() {
-  const done = state.slots.filter((slot) => slot.status === 'done').length;
-  const failed = state.slots.filter((slot) => slot.status === 'failed').length;
-  return panel('COMPARE', `<div class="toolbar"><div class="stats"><span class="pill">${state.slots.length || 100} SLOTS</span><span class="pill">ACTIVE ${state.batch?.activeLimit ?? state.activeLimit}</span><span class="pill">RUN ${state.running.size}</span><span class="pill ok">DONE ${done}</span><span class="pill impossible">FAIL ${failed}</span></div><button class="next-button" id="toAgreement" ${state.shortlist.size ? '' : 'disabled'}>NEXT</button></div><div class="slots">${(state.slots.length ? state.slots : Array.from({ length: 100 }, (_, index) => ({ slotIndex: index, status: 'queued' }))).map(slotCard).join('')}</div>`);
+  return panel('COMPARE', `<div class="toolbar"><div class="stats"><span class="pill">100 SLOTS</span><span class="pill">RANDOM FILL</span><span class="pill">SELECT ${state.shortlist.size}/6</span></div><button class="next-button" id="toAgreement" ${state.shortlist.size ? '' : 'disabled'}>NEXT</button></div><div class="slots">${(state.slots.length ? state.slots : Array.from({ length: 100 }, (_, index) => ({ slotIndex: index, status: 'queued' }))).map(slotCard).join('')}</div>`);
 }
 function slotCard(slot) {
   const record = state.recordsById.get(slot.designId);
@@ -382,7 +461,8 @@ function slotCard(slot) {
   const previewState = slot.status === 'active' ? '생성 중' : '생성 대기';
   const previewLabel = preview ? `<span class="registered-model-label">등록 모델 · ${previewState}</span>` : '';
   const previewPosition = preview ? ` style="object-position:${preview.focalX * 100}% ${preview.focalY * 100}%"` : '';
-  return `<div class="slot ${slot.status} ${preview ? 'registered-preview' : ''}" data-slot="${slot.slotIndex}"><div class="image"><img src="${esc(source)}" alt="${preview ? esc(`${preview.title} · 등록 모델 미리보기 · ${previewState}`) : slot.status === 'done' ? esc(slot.designId) : ''}"${previewPosition}></div>${previewLabel}<input type="checkbox" aria-label="후보 선택 ${slot.slotIndex + 1}" data-short="${esc(slot.designId || '')}" ${checked} ${slot.status === 'done' ? '' : 'disabled'}><div class="meta">${String(slot.slotIndex + 1).padStart(2, '0')} · ${esc(generationAxisLabel(slot))} · ${esc(slot.designId || '대기')}</div></div>`;
+  const number = String(slot.slotIndex + 1).padStart(2, '0');
+  return `<div class="slot ${mosaicTileClass(slot)} ${slot.status} ${preview ? 'registered-preview' : ''}" data-slot="${slot.slotIndex}"><button type="button" class="image" data-preview-image aria-label="${number}번 이미지 크게 보기"><img src="${esc(source)}" alt="${preview ? esc(`${preview.title} · 등록 모델 미리보기 · ${previewState}`) : slot.status === 'done' ? esc(slot.designId) : ''}"${previewPosition}></button>${previewLabel}<input type="checkbox" aria-label="후보 선택 ${slot.slotIndex + 1}" data-short="${esc(slot.designId || '')}" ${checked} ${slot.status === 'done' ? '' : 'disabled'}><div class="meta">${number}</div></div>`;
 }
 
 function renderAgreement() {
@@ -462,15 +542,13 @@ function goToProfile() {
 
 function handleNextAction(event) {
   const button = event.target.closest('button');
-  if (!button || !app.contains(button) || !['toProfile', 'toColor', 'toStructures', 'toVariations', 'toCompare', 'toAgreement'].includes(button.id)) return;
+  if (!button || !app.contains(button) || !['toProfile', 'toColor', 'toStructures', 'toAgreement'].includes(button.id)) return;
   event.preventDefault();
   event.stopImmediatePropagation();
   if (button.disabled) return;
   if (button.id === 'toProfile') goToProfile();
   else if (button.id === 'toColor') { syncIntake(); reconcileHairColorProfile(); state.profileStep = 1; render(); }
   else if (button.id === 'toStructures') startStructureExplore();
-  else if (button.id === 'toVariations') { hydrateVariations(); state.stage = 3; render(); }
-  else if (button.id === 'toCompare') startCompare();
   else if (button.id === 'toAgreement') { state.stage = 5; render(); }
 }
 
@@ -490,7 +568,12 @@ function bind() {
   document.querySelectorAll('[data-current-tone]').forEach((button) => button.addEventListener('click', () => setCurrentTone(button.dataset.currentTone)));
   document.querySelectorAll('[data-target-tone]').forEach((button) => button.addEventListener('click', () => toggleTargetTone(button.dataset.targetTone)));
   document.querySelectorAll('[data-color-intensity]').forEach((button) => button.addEventListener('click', () => { replaceHairColorProfile({ intensity: button.dataset.colorIntensity }); invalidateGeneratedSurfaces('color-change'); render(); }));
-  document.querySelectorAll('[data-structure-slot]').forEach((button) => button.addEventListener('click', () => selectStructureSlot(Number(button.dataset.structureSlot))));
+  document.querySelectorAll('[data-preview-image]').forEach((button) => button.addEventListener('click', () => button.dataset.structurePreview == null ? openImageLightbox(button) : openStructureLightbox(button, Number(button.dataset.structurePreview))));
+  document.querySelectorAll('[data-preview-image] img').forEach((image) => {
+    const fit = () => fitMosaicTileToImage(image);
+    if (image.complete && image.naturalWidth) requestAnimationFrame(fit);
+    else image.addEventListener('load', fit, { once: true });
+  });
   document.querySelector('#mood2')?.addEventListener('input', (event) => { const { selectionStart, selectionEnd } = event.target; state.mood = event.target.value; clearTimeout(moodRankTimer); moodRankTimer = setTimeout(() => { if (state.stage !== 3) return; state.ranked = rankFeasibleVariations(state.variations); state.variationPage = 0; state.selectedVariation = state.ranked.find((variation) => evaluateVariation(variation, state.diagnosis).status !== 'impossible') || null; render(); restoreTextFocus('mood2', selectionStart, selectionEnd); }, 350); });
   document.querySelector('#prevVariation')?.addEventListener('click', () => { state.variationPage = Math.max(0, state.variationPage - 1); render(); });
   document.querySelector('#nextVariation')?.addEventListener('click', () => { const pages = Math.max(1, Math.ceil(state.ranked.length / 72)); state.variationPage = Math.min(pages - 1, state.variationPage + 1); render(); });
@@ -588,15 +671,6 @@ function invalidateGeneratedSurfaces(reason) {
   state.shortlist.clear();
 }
 
-function selectStructureSlot(slotIndex) {
-  const slot = state.structureSlots[slotIndex];
-  if (!slot || slot.status !== 'done') return;
-  const record = state.recordsById.get(slot.designId);
-  const group = record ? state.groupsByKey.get(recordGroupKey(record)) : null;
-  if (!group) return;
-  state.selectedGroup = group;
-  render();
-}
 
 async function startStructureExplore() {
   if (state.structurePreparing) return;
@@ -666,33 +740,55 @@ async function loadBoardView(event) {
 async function loadPhoto(event) {
   const file = event.target.files?.[0];
   if (!file || !file.type.startsWith('image/')) return;
+  const loadVersion = ++sourceLoadVersion;
   state.error = '';
+  invalidateGeneratedSurfaces('source-change');
+  state.originalFile = file;
+  state.originalDataUrl = '';
+  state.originalJpegDataUrl = '';
+  state.originalJpegBlob = null;
+  state.sourceViews.front = '';
+  state.sourceViewBlobs.front = null;
+  state.sourceKey = '';
+  state.shortlist.clear();
+  clearProviderInputCache('front');
+  replaceHairColorProfile({ currentToneId: 'unknown', selectedToneIds: [PRESERVE_CURRENT_TONE_ID] });
+  state.hairColorDetection = { status: 'idle', source: 'none', toneId: 'unknown', confidence: 0 };
   state.sourceProcessing = true;
   render();
+  const previewPromise = fileToDataUrl(file);
+  const preparationPromise = prepareOriginalJpeg(file).then((value) => ({ value }), (error) => ({ error }));
   try {
-    invalidateGeneratedSurfaces('source-change');
-    const prepared = await prepareOriginalJpeg(file);
-    state.originalFile = file;
-    state.originalDataUrl = await fileToDataUrl(file);
+    const originalDataUrl = await previewPromise;
+    if (loadVersion !== sourceLoadVersion) return;
+    state.originalDataUrl = originalDataUrl;
+    state.sourceViews.front = originalDataUrl;
+    render();
+    const preparation = await preparationPromise;
+    if (preparation.error) throw preparation.error;
+    const prepared = preparation.value;
+    if (loadVersion !== sourceLoadVersion) return;
     state.originalJpegDataUrl = prepared.dataUrl;
     state.originalJpegBlob = prepared.blob;
     state.sourceViewBlobs.front = prepared.blob;
-    clearProviderInputCache('front');
-    state.sourceKey = await sourcePhotoKey(new Uint8Array(await prepared.blob.arrayBuffer()), prepared.blob.type);
     state.sourceViews.front = prepared.dataUrl;
-    state.shortlist.clear();
-    replaceHairColorProfile({ currentToneId: 'unknown', selectedToneIds: [PRESERVE_CURRENT_TONE_ID] });
-    try {
-      await detectCurrentHairTone('front');
-    } catch {
-      state.hairColorDetection = { status: 'failed', source: 'auto', toneId: 'unknown', confidence: 0 };
-    }
+    state.sourceKey = await sourcePhotoKey(new Uint8Array(await prepared.blob.arrayBuffer()), prepared.blob.type);
+    if (loadVersion !== sourceLoadVersion) return;
+    state.sourceProcessing = false;
+    state.hairColorDetection = { status: 'detecting', source: 'auto', toneId: 'unknown', confidence: 0 };
+    render();
+    detectCurrentHairTone('front').catch(() => {
+      if (loadVersion === sourceLoadVersion) state.hairColorDetection = { status: 'failed', source: 'auto', toneId: 'unknown', confidence: 0 };
+    }).finally(() => {
+      if (loadVersion === sourceLoadVersion) render();
+    });
   } catch {
+    if (loadVersion !== sourceLoadVersion) return;
+    state.sourceProcessing = false;
     state.hairColorDetection = { status: 'failed', source: 'auto', toneId: 'unknown', confidence: 0 };
     state.error = 'IMAGE ERROR';
+    render();
   }
-  state.sourceProcessing = false;
-  setTimeout(render, 0);
 }
 
 function fileToDataUrl(file) {
@@ -986,9 +1082,10 @@ function consultationPrompt(record, item) {
   const viewKey = item.sourceViewKey || axes.sourceViewKey || 'front';
   const currentToneId = state.hairColorProfile.currentToneId;
   const targetToneId = axes.colorToneId || currentToneId;
+  const resemblance = colorResemblance(axes.colorIntensity || state.hairColorProfile.intensity);
   const colorRule = targetToneId === currentToneId
     ? `COLOR: preserve the exact current hair tone (${toneLabel(currentToneId)}). No global color grading.`
-    : `COLOR: change hair from ${toneLabel(currentToneId)} to ${toneLabel(targetToneId)} with ${axes.intensity || state.hairColorProfile.intensity} intensity. Keep roots, depth and highlights natural; no global color grading.`;
+    : `COLOR: change hair from ${toneLabel(currentToneId)} toward ${toneLabel(targetToneId)}. RESEMBLANCE STRENGTH: ${resemblance.percent}% — ${resemblance.prompt}. Keep roots, depth and highlights natural; no global color grading.`;
   const viewRule = {
     front: 'Preserve the exact front-facing pose, facial geometry, gaze and expression.',
     side: 'Preserve the exact side profile, nose line, jaw line, ear position and neck angle.',
@@ -1086,5 +1183,8 @@ window.addEventListener('pagehide', (event) => {
   modelPreviewUnsubscribe();
   releaseModelPreviewUrls();
 });
+document.querySelector('#imageLightboxClose')?.addEventListener('click', closeImageLightbox);
+imageLightbox?.addEventListener('click', (event) => { if (event.target === imageLightbox) closeImageLightbox(); });
+window.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !imageLightbox.hidden) closeImageLightbox(); });
 render();
 (globalThis.requestIdleCallback || ((callback) => setTimeout(callback, 120)))(() => ensureCatalog().catch(() => {}));

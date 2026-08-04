@@ -9,7 +9,6 @@ import {
   saveModelPreview,
   saveModelPreviewBatch,
   setModelPreviewEnabled,
-  setModelPreviewsDesignRefs,
   setModelPreviewsEnabled,
   subscribeModelPreviewChanges
 } from '/src/modelPreviewRegistry.mjs';
@@ -43,12 +42,12 @@ let disposed = false;
 let refreshTimer = null;
 
 const rightsLabels = {
-  'salon-owned': '살롱 소유 촬영물',
+  'salon-owned': '매장 직접 촬영',
   'model-consented': '모델 사용 동의',
-  'licensed-stock': '라이선스 스톡',
-  'public-domain': '퍼블릭 도메인'
+  'licensed-stock': '사용 허가 사진',
+  'public-domain': '자유 사용 사진'
 };
-const statusLabels = { active: '사용 중', expired: '권리 만료', revoked: '사용 중지', disabled: '비활성' };
+const statusLabels = { active: '사용 중', expired: '기간 종료', revoked: '사용 중지', disabled: '사용 중지' };
 
 function esc(value) {
   return String(value ?? '').replace(/[&<>"']/g, (match) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[match]);
@@ -124,7 +123,7 @@ function updateBulkState() {
   const selected = selectedIds.size;
   const hasSelection = selected > 0;
   selectedCount.textContent = `${selected}개 선택`;
-  for (const id of ['bulkEnable', 'bulkDisable', 'bulkDelete', 'bulkApplyDesignRefs']) $(`#${id}`).disabled = !hasSelection;
+  for (const id of ['bulkEnable', 'bulkDisable', 'bulkDelete']) $(`#${id}`).disabled = !hasSelection;
   const selectedVisible = visibleIds.filter((id) => selectedIds.has(id)).length;
   selectVisible.disabled = visibleIds.length === 0;
   selectVisible.checked = visibleIds.length > 0 && selectedVisible === visibleIds.length;
@@ -136,20 +135,18 @@ function renderFilteredLibrary() {
   const filtered = records.filter(recordMatchesSearch);
   visibleIds = filtered.map((record) => record.id);
   count.textContent = String(records.length);
-  $('#libraryWarning').textContent = invalidCount ? `손상되었거나 이전 형식에서 복구할 수 없는 레코드 ${invalidCount}개를 표시에서 제외했습니다.` : '';
+  $('#libraryWarning').textContent = invalidCount ? `열 수 없는 사진 ${invalidCount}장을 목록에서 제외했습니다.` : '';
   list.innerHTML = filtered.length ? filtered.map((record) => {
     const rightsStatus = modelPreviewRightsStatus(record);
     const active = rightsStatus === 'active';
-    const designText = record.designRefs.length ? `DESIGN ${record.designRefs.join(' · ')}` : 'DESIGN 전체';
-    const reviewer = record.reviewedBy ? `검토 ${record.reviewedBy}` : '검토자 미기록';
     const selected = selectedIds.has(record.id);
     return `<article class="preview-card ${active ? '' : 'inactive'} ${selected ? 'selected' : ''}" data-record="${esc(record.id)}">
-      <label class="preview-select"><input type="checkbox" data-select="${esc(record.id)}" aria-label="${esc(record.title)} 일괄 관리 선택" ${selected ? 'checked' : ''}><span>선택</span></label>
-      <div class="preview-image"><img src="${esc(previewUrl(record))}" alt="${esc(record.title)}" style="object-position:${record.focalX * 100}% ${record.focalY * 100}%"><span class="display-badge">DISPLAY ONLY</span><span class="status-badge ${rightsStatus}">${esc(statusLabels[rightsStatus] || rightsStatus)}</span></div>
-      <div class="preview-meta"><b>${esc(record.title)}</b><small>${esc(tags(record))}</small><small>${esc(designText)}</small><small class="rights">${esc(rightsSummary(record))}</small><small>${esc(record.attribution)}</small><small>${esc(`${reviewer} · 동의 ${toDateInput(record.consentVerifiedAt)} · ${sourceHost(record)}`)}</small>
-      <div class="preview-actions"><button type="button" data-edit="${esc(record.id)}">수정</button><button type="button" data-toggle="${esc(record.id)}">${active ? '사용 중지' : rightsStatus === 'expired' ? '권리 갱신' : '재활성화'}</button><button class="danger" type="button" data-delete="${esc(record.id)}">삭제</button></div></div>
+      <label class="preview-select"><input type="checkbox" data-select="${esc(record.id)}" aria-label="${esc(record.title)} 선택" ${selected ? 'checked' : ''}><span>선택</span></label>
+      <div class="preview-image"><img src="${esc(previewUrl(record))}" alt="${esc(record.title)}" style="object-position:${record.focalX * 100}% ${record.focalY * 100}%"><span class="display-badge">대기 화면용</span><span class="status-badge ${rightsStatus}">${esc(statusLabels[rightsStatus] || rightsStatus)}</span></div>
+      <div class="preview-meta"><b>${esc(record.title)}</b><small>${esc(tags(record))}</small><small class="rights">${esc(rightsSummary(record))}</small><small>${esc(record.attribution)}</small><small>${esc(`확인 ${toDateInput(record.consentVerifiedAt)}`)}</small>
+      <div class="preview-actions"><button type="button" data-edit="${esc(record.id)}">수정</button><button type="button" data-toggle="${esc(record.id)}">${active ? '사용 중지' : rightsStatus === 'expired' ? '기간 갱신' : '다시 사용'}</button><button class="danger" type="button" data-delete="${esc(record.id)}">삭제</button></div></div>
     </article>`;
-  }).join('') : '<div class="empty">조건에 맞는 등록 모델 사진이 없습니다.<br>살롱 촬영물 또는 사용 권리가 확인된 사진을 등록하세요.</div>';
+  }).join('') : '<div class="empty">등록된 사진이 없습니다.<br>사용 권리가 확인된 모델 사진을 선택해 주세요.</div>';
   updateBulkState();
 }
 
@@ -159,23 +156,22 @@ async function refreshLibrary({ preserveStatus = true } = {}) {
   invalidCount = inspection.invalidCount;
   renderFilteredLibrary();
   await updateStorageStatus(inspection);
-  if (!preserveStatus && !records.length) setStatus('등록된 모델 사진이 없습니다.');
+  if (!preserveStatus && !records.length) setStatus('등록된 사진이 없습니다.');
 }
 
 function scheduleRefresh() {
   clearTimeout(refreshTimer);
   refreshTimer = setTimeout(() => {
-    if (!disposed) refreshLibrary().catch((error) => setStatus(error?.message || '등록 라이브러리를 갱신하지 못했습니다.', 'error'));
+    if (!disposed) refreshLibrary().catch((error) => setStatus(error?.message || '사진 목록을 새로 고치지 못했습니다.', 'error'));
   }, 40);
 }
 
 function setSourceMode(kind) {
   sourceKind.value = kind;
-  document.querySelectorAll('[data-source-tab]').forEach((item) => item.classList.toggle('on', item.dataset.sourceTab === kind));
-  fileField.hidden = kind !== 'salon';
-  urlField.hidden = kind !== 'web';
-  imageFile.required = !editingRecord && kind === 'salon';
-  imageUrl.required = !editingRecord && kind === 'web';
+  fileField.hidden = false;
+  urlField.hidden = true;
+  imageFile.required = !editingRecord;
+  imageUrl.required = false;
 }
 
 function updateCropPosition() {
@@ -197,9 +193,9 @@ function resetForm() {
   form.reset();
   editingRecord = null;
   $('#editingId').value = '';
-  $('#formMode').textContent = 'NEW RECORD';
-  $('.form-heading h2').textContent = '모델 사진 등록';
-  $('.save').textContent = '이 브라우저에 등록';
+  $('#formMode').textContent = '새 사진';
+  $('.form-heading h2').textContent = '사진 등록';
+  $('.save').textContent = '사진 등록';
   $('#cancelEdit').hidden = true;
   $('#disableFromForm').hidden = true;
   imageFile.multiple = true;
@@ -215,13 +211,13 @@ function beginEdit(id) {
   if (!record) return;
   editingRecord = record;
   $('#editingId').value = record.id;
-  $('#formMode').textContent = 'EDIT RECORD';
-  $('.form-heading h2').textContent = '모델 사진 수정';
+  $('#formMode').textContent = '사진 수정';
+  $('.form-heading h2').textContent = '사진 수정';
   $('.save').textContent = '수정 내용 저장';
   $('#cancelEdit').hidden = false;
   const rightsStatus = modelPreviewRightsStatus(record);
   $('#disableFromForm').hidden = rightsStatus === 'expired';
-  $('#disableFromForm').textContent = rightsStatus === 'active' ? '사용 중지' : '재활성화';
+  $('#disableFromForm').textContent = rightsStatus === 'active' ? '사용 중지' : '다시 사용';
   imageFile.multiple = false;
   $('#title').value = record.title;
   $('#gender').value = record.genderId;
@@ -299,18 +295,18 @@ function normalizeImageBlob(blob) {
     };
     const timeout = setTimeout(() => finish(() => reject(new Error('이미지 파일 해석이 15초 안에 완료되지 않았습니다.'))), 15000);
     image.onload = () => finish(() => {
-      if (image.naturalWidth < 200 || image.naturalHeight < 200) return reject(new Error('모델 사진은 가로·세로 각각 200px 이상이어야 합니다.'));
-      if (Math.max(image.naturalWidth, image.naturalHeight) > 8192) return reject(new Error('모델 사진의 최대 변은 8192px 이하여야 합니다.'));
+      if (image.naturalWidth < 200 || image.naturalHeight < 200) return reject(new Error('사진은 가로·세로 각각 200px 이상이어야 합니다.'));
+      if (Math.max(image.naturalWidth, image.naturalHeight) > 8192) return reject(new Error('사진의 최대 변은 8192px 이하여야 합니다.'));
       const scale = Math.min(1, 1400 / Math.max(image.naturalWidth, image.naturalHeight));
       const canvas = document.createElement('canvas');
       canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
       canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
       const context = canvas.getContext('2d');
-      if (!context) return reject(new Error('브라우저가 모델 사진 변환을 지원하지 않습니다.'));
+      if (!context) return reject(new Error('이 기기에서 사진 변환을 지원하지 않습니다.'));
       context.fillStyle = '#120d0b';
       context.fillRect(0, 0, canvas.width, canvas.height);
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((normalized) => normalized ? resolve(normalized) : reject(new Error('모델 사진을 저장 형식으로 변환하지 못했습니다.')), 'image/jpeg', 0.86);
+      canvas.toBlob((normalized) => normalized ? resolve(normalized) : reject(new Error('사진을 저장 형식으로 변환하지 못했습니다.')), 'image/jpeg', 0.86);
     });
     image.onerror = () => finish(() => reject(new Error('이미지 파일을 해석할 수 없습니다.')));
     image.src = objectUrl;
@@ -324,31 +320,26 @@ async function normalizedInputBlob(blob) {
 }
 
 async function submitRecords() {
-  const baseTitle = $('#title').value.trim();
+  const requestedTitle = $('#title').value.trim();
   if (editingRecord) {
     const selectedFile = imageFile.files?.[0];
     const urlChanged = sourceKind.value === 'web' && imageUrl.value.trim() !== editingRecord.sourceUrl;
     const sourceChanged = sourceKind.value !== editingRecord.sourceKind;
-    if (sourceChanged && !selectedFile && !urlChanged) throw new Error('사진 출처를 변경하려면 새 파일 또는 URL을 입력하세요.');
+    if (sourceChanged && !selectedFile && !urlChanged) throw new Error('사진을 바꾸려면 새 파일을 선택하세요.');
     let blob = editingRecord.blob;
     let sourceUrl = editingRecord.sourceUrl;
-    if (selectedFile) { blob = await normalizedInputBlob(selectedFile); sourceUrl = ''; }
+    if (selectedFile) { sourceKind.value = 'salon'; blob = await normalizedInputBlob(selectedFile); sourceUrl = ''; }
     else if (urlChanged) { const fetched = await fetchWebImage(imageUrl.value.trim()); blob = await normalizedInputBlob(fetched.blob); sourceUrl = fetched.sourceUrl; }
-    await saveModelPreview({ ...metadataFromForm(baseTitle, { sourceUrl }), id: editingRecord.id }, blob);
-    return 1;
-  }
-  if (sourceKind.value === 'web') {
-    const fetched = await fetchWebImage(imageUrl.value.trim());
-    const blob = await normalizedInputBlob(fetched.blob);
-    await saveModelPreview(metadataFromForm(baseTitle, { sourceUrl: fetched.sourceUrl }), blob);
+    const title = requestedTitle || editingRecord.title || fileTitle(selectedFile);
+    await saveModelPreview({ ...metadataFromForm(title, { sourceUrl }), id: editingRecord.id }, blob);
     return 1;
   }
   const files = [...(imageFile.files || [])];
-  if (!files.length) throw new Error('살롱 모델 사진 파일을 선택하세요.');
+  if (!files.length) throw new Error('등록할 사진을 선택하세요.');
   const prepared = [];
   for (const file of files) {
     const blob = await normalizedInputBlob(file);
-    const title = files.length > 1 ? `${baseTitle} · ${fileTitle(file)}`.slice(0, 80) : baseTitle;
+    const title = requestedTitle ? (files.length > 1 ? `${requestedTitle} · ${fileTitle(file)}`.slice(0, 80) : requestedTitle) : fileTitle(file).slice(0, 80);
     prepared.push({ metadata: metadataFromForm(title, { sourceUrl: '' }), blob });
   }
   await saveModelPreviewBatch(prepared);
@@ -357,20 +348,13 @@ async function submitRecords() {
 
 async function updateStorageStatus(inspection = null) {
   const local = inspection || await inspectModelPreviewLibrary();
-  let browserText = '';
   let persisted = false;
   try {
-    if (navigator.storage?.estimate) {
-      const estimate = await navigator.storage.estimate();
-      const used = Number(estimate.usage || 0);
-      const quota = Number(estimate.quota || 0);
-      browserText = quota ? ` · 브라우저 전체 ${(used / 1048576).toFixed(1)}MB / ${(quota / 1048576).toFixed(1)}MB` : '';
-    }
     persisted = navigator.storage?.persisted ? await navigator.storage.persisted() : false;
   } catch {
-    browserText = ' · 브라우저 전체 용량 확인 불가';
+    persisted = false;
   }
-  $('#storageStatus').textContent = `모델 ${local.count}/${local.maxRecords}장 · ${(local.totalBytes / 1048576).toFixed(1)}MB / ${(local.maxTotalBytes / 1048576).toFixed(0)}MB${browserText} · 영구 저장 ${persisted ? '허용됨' : '미허용'}`;
+  $('#storageStatus').textContent = `사진 ${local.count}/${local.maxRecords}장 · ${(local.totalBytes / 1048576).toFixed(1)}MB / ${(local.maxTotalBytes / 1048576).toFixed(0)}MB · 안전 보관 ${persisted ? '사용 중' : '설정 필요'}`;
   $('#persistStorage').disabled = persisted || !navigator.storage?.persist;
 }
 
@@ -389,9 +373,9 @@ form.addEventListener('submit', async (event) => {
   setStatus('사진과 권리 정보를 확인해 저장하는 중입니다.');
   try {
     const saved = await submitRecords();
-    const message = editingRecord ? '수정 내용을 저장했습니다.' : `${saved}장의 모델 사진을 등록했습니다.`;
+    const message = editingRecord ? '수정 내용을 저장했습니다.' : `${saved}장의 사진을 등록했습니다.`;
     resetForm();
-    setStatus(`${message} Explore와 PRO의 생성 대기 카드에 반영됩니다.`, 'ok');
+    setStatus(`${message} 생성 대기 화면에 바로 반영됩니다.`, 'ok');
     await refreshLibrary();
   } catch (error) {
     setStatus(error?.message || '등록하지 못했습니다.', 'error');
@@ -405,7 +389,7 @@ $('#disableFromForm').addEventListener('click', async () => {
   try {
     const enable = modelPreviewRightsStatus(editingRecord) !== 'active';
     await setModelPreviewEnabled(editingRecord.id, enable);
-    setStatus(enable ? '모델 사진을 다시 활성화했습니다.' : '모델 사진 사용을 중지했습니다.', 'ok');
+    setStatus(enable ? '사진을 다시 사용합니다.' : '사진 사용을 중지했습니다.', 'ok');
     resetForm();
     await refreshLibrary();
   } catch (error) { setStatus(error?.message || '상태를 변경하지 못했습니다.', 'error'); }
@@ -420,24 +404,24 @@ list.addEventListener('click', async (event) => {
     if (!record) return;
     if (modelPreviewRightsStatus(record) === 'expired') {
       beginEdit(record.id);
-      setStatus('만료일을 갱신하고 동의 확인일을 검토한 뒤 저장하세요.');
+      setStatus('사용 종료일과 확인 날짜를 다시 확인한 뒤 저장하세요.');
       return;
     }
     try {
       const enable = modelPreviewRightsStatus(record) !== 'active';
       await setModelPreviewEnabled(record.id, enable);
-      setStatus(enable ? '모델 사진을 다시 활성화했습니다.' : '모델 사진 사용을 중지했습니다.', 'ok');
+      setStatus(enable ? '사진을 다시 사용합니다.' : '사진 사용을 중지했습니다.', 'ok');
       await refreshLibrary();
     } catch (error) { setStatus(error?.message || '상태를 변경하지 못했습니다.', 'error'); }
     return;
   }
   if (button.dataset.delete) {
     const record = records.find((item) => item.id === button.dataset.delete);
-    if (!record || !confirm(`“${record.title}” 모델 사진을 이 브라우저에서 삭제할까요?`)) return;
+    if (!record || !confirm(`“${record.title}” 사진을 이 기기에서 삭제할까요?`)) return;
     try {
       await deleteModelPreview(record.id);
       if (editingRecord?.id === record.id) resetForm();
-      setStatus('등록 모델 사진을 삭제했습니다.', 'ok');
+      setStatus('사진을 삭제했습니다.', 'ok');
       await refreshLibrary();
     } catch (error) { setStatus(error?.message || '삭제하지 못했습니다.', 'error'); }
   }
@@ -469,53 +453,42 @@ $('#bulkDisable').addEventListener('click', async () => {
   if (!ids.length) return;
   try {
     await setModelPreviewsEnabled(ids, false);
-    setStatus(`${ids.length}장의 모델 사진 사용을 중지했습니다. 열린 Explore와 PRO에도 즉시 반영됩니다.`, 'ok');
+    setStatus(`${ids.length}장의 사진 사용을 중지했습니다. 열린 대기 화면에도 바로 반영됩니다.`, 'ok');
     await refreshLibrary();
-  } catch (error) { setStatus(error?.message || '선택 모델 상태를 변경하지 못했습니다.', 'error'); }
+  } catch (error) { setStatus(error?.message || '선택한 사진 상태를 변경하지 못했습니다.', 'error'); }
 });
 
 $('#bulkEnable').addEventListener('click', async () => {
   const selected = selectedRecords();
   const eligible = selected.filter((record) => modelPreviewRightsStatus(record) !== 'expired');
   const expired = selected.length - eligible.length;
-  if (!eligible.length) return setStatus('선택한 모델은 모두 만료되었습니다. 각 레코드의 권리 만료일을 먼저 갱신하세요.', 'error');
+  if (!eligible.length) return setStatus('선택한 사진은 모두 사용 기간이 끝났습니다. 각 사진의 사용 종료일을 먼저 갱신하세요.', 'error');
   try {
     await setModelPreviewsEnabled(eligible.map((record) => record.id), true);
-    setStatus(`${eligible.length}장의 모델 사진을 재활성화했습니다.${expired ? ` 만료 ${expired}장은 권리 갱신이 필요합니다.` : ''}`, 'ok');
+    setStatus(`${eligible.length}장의 사진을 다시 사용합니다.${expired ? ` 기간 종료 ${expired}장은 갱신이 필요합니다.` : ''}`, 'ok');
     await refreshLibrary();
-  } catch (error) { setStatus(error?.message || '선택 모델 상태를 변경하지 못했습니다.', 'error'); }
+  } catch (error) { setStatus(error?.message || '선택한 사진 상태를 변경하지 못했습니다.', 'error'); }
 });
 
-$('#bulkApplyDesignRefs').addEventListener('click', async () => {
-  const ids = selectedRecords().map((record) => record.id);
-  if (!ids.length) return;
-  try {
-    const refs = parseDesignRefs($('#bulkDesignRefs').value);
-    await setModelPreviewsDesignRefs(ids, refs);
-    setStatus(`${ids.length}장의 디자인 태그를 ${refs.length ? '일괄 설정' : '해제'}했습니다.`, 'ok');
-    $('#bulkDesignRefs').value = '';
-    await refreshLibrary();
-  } catch (error) { setStatus(error?.message || '디자인 태그를 적용하지 못했습니다.', 'error'); }
-});
 
 $('#bulkDelete').addEventListener('click', async () => {
   const ids = selectedRecords().map((record) => record.id);
-  if (!ids.length || !confirm(`선택한 등록 모델 ${ids.length}장을 이 브라우저에서 삭제할까요?`)) return;
+  if (!ids.length || !confirm(`선택한 사진 ${ids.length}장을 이 기기에서 삭제할까요?`)) return;
   try {
     const deleted = await deleteModelPreviews(ids);
     for (const id of ids) selectedIds.delete(id);
     if (editingRecord && ids.includes(editingRecord.id)) resetForm();
-    setStatus(`${deleted}장의 등록 모델 사진을 삭제했습니다.`, 'ok');
+    setStatus(`${deleted}장의 사진을 삭제했습니다.`, 'ok');
     await refreshLibrary();
-  } catch (error) { setStatus(error?.message || '선택 모델을 삭제하지 못했습니다.', 'error'); }
+  } catch (error) { setStatus(error?.message || '선택한 사진을 삭제하지 못했습니다.', 'error'); }
 });
 
 $('#persistStorage').addEventListener('click', async () => {
   try {
     const granted = await navigator.storage?.persist?.();
-    setStatus(granted ? '브라우저 영구 저장을 허용했습니다.' : '브라우저가 영구 저장 요청을 허용하지 않았습니다.', granted ? 'ok' : 'error');
+    setStatus(granted ? '이 기기에 안전하게 보관하도록 설정했습니다.' : '기기에서 안전 보관 설정을 허용하지 않았습니다.', granted ? 'ok' : 'error');
     await updateStorageStatus();
-  } catch (error) { setStatus(error?.message || '영구 저장을 요청하지 못했습니다.', 'error'); }
+  } catch (error) { setStatus(error?.message || '사진 보관 설정을 변경하지 못했습니다.', 'error'); }
 });
 
 $('#exportArchive').addEventListener('click', async () => {
@@ -529,8 +502,8 @@ $('#exportArchive').addEventListener('click', async () => {
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 0);
     $('#archivePassphrase').value = '';
-    setStatus('암호화 보관 파일을 만들었습니다. 암호와 파일을 분리해 보관하세요.', 'ok');
-  } catch (error) { setStatus(error?.message || '보관 파일을 만들지 못했습니다.', 'error'); }
+    setStatus('사진 백업 파일을 만들었습니다. 비밀번호와 파일을 따로 보관하세요.', 'ok');
+  } catch (error) { setStatus(error?.message || '사진 백업 파일을 만들지 못했습니다.', 'error'); }
 });
 
 $('#importArchive').addEventListener('change', async () => {
@@ -540,9 +513,9 @@ $('#importArchive').addEventListener('change', async () => {
     const result = await importModelPreviewArchive(file, $('#archivePassphrase').value);
     $('#archivePassphrase').value = '';
     $('#importArchive').value = '';
-    setStatus(`${result.imported}장 가져오기 완료 · 중복 ${result.skipped}장 건너뜀`, 'ok');
+    setStatus(`${result.imported}장 복원 완료 · 같은 사진 ${result.skipped}장 건너뜀`, 'ok');
     await refreshLibrary();
-  } catch (error) { setStatus(error?.message || '보관 파일을 가져오지 못했습니다.', 'error'); }
+  } catch (error) { setStatus(error?.message || '사진 백업 파일을 가져오지 못했습니다.', 'error'); }
 });
 
 const unsubscribe = subscribeModelPreviewChanges(scheduleRefresh);
