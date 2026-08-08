@@ -2,9 +2,16 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>HAIRLOOM · PRO</title>
-  <link rel="stylesheet" href="/consultation/styles.css?v=20260804-lightbox-color-v18">
+  <meta name="theme-color" content="#080606">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Hairloom PRO">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/hairloom-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/hairloom-192.png">
+  <link rel="stylesheet" href="/consultation/styles.css?v=20260808-mobile-ai-v1">
 </head>
 <body>
   <main id="app" class="shell"></main>
@@ -20,6 +27,7 @@
     </div>
   </div>
   <script src="/imagen.web.js" defer></script>
-  <script type="module" src="/consultation/app.mjs?v=20260804-lightbox-color-v18"></script>
+  <script>if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/service-worker.js').catch(()=>{}));</script>
+  <script type="module" src="/consultation/app.mjs?v=20260808-mobile-ai-v1"></script>
 </body>
 </html>

@@ -12,7 +12,7 @@ This is the machine-operable guide for work in the standalone Hairloom repositor
 - App URL: `http://127.0.0.1:4180/`
 - Health URL: `http://127.0.0.1:4180/healthz`
 - Main verification: `npm run verify`
-- Expected baseline: 83 tests passing
+- Expected baseline: 91 tests passing
 
 ## Hard project boundary
 
@@ -42,17 +42,21 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, Explore/catalog/consultation/server/trend/scheduler/automation/model-preview tests, and the 83-test baseline.
+`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, Explore/catalog/consultation/server/trend/scheduler/automation/model-preview tests, hair-analysis tests, and the 91-test baseline.
 
 ## Product invariants
 
 - Explore is front-only, fast, and low-quality.
 - Design Lock is separate, high-quality, and front/side/back.
-- Explore exposes exactly six settings: current length, hair thickness, damage condition, perm allowed, extension/piece allowed, and similarity.
-- Do not add face-ratio or hidden face-shape controls.
-- High damage excludes every perm and extension/piece design regardless of other toggles.
+- Explore is photo-and-prompt driven. It does not expose the former six manual constraint settings or a separate color picker.
+- Camera capture (`capture="user"`) and gallery selection must both feed the same prepared-original FRONT pipeline.
+- Hair analysis may use only the prepared original customer image and must never infer identity, face shape, or gender identity. `catalogLine` describes haircut geometry only and may be `F`, `M`, or neutral `U`.
+- Visually unobservable history such as bleach count, recent perm, or extensions must use conservative defaults plus explicit uncertainty rather than fabricated certainty.
+- High visible damage excludes every perm and extension/piece design regardless of free-prompt wording.
 - Every Explore request uses the prepared original front photo.
 - Generated pixels and catalog model photos are never subsequent request inputs.
+- The installable mobile shell is a local-first PWA. Its service worker must never cache customer photos, analysis payloads, Provider requests/responses, generated images, registered model data, API keys, `imagen.web.js`, blob URLs, or data URLs.
+- Free prompts may express style, target color, resemblance, and maintenance intent. Analysis-derived normalized settings remain internal and must be included in deterministic seeds/cache keys so changed intent cannot reuse stale results.
 - Registered loading model photos are display-only browser-local assets. They may replace only `queued` or `active` card visuals and must never become provider inputs, generated-image inputs, catalog records, trend records, cache keys, customer/generation exports, or handoff fields. The only permitted photo export is the explicit passphrase-encrypted operator library archive.
 - Model preview registration must require an explicit rights basis, attribution, confirmed model-image consent, consent verification date, and optional expiry/revocation audit data. Web registration accepts credential-free HTTPS only and stores a normalized metadata-free local JPEG rather than runtime hotlinking; cap the browser library at 80 images and 160MB.
 - Explore and PRO must deterministically match registered previews by gender, length, texture, and optional stable design IDs/prefixes, preserve 100 fixed-slot ownership, distinguish queued from active labels, and replace previews in place when provider output arrives.
@@ -65,11 +69,13 @@ HOST=127.0.0.1 PORT=4180 npm run start
 - Shortlists contain 1–6 current `HLM-*` design IDs.
 - Explore handoff requires the current `catalogVersion` and `promptVersion`.
 - Standard Design Lock continues to use its normal recommendation path.
-- PRO remains a separate six-stage route: `SOURCE → PROFILE → STRUCTURE → VARIATION → COMPARE → LOCK`.
+- PRO remains a separate four-stage route: `SOURCE → STRUCTURE → COMPARE → LOCK`.
 - PRO requires FRONT and accepts optional SIDE / BACK / CROWN / NAPE / DETAIL originals.
-- PRO PROFILE is two pages: diagnosis, then deterministic FRONT-based current-color selection with visible confidence and manual correction, plus bounded natural target colors.
-- PRO user-facing length choices are exactly `짧은 머리 / 중간 / 장발`.
+- PRO SOURCE contains camera/gallery intake, one free prompt, compact non-editable AI analysis status, and collapsed Provider settings. It must not render manual diagnosis or color controls.
+- Automatic analysis maps to the existing feasibility, diversity, color, and handoff contracts. Provider analysis failure must fall back to deterministic conservative values without blocking generation.
 - PRO does not create, confirm, or send hair masks; current and non-current natural tones use the same maskless provider path.
+- AI analysis uses a separate OpenAI-compatible vision request path from image generation, shares only the configured endpoint/key, is bounded to the current request, and is never persisted or exported.
+- Changing the source photo or free prompt invalidates stale analysis and generated surfaces.
 - Explore, PRO, and Design Lock prompts must use the shared low-sheen satin-to-matte surface contract and reject wet, oily, glassy, plastic, metallic, lacquered, or synthetic-wig shine.
 - Core female and male records must receive distinct hair-only line-treatment prompts: feminine connected curves and blended face-framing versus masculine directional planes, broader sections, and controlled temple/nape transitions. The named design remains authoritative, and these rules must never alter face, body, or identity.
 - Trend signals are metadata-only and map to stable core design prefixes. External images, thumbnails, Base64, media URLs, and image data URLs must never be stored, served, or used as generation inputs.
@@ -123,14 +129,14 @@ docs/assets/test-subjects/
 .gjc/
 ```
 
-API keys belong in session storage or the ignored local fallback file. Non-secret provider settings may use local storage.
+API keys belong in session storage or the ignored local fallback file. Non-secret provider settings, including the image and analysis model names, may use local storage.
 
 ## Verification by change type
 
 Core or catalog changes:
 
 ```bash
-node --test exploreCore.test.mjs catalogRuntime.test.mjs
+node --test hairAnalysis.test.mjs exploreCore.test.mjs consultationCore.test.mjs catalogRuntime.test.mjs
 npm run verify
 ```
 

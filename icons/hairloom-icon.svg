@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Hairloom</title>
+  <desc id="desc">Warm ivory H with flowing hair strands on a cocoa background</desc>
+  <rect width="512" height="512" rx="118" fill="#161010"/>
+  <path d="M142 116v280M370 116v280M142 254h228" fill="none" stroke="#f4ece3" stroke-width="46" stroke-linecap="round"/>
+  <path d="M112 105c88 38 90 124 32 196-40 50-28 106 22 132M400 105c-88 38-90 124-32 196 40 50 28 106-22 132" fill="none" stroke="#d98aa0" stroke-width="18" stroke-linecap="round"/>
+  <path d="M188 91c48 48 38 93 4 133M324 91c-48 48-38 93-4 133" fill="none" stroke="#caa473" stroke-width="12" stroke-linecap="round"/>
+</svg>

@@ -15,10 +15,12 @@ const mimeTypes = {
   '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp'
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml; charset=utf-8',
 };
 
 function resolveStaticPath(pathname) {
@@ -31,6 +33,9 @@ function resolveStaticPath(pathname) {
 
   const allowed =
     decoded === '/index.html' ||
+    decoded === '/manifest.webmanifest' ||
+    decoded === '/service-worker.js' ||
+    /^\/icons\/hairloom-(?:icon\.svg|192\.png|512\.png)$/i.test(decoded) ||
     decoded === '/consultation/' ||
     decoded === '/consultation/index.html' ||
     decoded === '/consultation/styles.css' ||
@@ -46,6 +51,7 @@ function resolveStaticPath(pathname) {
     decoded === '/src/hairTrendData.mjs' ||
     decoded === '/src/consultationCore.mjs' ||
     decoded === '/src/hairColorPalette.mjs' ||
+    decoded === '/src/hairAnalysis.mjs' ||
     decoded === '/src/modelPreviewRegistry.mjs' ||
     decoded === '/docs/hair-design-master/catalog.json' ||
     decoded === '/docs/hair-design-master/catalog-index.json' ||

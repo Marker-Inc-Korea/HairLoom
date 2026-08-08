@@ -7,11 +7,13 @@ Hairloom은 원본 인물 사진을 유지하면서 다양한 헤어 디자인�
 ## 주요 기능
 
 - 6,500개 v2 헤어 디자인 카탈로그 기반 Explore
-- 고정 100개 결과 슬롯과 최대 동시 요청 32개
+- 설치 가능한 모바일 PWA와 카메라 촬영·갤러리 선택
+- 고객 원본 사진과 자유 입력 프롬프트 기반 AI 헤어 분석
+- 수동 제약 설정 없이 고정 100개 결과 슬롯과 최대 동시 요청 32개
 - 기본 Explore는 원본 FRONT 사진만 사용하는 빠른 탐색
 - FRONT / SIDE / BACK 기반 Design Lock
-- 별도 PRO 워크스테이션의 6단계 흐름: `SOURCE → PROFILE → STRUCTURE → VARIATION → COMPARE → LOCK`
-- PRO의 선택 원본 뷰 균형 배분, 좌우 반전 증강, 자연색 범위 선택
+- 별도 PRO 워크스테이션의 4단계 흐름: `SOURCE → STRUCTURE → COMPARE → LOCK`
+- PRO의 선택 원본 뷰 균형 배분, 좌우 반전 증강, 자동 색상·헤어 프로필 적용
 - PRO는 헤어 마스크 없이 준비된 원본 한 장을 Provider에 전달하고 얼굴·의상·배경 보존을 프롬프트로 제어
 - Explore, PRO, Design Lock 모두 자연스러운 저광택 새틴-매트 질감과 부드러운 분산 하이라이트를 기본으로 사용
 - 여성 디자인은 연결된 곡선·부드러운 페이스 프레임·유연한 끝선을, 남성 디자인은 방향성 있는 면·넓은 모발 섹션·절제된 템플과 네이프 라인을 별도 계약으로 사용
@@ -40,25 +42,31 @@ HOST=127.0.0.1 PORT=4180 npm run start
 
 브라우저에서 `http://127.0.0.1:4180/`을 엽니다.
 
+### 모바일 앱으로 설치
+
+- Android Chrome: 주소창의 설치 아이콘 또는 메뉴의 `앱 설치`를 선택합니다.
+- iPhone/iPad Safari: 공유 메뉴에서 `홈 화면에 추가`를 선택합니다.
+- 설치 후에도 Explore `/`, PRO `/consultation/`, 모델 관리 `/model-previews/` 경로를 그대로 사용합니다.
+- 오프라인 앱 셸만 캐시하며 고객 사진, AI 분석, Provider 요청·응답, 생성 이미지, API 키는 캐시하지 않습니다.
+
 ## 사용법
 
 ### Explore
 
-1. FRONT 원본 사진을 업로드합니다.
-2. 현재 길이, 모발 굵기, 손상도 등 6개 설정을 선택합니다.
-3. 100개 헤어 결과에서 후보를 비교합니다.
-4. 1–6개 디자인을 선택해 Design Lock으로 이동합니다.
+1. FRONT 사진을 카메라로 촬영하거나 갤러리에서 선택합니다.
+2. 원하는 헤어·색상·분위기를 자연스러운 문장으로 입력합니다.
+3. AI가 현재 기장·질감·밀도·색상과 보수적인 시술 가능성 기본값을 자동 분석합니다.
+4. 100개 헤어 결과에서 1–6개 디자인을 선택해 Design Lock으로 이동합니다.
 
 ### PRO 상담
 
-1. FRONT 사진을 필수로 넣고 SIDE / BACK / CROWN / NAPE / DETAIL 사진을 선택적으로 추가합니다.
-2. `PROFILE 1/2`에서 `짧은 머리 / 중간 / 장발`, 모질, 밀도, 손상도와 시술 이력을 설정합니다.
-3. `COLOR 2/2`에서 FRONT 원본의 보수적인 헤어 영역 샘플로 현재 색상을 자동 선택합니다. `AUTO` 신뢰도를 확인하고 필요하면 직접 수정한 뒤, 허용된 자연 색상을 복수 선택합니다.
-4. 헤어 마스크 확인 없이 현재 색상 또는 선택한 자연색으로 바로 STRUCTURE 생성을 시작합니다.
-5. STRUCTURE의 100개 슬롯은 입력한 원본 뷰를 균형 있게 섞고, 좌우 반전 증강 결과는 원래 방향으로 되돌려 표시합니다.
-6. VARIATION과 COMPARE에서 세부 스타일을 선택한 뒤 LOCK에서 1–6개 디자인과 원본 뷰를 Design Lock으로 전달합니다.
+1. FRONT 사진을 카메라로 촬영하거나 갤러리에서 선택하고, SIDE / BACK / CROWN / NAPE / DETAIL 원본을 선택적으로 추가합니다.
+2. 원하는 헤어·색상·분위기를 자유 입력합니다. 별도 PROFILE·COLOR 제약 설정 화면은 없습니다.
+3. AI가 원본 사진의 현재 헤어 프로필과 색상을 분석하고, 관찰할 수 없는 시술 이력은 보수적인 기본값과 불확실성으로 처리합니다.
+4. STRUCTURE에서 확대된 이미지 안의 최소 바리에이션을 고른 뒤 `이 스타일로 더 생성해보기`로 COMPARE를 시작합니다.
+5. LOCK에서 1–6개 디자인과 고객 원본 뷰를 Design Lock으로 전달합니다.
 
-PRO 요청은 항상 준비된 원본 사진 한 장만 사용합니다. 생성 결과는 다음 요청의 입력이 되지 않으며, 좌우 반전 입력의 결과만 원래 방향으로 복원한 뒤 Provider 결과를 직접 표시합니다.
+Explore와 PRO 분석·생성 요청은 항상 준비된 고객 원본 사진만 사용합니다. 생성 결과와 등록 모델 사진은 분석 또는 다음 생성의 입력이 되지 않으며, 좌우 반전 입력의 결과만 원래 방향으로 복원한 뒤 Provider 결과를 직접 표시합니다.
 
 ## 이미지 Provider 설정
 
@@ -68,13 +76,14 @@ PRO 요청은 항상 준비된 원본 사진 한 장만 사용합니다. 생성 
 cp imagen.web.example.js imagen.web.js
 ```
 
-`imagen.web.js`에서 OpenAI 호환 이미지 API의 URL, 모델, API 키를 설정합니다. 이 파일은 Git에서 제외됩니다.
+`imagen.web.js`에서 OpenAI 호환 API의 URL, 이미지 모델, 분석 모델, API 키를 설정합니다. 분석 API를 사용할 수 없으면 Hairloom은 로컬 색상 추정과 보수적인 기본값으로 계속 진행합니다. 이 파일은 Git에서 제외됩니다.
 
 ```js
 window.HAIR_IMAGEN = {
   baseURL: 'https://YOUR-PROXY/v1',
   apiKey: 'YOUR_PROXY_API_KEY',
   model: 'gpt-image-2',
+  analysisModel: 'gpt-4.1-mini',
   size: '1024x1024'
 };
 ```
@@ -83,7 +92,7 @@ API 키, 고객 사진, 생성 고객 이미지, `.gjc/` QA 자료는 커밋하�
 
 ## 생성 대기 모델 이미지
 
-`http://127.0.0.1:4180/model-previews/`에서 AI 생성 결과가 도착하기 전 Explore와 PRO의 대기 카드에 표시할 실제 모델 사진을 등록할 수 있습니다. 기본 화면의 연결 설정과 PRO `PROFILE 1/2`에서도 관리 화면을 열 수 있습니다.
+`http://127.0.0.1:4180/model-previews/`에서 AI 생성 결과가 도착하기 전 Explore와 PRO의 대기 카드에 표시할 실제 모델 사진을 등록할 수 있습니다. Explore와 PRO의 SOURCE 화면에서도 관리 화면을 열 수 있습니다.
 
 - 살롱 촬영 파일 또는 사용 권리가 확인된 HTTPS 이미지를 등록하며, 살롱 파일은 여러 장을 한 번에 추가할 수 있습니다.
 - 성별, 기장, 질감과 선택적 `HLM-*` 디자인 ID·접두어로 후보에 가장 가까운 등록 모델을 결정적으로 선택합니다.
@@ -189,7 +198,7 @@ npm run verify
 현재 기준:
 
 ```text
-83 tests passing
+91 tests passing
 1,080-design taxonomy check passing
 6,500-design v2 master catalog check passing
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
@@ -205,6 +214,7 @@ consultation/                      PRO 상담 UI
 model-previews/                      대기 모델 사진 로컬 등록 UI
 src/exploreCore.mjs                Explore 도메인 로직
 src/consultationCore.mjs           상담·시술 가능성·큐 로직
+src/hairAnalysis.mjs               원본 사진 AI 분석·보수적 폴백·내부 설정 변환
 src/trendRegistry.mjs              트렌드 검증·점수·카탈로그 매핑
 src/hairTrendData.mjs              생성된 40개 런타임 트렌드 스냅샷
 src/modelPreviewRegistry.mjs        권리 검증·IndexedDB·결정적 모델 매칭

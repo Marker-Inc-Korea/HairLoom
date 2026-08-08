@@ -51,7 +51,7 @@ const CORE_ID_PATTERN = /^HLM-C-([FM])-(US|S|MD|L|XL)-(\d{2})-([A-Z]{2})-([A-Z]{
 const SPECIAL_ID_PATTERN = /^HLM-S-([A-Z]{2})-(\d{2})-([A-Z]{2})$/;
 const SUITABILITY_FLOOR = 60;
 
-const GENDERS = new Set(['F', 'M']);
+const GENDERS = new Set(['F', 'M', 'U']);
 const TEXTURES = new Map([
   ['straight', '내추럴 스트레이트'], ['wave', '내추럴 웨이브'], ['wavy', '내추럴 웨이브'],
   ['curl', '내추럴 컬'], ['curly', '내추럴 컬'], ['coil', '내추럴 코일'], ['coily', '내추럴 코일'],
@@ -224,7 +224,8 @@ export function evaluateHairColorFeasibility(targetToneId, rawProfile = {}, rawD
 }
 
 export function normalizeDiagnosis(raw = {}) {
-  const gender = String(raw.profileGender ?? raw.gender ?? 'F').toUpperCase().startsWith('M') ? 'M' : 'F';
+  const requestedGender = String(raw.profileGender ?? raw.gender ?? 'F').trim().toUpperCase();
+  const gender = requestedGender === 'M' || requestedGender === 'MALE' ? 'M' : requestedGender === 'F' || requestedGender === 'FEMALE' ? 'F' : 'U';
   if (!GENDERS.has(gender)) throw new TypeError('Invalid profile gender');
   const actualLengthCm = Math.max(0, finiteNumber(raw.actualLengthCm ?? raw.lengthCm ?? raw.currentLengthCm, 0));
   const textureKey = String(raw.naturalTexture ?? raw.texture ?? 'straight').trim();
@@ -245,7 +246,7 @@ export function normalizeDiagnosis(raw = {}) {
     damage,
     bleachCount,
     monthsSincePerm,
-    extensionAllowed: gender === 'F' && Boolean(raw.extensionAllowed ?? raw.extensionOrPieceAllowed ?? raw.allowExtensionOrPiece)
+    extensionAllowed: gender !== 'M' && Boolean(raw.extensionAllowed ?? raw.extensionOrPieceAllowed ?? raw.allowExtensionOrPiece)
   };
 }
 
@@ -318,7 +319,7 @@ export function evaluateVariation(variation, rawDiagnosis) {
   let status = 'possible';
   let extensionNeed = 'none';
 
-  if (variation.genderId !== diagnosis.profileGender) {
+  if (diagnosis.profileGender !== 'U' && variation.genderId !== diagnosis.profileGender) {
     status = 'impossible';
     addReason(reasons, '프로필 성별과 맞지 않음');
   }

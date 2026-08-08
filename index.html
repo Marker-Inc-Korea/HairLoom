@@ -2,8 +2,15 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>HAIRLOOM · Design Book</title>
+<meta name="theme-color" content="#161010">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hairloom">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/hairloom-icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icons/hairloom-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -140,19 +147,19 @@ body[data-stage^="explore"] .zoomctl{display:none}
 .explore-drop{width:min(360px,100%);aspect-ratio:4/5;align-self:center;border:1.5px dashed #3a2b26;border-radius:24px;background:var(--panel);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.35s var(--ease)}
 .explore-drop:hover,.explore-drop.hover{border-color:var(--accent)}.explore-drop span{width:64px;height:64px;border:1px solid var(--gold);border-radius:50%;display:grid;place-items:center;color:var(--gold);font-size:26px}.explore-drop img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:var(--bg2);opacity:0}.explore-drop.filled img{opacity:1}.explore-drop.filled span{opacity:0}
 .explore-upload-action{display:flex;justify-content:center}.explore-upload-action .cta{opacity:.35;pointer-events:none}.explore-upload-action .cta.on{opacity:1;pointer-events:auto}
-.explore-settings{max-width:980px;min-height:100%;margin:0 auto;display:flex;flex-direction:column;justify-content:center}.explore-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:54px}.explore-setting{padding:24px 4px 22px;border-bottom:1px solid rgba(244,236,227,.07)}.explore-setting-head{display:flex;align-items:baseline;justify-content:space-between;gap:18px;margin-bottom:15px}.explore-setting label{font-family:var(--serif);font-size:23px;letter-spacing:-.02em}.explore-setting output{font-size:11px;color:var(--accent);letter-spacing:.08em}
-.explore-range{display:block;width:100%;height:22px;margin:0;appearance:none;-webkit-appearance:none;background:transparent;cursor:pointer;--p:50%}.explore-range::-webkit-slider-runnable-track{height:2px;border-radius:2px;background:linear-gradient(90deg,var(--accent) 0 var(--p),var(--line) var(--p) 100%)}.explore-range::-moz-range-track{height:2px;border:0;border-radius:2px;background:var(--line)}.explore-range::-moz-range-progress{height:2px;border-radius:2px;background:var(--accent)}.explore-range::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:16px;height:16px;margin-top:-7px;border:0;border-radius:50%;background:var(--accent);box-shadow:0 0 0 6px rgba(217,138,160,.09)}.explore-range::-moz-range-thumb{width:16px;height:16px;border:0;border-radius:50%;background:var(--accent);box-shadow:0 0 0 6px rgba(217,138,160,.09)}
-.explore-ends{display:flex;justify-content:space-between;color:var(--faint);font-size:9px;letter-spacing:.08em;margin-top:3px}.explore-settings-action{display:flex;justify-content:flex-end;padding-top:34px}
+.explore-intake-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;width:min(520px,100%);align-self:center}.explore-intake-actions button{min-height:48px;padding:12px 16px;border:1px solid var(--line);border-radius:14px;background:var(--panel);font-weight:700}.explore-intake-actions button:hover{border-color:var(--accent);color:var(--accent)}
+.explore-prompt{display:grid;gap:8px;width:min(520px,100%);align-self:center}.explore-prompt span{font-family:var(--serif);font-size:18px}.explore-prompt textarea{width:100%;min-height:92px;resize:vertical;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--panel);color:var(--ink);line-height:1.5}.explore-prompt textarea:focus{outline:none;border-color:var(--accent)}
+.explore-analysis{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;width:min(520px,100%);align-self:center;padding:12px 14px;border:1px solid rgba(202,164,115,.25);border-radius:14px;background:rgba(22,16,16,.78)}.explore-analysis b{font-size:11px}.explore-analysis p{margin-top:4px;color:var(--muted);font-size:10px;line-height:1.45}.explore-analysis button{min-height:38px;padding:8px 11px;border:1px solid var(--line);border-radius:999px;color:var(--gold);font-size:10px}.explore-analysis[data-state="analyzing"]{border-color:rgba(217,138,160,.5)}
 .explore-results-main{padding:18px clamp(12px,3vw,34px) 38px}.explore-results-head{position:sticky;top:0;z-index:18;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 0 16px;background:linear-gradient(var(--bg) 72%,transparent)}.explore-results-head strong{font-family:var(--serif);font-size:26px;font-weight:500}.explore-results-head small{font-size:10px;color:var(--muted);letter-spacing:.12em}.explore-result-actions{display:flex;align-items:center;gap:8px}.explore-shortlist-count{font-size:11px;color:var(--accent);min-width:34px;text-align:center}.explore-lock{padding:10px 15px;border-radius:999px;background:var(--ink);color:#0b0808;font-size:11px;font-weight:800;opacity:0;visibility:hidden;pointer-events:none}.explore-lock.on{opacity:1;visibility:visible;pointer-events:auto}.explore-lock:hover{background:var(--accent)}
 .explore-grid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:7px}.explore-tile{position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--bg2);isolation:isolate}.explore-neighbor{position:absolute;inset:0;width:100%;height:100%;display:block;background:var(--bg2);text-align:left}.explore-tile img{width:100%;height:100%;object-fit:contain;background:var(--bg2);transition:filter .7s var(--ease),opacity .7s var(--ease)}.explore-tile.queued img,.explore-tile.active img{filter:blur(13px) brightness(.48) saturate(.72);opacity:.74}.explore-tile.active:after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 35% 32%,rgba(244,236,227,.13),transparent 30%),radial-gradient(circle at 70% 68%,rgba(202,164,115,.12),transparent 32%);animation:diffuse-drift 3.4s ease-in-out infinite alternate;pointer-events:none}.explore-tile.ready:hover{border-color:rgba(217,138,160,.72)}.explore-tile.failed img{filter:blur(15px) grayscale(.7) brightness(.28);opacity:.48}.explore-tile .tile-id{position:absolute;left:7px;bottom:6px;z-index:2;font-size:7px;letter-spacing:.04em;color:rgba(244,236,227,.68);text-shadow:0 1px 6px #000}.explore-select{position:absolute;right:6px;top:6px;z-index:5;width:24px;height:24px;border-radius:8px;background:rgba(8,6,6,.68);border:1px solid rgba(244,236,227,.34);display:grid;place-items:center;font-size:13px;color:var(--ink);backdrop-filter:blur(6px)}.explore-select[hidden]{display:none}.explore-select.on{background:var(--accent);border-color:var(--accent);color:#0b0808;font-weight:900}.explore-select:hover{border-color:var(--accent)}.explore-empty{display:none;padding:80px 20px;text-align:center;color:var(--muted);font-size:13px}.explore-empty.on{display:block}
 .explore-neighbor:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
 .explore-tile.registered-preview.queued img,.explore-tile.registered-preview.active img{object-fit:cover;filter:brightness(.66) saturate(.86);opacity:.92}.registered-model-label{position:absolute;z-index:4;left:6px;top:6px;max-width:calc(100% - 12px);padding:5px 7px;border:1px solid rgba(202,164,115,.3);border-radius:999px;background:rgba(8,6,6,.82);color:var(--gold);font-size:9px;line-height:1.15;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;backdrop-filter:blur(7px)}.registered-model-label[hidden]{display:none}
 #angles.explore-handoff .anglepresets [data-preset]{display:none}#angles.explore-handoff .consistency{top:112px}
 @media(max-width:1099px){.explore-shell{grid-template-columns:1fr}.explore-rail{display:none}.explore-main{padding-top:34px}.explore-grid{grid-template-columns:repeat(8,minmax(0,1fr))}}
-@media(max-width:699px){.explore-start{bottom:78px;padding:11px 21px}.explore-stage{padding-top:60px}.explore-main{padding:18px 14px 30px}.explore-upload-wrap{justify-content:flex-start;padding-top:34px}.explore-drop{width:min(300px,82vw)}.explore-settings{justify-content:flex-start}.explore-settings-grid{grid-template-columns:1fr}.explore-setting{padding:12px 2px 11px}.explore-setting-head{margin-bottom:7px}.explore-setting label{font-size:17px}.explore-setting output{font-size:10px}.explore-settings-action{padding-top:18px}.explore-settings-action .cta{width:100%;justify-content:center}.explore-results-main{padding:7px 8px 24px}.explore-results-head{padding:8px 3px 12px}.explore-results-head strong{font-size:20px}.explore-results-head small{display:none}.explore-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.explore-tile{border-radius:8px}.explore-tile .tile-id{font-size:6px;left:4px;bottom:4px}.explore-select{width:22px;height:22px;right:4px;top:4px}.explore-lock{padding:9px 12px}.explore-shortlist-count{font-size:10px}}
+@media(max-width:699px){.explore-start{bottom:78px;padding:11px 21px}.explore-stage{padding-top:60px}.explore-main{padding:18px 14px 30px}.explore-upload-wrap{justify-content:flex-start;padding-top:34px}.explore-drop{width:min(300px,82vw)}.explore-results-main{padding:7px 8px 24px}.explore-results-head{padding:8px 3px 12px}.explore-results-head strong{font-size:20px}.explore-results-head small{display:none}.explore-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.explore-tile{border-radius:8px}.explore-tile .tile-id{font-size:6px;left:4px;bottom:4px}.explore-select{width:22px;height:22px;right:4px;top:4px}.explore-lock{padding:9px 12px}.explore-shortlist-count{font-size:10px}}
 @media(prefers-reduced-motion:reduce){.explore-start,.explore-tile img,.explore-tile.active:after{transition:none;animation:none}}
-.explore-color-choice{margin-top:28px;padding-top:26px;border-top:1px solid rgba(244,236,227,.08)}.explore-color-head{display:flex;align-items:baseline;justify-content:space-between;gap:18px;margin-bottom:16px}.explore-color-head b{font-family:var(--serif);font-size:23px;font-weight:500}.explore-color-head small{font-size:10px;color:var(--muted);letter-spacing:.08em}.explore-color-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.explore-color-option{min-width:0;display:flex;align-items:center;gap:9px;padding:9px 10px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--muted);font-size:10px;text-align:left;transition:.25s var(--ease)}.explore-color-option:hover{border-color:var(--faint);color:var(--ink)}.explore-color-option.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);color:var(--ink)}.explore-color-option i{width:22px;height:28px;flex:none;border-radius:3px;background:var(--tone-color);border:1px solid rgba(244,236,227,.18)}.explore-color-option.preserve i{background:linear-gradient(135deg,#171310 0 33%,#756b63 33% 66%,#c7a982 66%)}.explore-color-option span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.explore-grid{grid-auto-flow:dense;grid-auto-rows:clamp(58px,7.4vw,108px)}.explore-tile{aspect-ratio:auto;border-radius:3px}.explore-tile img{object-fit:cover}.explore-tile.mosaic-1x2{grid-column:span 1;grid-row:span 2}.explore-tile.mosaic-2x1{grid-column:span 2;grid-row:span 1}.explore-tile.mosaic-2x2{grid-column:span 2;grid-row:span 2}.explore-tile.mosaic-2x3{grid-column:span 2;grid-row:span 3}.explore-tile.mosaic-3x3{grid-column:span 3;grid-row:span 3}
-@media(max-width:1099px){.explore-grid{grid-auto-rows:clamp(66px,11vw,94px)}}@media(max-width:699px){.explore-color-choice{margin-top:18px;padding-top:18px}.explore-color-head{margin-bottom:10px}.explore-color-head b{font-size:18px}.explore-color-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.explore-color-option{padding:7px 6px;gap:6px;font-size:9px}.explore-color-option i{width:18px;height:24px}.explore-grid{grid-auto-rows:62px}.explore-tile{border-radius:2px}}
+.explore-grid{grid-auto-flow:dense;grid-auto-rows:clamp(58px,7.4vw,108px)}.explore-tile{aspect-ratio:auto;border-radius:3px}.explore-tile img{object-fit:cover}.explore-tile.mosaic-1x2{grid-column:span 1;grid-row:span 2}.explore-tile.mosaic-2x1{grid-column:span 2;grid-row:span 1}.explore-tile.mosaic-2x2{grid-column:span 2;grid-row:span 2}.explore-tile.mosaic-2x3{grid-column:span 2;grid-row:span 3}.explore-tile.mosaic-3x3{grid-column:span 3;grid-row:span 3}
+@media(max-width:1099px){.explore-grid{grid-auto-rows:clamp(66px,11vw,94px)}}@media(max-width:699px){.explore-grid{grid-auto-rows:62px}.explore-tile{border-radius:2px}}
 
 /* 2026-08-04 · aspect-safe tiles and image viewer */
 body.explore-lightbox-open{overflow:hidden}
@@ -170,6 +177,8 @@ body.explore-lightbox-open{overflow:hidden}
 .explore-image-lightbox-frame img{display:block;width:100%;height:100%;max-height:min(78vh,780px);object-fit:contain;background:#d8d0c6}
 .explore-image-lightbox-close{position:absolute;top:-16px;right:-16px;z-index:2;width:42px;height:42px;border:1px solid rgba(255,255,255,.35);border-radius:999px;background:#201c18;color:#fff;font-size:22px}
 @media(max-width:699px){.explore-tile .tile-id{left:4px;bottom:4px;font-size:7px}.explore-similar{right:4px;bottom:4px;width:24px;height:24px}.explore-image-lightbox{padding:12px}.explore-image-lightbox-shell{padding:10px}.explore-image-lightbox-frame{min-height:60vh}.explore-image-lightbox-frame img{max-height:78vh}.explore-image-lightbox-close{top:4px;right:4px}}
+@media(max-width:699px){.explore-upload-wrap{padding-bottom:calc(24px + env(safe-area-inset-bottom))}.explore-intake-actions{grid-template-columns:1fr}.explore-intake-actions button,.explore-upload-action .cta{min-height:52px;width:100%}.explore-analysis{grid-template-columns:1fr}.explore-analysis button{width:100%}}
+@media(max-width:699px){.top{padding-top:max(20px,env(safe-area-inset-top));padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}}
 /* EDITOR */
 #editor{justify-content:flex-start;padding:78px 18px 40px}
 .ehead{width:100%;max-width:640px;margin:0 auto 14px;display:flex;align-items:baseline;justify-content:space-between}
@@ -211,25 +220,18 @@ body.explore-lightbox-open{overflow:hidden}
   <div class="explore-shell">
     <aside class="explore-rail"><b>HAIRLOOM</b><small>EXPLORE</small><strong>01</strong></aside>
     <main class="explore-main"><div class="explore-upload-wrap">
-      <h1 class="explore-title">Front <em>Photo</em></h1>
+      <h1 class="explore-title">Photo <em>+ Prompt</em></h1>
       <label class="explore-drop" id="exploreDrop"><span>＋</span><img id="explorePreview" alt="고객 전면 사진"></label>
-      <div class="explore-upload-action"><button class="cta" id="toExploreSettings">설정 →</button></div>
-      <input type="file" id="exploreFile" accept="image/*">
+      <div class="explore-intake-actions"><button type="button" id="exploreCameraButton">카메라 촬영</button><button type="button" id="exploreGalleryButton">갤러리 선택</button></div>
+      <input type="file" id="exploreCameraFile" accept="image/*" capture="user">
+      <input type="file" id="exploreGalleryFile" accept="image/*">
+      <label class="explore-prompt" for="explorePrompt"><span>원하는 헤어</span><textarea id="explorePrompt" placeholder="예: 얼굴은 그대로 두고, 자연스러운 레이어드 웨이브와 은은한 애쉬 브라운"></textarea></label>
+      <section class="explore-analysis" id="exploreAnalysis" data-state="idle" aria-live="polite"><div><b id="exploreAnalysisTitle">사진을 추가하면 AI가 현재 헤어를 분석합니다.</b><p id="exploreAnalysisSummary">기장·질감·밀도·색상은 자동으로 적용하고 확인할 수 없는 시술 이력은 보수적으로 처리합니다.</p></div><button type="button" id="reanalyzeExplore" disabled>AI 다시 분석</button></section>
+      <div class="explore-upload-action"><button class="cta" id="startExploreBatch">AI 분석 후 100개 생성 →</button></div>
     </div></main>
   </div>
 </section>
 
-<!-- EXPLORE SETTINGS -->
-<section class="stage explore-stage" id="exploreSettings">
-  <div class="explore-shell">
-    <aside class="explore-rail"><b>HAIRLOOM</b><small>EXPLORE</small><strong>02</strong></aside>
-    <main class="explore-main"><div class="explore-settings">
-      <div class="explore-settings-grid" id="exploreSettingsGrid"></div>
-      <section class="explore-color-choice" aria-labelledby="exploreColorTitle"><div class="explore-color-head"><b id="exploreColorTitle">생성 색상</b><small>6개 진단 설정과 별도로 적용됩니다.</small></div><div class="explore-color-grid" id="exploreColorGrid"></div></section>
-      <div class="explore-settings-action"><button class="cta" id="startExploreBatch">100개 생성 →</button></div>
-    </div></main>
-  </div>
-</section>
 
 <!-- EXPLORE RESULTS -->
 <section class="stage explore-stage" id="exploreResults">
@@ -346,12 +348,13 @@ body.explore-lightbox-open{overflow:hidden}
 <div class="cfgmask" id="cfgMask">
   <div class="cfgcard">
     <button class="cfgx" id="cfgClose" aria-label="닫기">✕</button>
-    <h3>이미지 생성 API 연결</h3>
-    <p class="cfghint">OpenAI 호환 이미지 API를 연결하세요. API Key는 현재 탭에만 보관되고, 주소·모델·크기만 이 브라우저에 저장됩니다.</p>
+    <h3>AI 연결</h3>
+    <p class="cfghint">OpenAI 호환 이미지 생성·분석 API를 연결하세요. API Key는 현재 탭에만 보관되고, 주소·모델·크기만 이 브라우저에 저장됩니다.</p>
     <a class="cfgpreviewlink" href="/model-previews/" target="_blank" rel="noopener">대기 모델 이미지 관리 <span>↗</span></a>
     <label>Base URL<input id="cfgBase" placeholder="https://api.openai.com/v1" autocomplete="off"></label>
     <label>API Key<input id="cfgKey" type="password" placeholder="sk-..." autocomplete="off"></label>
-    <label>Model<input id="cfgModel" placeholder="gpt-image-1" autocomplete="off"></label>
+    <label>Image Model<input id="cfgModel" placeholder="gpt-image-2" autocomplete="off"></label>
+    <label>Analysis Model<input id="cfgAnalysisModel" placeholder="gpt-4.1-mini" autocomplete="off"></label>
     <label>Size<input id="cfgSize" placeholder="1024x1024" autocomplete="off"></label>
     <div class="cfgstat" id="cfgStat"></div>
     <div class="cfgrow">
@@ -365,6 +368,7 @@ body.explore-lightbox-open{overflow:hidden}
 <div class="toast" id="toast"></div>
 
 <script src="imagen.web.js"></script>
+<script>if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/service-worker.js').catch(()=>{}));</script>
 <script>
 let ExploreCore=null;
 const exploreCoreReady=import('./src/exploreCore.mjs').then(core=>(ExploreCore=core));
@@ -374,6 +378,10 @@ let exploreModelPreviewUnsubscribe=()=>{};
 const modelPreviewRegistryReady=import('./src/modelPreviewRegistry.mjs').then(registry=>(ModelPreviewRegistry=registry)).catch(()=>null);
 let HairColorPalette=null;
 const hairColorPaletteReady=import('./src/hairColorPalette.mjs').then(palette=>(HairColorPalette=palette));
+let HairAnalysis=null;
+const hairAnalysisReady=import('./src/hairAnalysis.mjs').then(module=>(HairAnalysis=module));
+let ConsultationCore=null;
+const consultationCoreReady=import('./src/consultationCore.mjs').then(module=>(ConsultationCore=module));
 
 const A='docs/assets/samples/';
 const $=s=>document.querySelector(s);
@@ -518,7 +526,7 @@ const PRESETS={
   realMale:'docs/assets/test-subjects/real-male-01'
 };
 const S={gender:null,length:null,tex:'',color:COLORS[2],photos:{front:null,side:null,back:null},results:[],adminEdit:false,history:[{id:'gender'}],designLockSource:'standard',designLockCatalogSelections:[],exploreSettings:null};
-const EX={catalog:null,index:null,recordsById:new Map(),originalFrontDataUrl:null,preparedFrontBlob:null,sourcePhotoKey:null,settings:null,colorToneId:'preserve-current',batch:null,batchCounter:0,controllers:new Map(),selectedDesignIds:new Set(),cache:new Map(),catalogPromise:null,modelPreviews:[],modelPreviewUrls:new Map()};
+const EX={catalog:null,index:null,recordsById:new Map(),originalFrontDataUrl:null,preparedFrontDataUrl:null,preparedFrontBlob:null,sourcePhotoKey:null,sourceVersion:0,settings:null,colorToneId:'preserve-current',freePrompt:'',analysis:null,analysisStatus:'idle',analysisVersion:0,analysisController:null,batch:null,batchCounter:0,controllers:new Map(),selectedDesignIds:new Set(),cache:new Map(),catalogPromise:null,modelPreviews:[],modelPreviewUrls:new Map()};
 const PHOTO_SCALE_KEY='HAIRLOOM_PHOTO_SCALE';
 let photoScale=Math.max(70,Math.min(100,Number(localStorage.getItem(PHOTO_SCALE_KEY))||90));
 function applyPhotoScale(){document.documentElement.style.zoom='';document.documentElement.style.setProperty('--photo-scale',photoScale/100);$('#zoomText').textContent=photoScale+'%';localStorage.setItem(PHOTO_SCALE_KEY,String(photoScale))}
@@ -558,7 +566,7 @@ function refreshCfgStat(){
 function fillCfgForm(){
   const c=getImagenCfg()||{};
   $('#cfgBase').value=c.baseURL||'';$('#cfgKey').value=c.apiKey||'';
-  $('#cfgModel').value=c.model||'gpt-image-1';$('#cfgSize').value=c.size||'1024x1024';
+  $('#cfgModel').value=c.model||'gpt-image-2';$('#cfgAnalysisModel').value=c.analysisModel||HairAnalysis?.DEFAULT_HAIR_ANALYSIS_MODEL||'gpt-4.1-mini';$('#cfgSize').value=c.size||'1024x1024';
   refreshCfgStat();
 }
 function openCfg(){fillCfgForm();$('#cfgMask').classList.add('on')}
@@ -567,10 +575,10 @@ $('#openCfg').addEventListener('click',openCfg);
 $('#cfgClose').addEventListener('click',closeCfg);
 $('#cfgMask').addEventListener('click',e=>{if(e.target===$('#cfgMask'))closeCfg()});
 $('#cfgSave').addEventListener('click',()=>{
-  const cfg={baseURL:$('#cfgBase').value.trim().replace(/\/+$/,''),apiKey:$('#cfgKey').value.trim(),model:$('#cfgModel').value.trim()||'gpt-image-1',size:$('#cfgSize').value.trim()||'1024x1024'};
+  const cfg={baseURL:$('#cfgBase').value.trim().replace(/\/+$/,''),apiKey:$('#cfgKey').value.trim(),model:$('#cfgModel').value.trim()||'gpt-image-2',analysisModel:$('#cfgAnalysisModel').value.trim()||'gpt-4.1-mini',size:$('#cfgSize').value.trim()||'1024x1024'};
   if(!cfg.baseURL||!cfg.apiKey){toast('Base URL과 API Key를 입력하세요');return}
   sessionStorage.setItem(CFG_SESSION_KEY,cfg.apiKey);
-  localStorage.setItem(CFG_KEY,JSON.stringify({baseURL:cfg.baseURL,model:cfg.model,size:cfg.size}));refreshCfgStat();toast('연결 정보를 저장했어요');
+  localStorage.setItem(CFG_KEY,JSON.stringify({baseURL:cfg.baseURL,model:cfg.model,analysisModel:cfg.analysisModel,size:cfg.size}));refreshCfgStat();toast('연결 정보를 저장했어요');
 });
 $('#cfgClear').addEventListener('click',()=>{localStorage.removeItem(CFG_KEY);sessionStorage.removeItem(CFG_SESSION_KEY);fillCfgForm();toast('연결 정보를 초기화했어요')});
 $('#cfgTest').addEventListener('click',async()=>{
@@ -585,42 +593,45 @@ $('#cfgTest').addEventListener('click',async()=>{
 });
 
 /* EXPLORE: original front photo → 100 personalized front edits */
-const EXPLORE_SETTINGS_KEY='HAIRLOOM_EXPLORE_SETTINGS';
-const EXPLORE_COLOR_KEY='HAIRLOOM_EXPLORE_COLOR';
-const EXPLORE_DEFINITIONS=[
-  {key:'currentLength',label:'현재 기장',values:['귀 위','턱선','쇄골','가슴','허리'],serialized:[0,1,2,3,4]},
-  {key:'hairThickness',label:'모발 굵기',values:['가늘음','보통','굵음'],serialized:['fine','normal','thick']},
-  {key:'damageCondition',label:'손상도',values:['낮음','보통','높음'],serialized:['low','medium','high']},
-  {key:'permAllowed',label:'펌',values:['제외','허용'],serialized:[false,true]},
-  {key:'extensionAllowed',label:'붙임 · 피스',values:['안 함','허용'],serialized:[false,true]},
-  {key:'similarity',label:'유사도',values:['다양','넓게','균형','가깝게','유사'],serialized:[0,1,2,3,4]}
-];
-function exploreSettingIndex(definition){const index=definition.serialized.findIndex(value=>value===EX.settings[definition.key]);return Math.max(0,index)}
-function loadExploreSettings(){
-  const base=ExploreCore.defaultExploreSettings();
-  try{return ExploreCore.normalizeSettings({...base,...JSON.parse(localStorage.getItem(EXPLORE_SETTINGS_KEY)||'{}')})}catch(e){localStorage.removeItem(EXPLORE_SETTINGS_KEY);return base}
-}
-function loadExploreColor(){
-  const stored=localStorage.getItem(EXPLORE_COLOR_KEY);
-  return HairColorPalette.normalizeHairColorToneId(stored,{preserve:true});
-}
+const EXPLORE_LENGTH_LABELS=['귀 위','턱선','쇄골','가슴','허리'];
 function designLockColorFromToneId(toneId){
   if(toneId===HairColorPalette.PRESERVE_CURRENT_TONE_ID)return {id:toneId,ko:'원본 컬러',hex:'#3a2a22'};
   const tone=HairColorPalette.hairColorToneById(toneId);
   return tone?{id:tone.id,ko:tone.labelKo,hex:tone.hex}:{id:HairColorPalette.PRESERVE_CURRENT_TONE_ID,ko:'원본 컬러',hex:'#3a2a22'};
 }
-function renderExploreColorPalette(){
-  EX.colorToneId=HairColorPalette.normalizeHairColorToneId(EX.colorToneId||loadExploreColor(),{preserve:true});
-  const options=[{id:HairColorPalette.PRESERVE_CURRENT_TONE_ID,labelKo:'현재 색상 유지',hex:'transparent'},...HairColorPalette.HAIR_COLOR_TONES];
-  $('#exploreColorGrid').innerHTML=options.map(tone=>`<button type="button" class="explore-color-option ${tone.id===EX.colorToneId?'on':''} ${tone.id===HairColorPalette.PRESERVE_CURRENT_TONE_ID?'preserve':''}" data-tone-id="${tone.id}" aria-pressed="${tone.id===EX.colorToneId}"><i style="--tone-color:${tone.hex}"></i><span>${tone.labelKo}</span></button>`).join('');
-  document.querySelectorAll('.explore-color-option').forEach(button=>button.addEventListener('click',()=>{EX.colorToneId=HairColorPalette.normalizeHairColorToneId(button.dataset.toneId,{preserve:true});localStorage.setItem(EXPLORE_COLOR_KEY,EX.colorToneId);renderExploreColorPalette()}));
+function renderExploreAnalysis(){
+  const panel=$('#exploreAnalysis');if(!panel)return;
+  panel.dataset.state=EX.analysisStatus;
+  const title=$('#exploreAnalysisTitle'),summary=$('#exploreAnalysisSummary'),retry=$('#reanalyzeExplore'),start=$('#startExploreBatch');
+  const labels={idle:'사진을 추가하면 AI가 현재 헤어를 분석합니다.',analyzing:'AI가 현재 헤어를 분석 중입니다.',ready:'AI 헤어 분석 완료',fallback:'보수적인 자동 분석으로 준비됨',failed:'자동 분석을 준비하지 못했습니다.'};
+  title.textContent=labels[EX.analysisStatus]||labels.idle;
+  summary.textContent=EX.analysis?.summaryKo||'기장·질감·밀도·색상은 자동으로 적용하고 확인할 수 없는 시술 이력은 보수적으로 처리합니다.';
+  retry.disabled=!EX.originalFrontDataUrl||EX.analysisStatus==='analyzing';
+  start.classList.toggle('on',Boolean(EX.preparedFrontBlob)&&EX.analysisStatus!=='analyzing');
+  start.textContent=EX.analysisStatus==='analyzing'?'AI 분석 중…':'AI 분석 후 100개 생성 →';
 }
-function renderExploreSettings(){
-  EX.settings=EX.settings||loadExploreSettings();
-  $('#exploreSettingsGrid').innerHTML=EXPLORE_DEFINITIONS.map(definition=>{const value=exploreSettingIndex(definition),max=definition.values.length-1,percent=max?value/max*100:0;return `<section class="explore-setting"><div class="explore-setting-head"><label for="explore-${definition.key}">${definition.label}</label><output id="explore-${definition.key}-value">${definition.values[value]}</output></div><input class="explore-range" id="explore-${definition.key}" data-key="${definition.key}" type="range" min="0" max="${max}" step="1" value="${value}" style="--p:${percent}%"><div class="explore-ends"><span>${definition.values[0]}</span><span>${definition.values[max]}</span></div></section>`}).join('');
-  renderExploreColorPalette();
-  document.querySelectorAll('.explore-range').forEach(input=>input.addEventListener('input',()=>{const definition=EXPLORE_DEFINITIONS.find(item=>item.key===input.dataset.key),index=Number(input.value),max=definition.values.length-1;EX.settings=ExploreCore.normalizeSettings({...EX.settings,[definition.key]:definition.serialized[index]});input.style.setProperty('--p',`${max?index/max*100:0}%`);$(`#explore-${definition.key}-value`).textContent=definition.values[index];localStorage.setItem(EXPLORE_SETTINGS_KEY,JSON.stringify(EX.settings))}));
+async function detectExploreHairTone(){
+  if(!EX.originalFrontDataUrl)return {toneId:'unknown',confidence:0};
+  await consultationCoreReady;
+  const image=await new Promise((resolve,reject)=>{const element=new Image();element.onload=()=>resolve(element);element.onerror=reject;element.src=EX.originalFrontDataUrl});
+  const scale=Math.min(1,256/Math.max(image.naturalWidth,image.naturalHeight)),width=Math.max(1,Math.round(image.naturalWidth*scale)),height=Math.max(1,Math.round(image.naturalHeight*scale)),canvas=document.createElement('canvas');
+  canvas.width=width;canvas.height=height;const context=canvas.getContext('2d');context.drawImage(image,0,0,width,height);const pixels=context.getImageData(0,0,width,height).data,samples=[];
+  for(let y=0;y<height;y++){for(let x=0;x<width;x++){const nx=(x+.5)/width,ny=(y+.5)/height,top=((nx-.5)/.29)**2+((ny-.27)/.2)**2<=1,face=((nx-.5)/.27)**2+((ny-.58)/.3)**2<=1;if(!top||face)continue;const index=(y*width+x)*4;samples.push([pixels[index],pixels[index+1],pixels[index+2]])}}
+  return ConsultationCore.classifyHairColorSamples(samples);
 }
+async function runExploreAnalysis({force=false}={}){
+  if(!EX.originalFrontDataUrl||!EX.preparedFrontBlob)return null;
+  if(EX.analysis&&EX.analysisStatus!=='idle'&&!force)return EX.analysis;
+  await Promise.all([hairAnalysisReady,hairColorPaletteReady]);
+  const version=++EX.analysisVersion;EX.analysisController?.abort();const controller=new AbortController();EX.analysisController=controller;EX.analysisStatus='analyzing';renderExploreAnalysis();
+  const freePrompt=EX.freePrompt.trim();let localTone={toneId:'unknown',confidence:0};try{localTone=await detectExploreHairTone()}catch{}
+  let analysis=HairAnalysis.defaultHairAnalysis({promptIntent:freePrompt,currentToneId:localTone.toneId,confidence:localTone.confidence});
+  const cfg=getImagenCfg();
+  if(cfg?.baseURL&&cfg?.apiKey){try{const remote=await HairAnalysis.requestHairAnalysis({baseURL:cfg.baseURL,apiKey:cfg.apiKey,model:cfg.analysisModel||HairAnalysis.DEFAULT_HAIR_ANALYSIS_MODEL,imageDataUrl:EX.preparedFrontDataUrl,freePrompt,signal:controller.signal});analysis=HairAnalysis.normalizeHairAnalysis({...remote,currentToneId:remote.currentToneId==='unknown'?localTone.toneId:remote.currentToneId,confidence:Math.max(remote.confidence,localTone.confidence||0)},{freePrompt,source:'provider'})}catch(error){if(error?.name==='AbortError')return null}}
+  if(version!==EX.analysisVersion||controller.signal.aborted)return null;
+  EX.analysis=analysis;EX.settings=ExploreCore.normalizeSettings(HairAnalysis.hairAnalysisToExploreSettings(analysis));EX.colorToneId=analysis.targetToneIds[0]||HairColorPalette.PRESERVE_CURRENT_TONE_ID;EX.analysisStatus=analysis.source==='provider'?'ready':'fallback';renderExploreAnalysis();return analysis;
+}
+function exploreIntentKey(){return `${EX.sourcePhotoKey}:${ExploreCore.stableHash32(`${EX.freePrompt}|${EX.analysis?.summaryKo||''}`)}`;}
 async function loadExploreCatalog(){
   if(EX.catalog&&EX.index)return EX;
   if(!EX.catalogPromise)EX.catalogPromise=(async()=>{const [catalogResponse,indexResponse]=await Promise.all([fetch('/docs/hair-design-master/catalog.json'),fetch('/docs/hair-design-master/catalog-index.json')]);if(!catalogResponse.ok||!indexResponse.ok)throw new Error('catalog fetch failed');const [catalogPayload,indexPayload]=await Promise.all([catalogResponse.json(),indexResponse.json()]);EX.catalog=ExploreCore.hydrateCatalogPayload(catalogPayload);EX.index=ExploreCore.hydrateCatalogIndexPayload(indexPayload);ExploreCore.validateCatalogIndex(EX.index,{schemaVersion:1,catalogVersion:ExploreCore.catalogVersion,promptVersion:ExploreCore.promptVersion,total:6500});EX.recordsById=new Map(EX.catalog.records.map(record=>[record.id,record]));return EX})().catch(error=>{EX.catalogPromise=null;throw error});
@@ -655,9 +666,9 @@ function clearExploreCache(){for(const entry of EX.cache.values())if(entry.objec
 function supersedeExploreBatch(reason='superseded'){
   for(const controller of EX.controllers.values())controller.abort();EX.controllers.clear();
   if(EX.batch&&!EX.batch.supersededBy)EX.batch=ExploreCore.supersedeBatch(EX.batch,`${reason}-${Date.now()}`);
-  if(['route-exit','handoff','source-change','clear-data'].includes(reason))clearExploreCache();
+  if(['route-exit','handoff','source-change','prompt-change','clear-data'].includes(reason))clearExploreCache();
 }
-function exploreImageCacheKey(designId,colorToneId=EX.batch?.colorToneId||EX.colorToneId){return `${ExploreCore.buildExploreCacheKey({sourcePhotoKey:EX.sourcePhotoKey,settings:EX.settings,batchKind:'design',centerDesignId:designId})}:color=${colorToneId}:${designId}`}
+function exploreImageCacheKey(designId,colorToneId=EX.batch?.colorToneId||EX.colorToneId){return `${ExploreCore.buildExploreCacheKey({sourcePhotoKey:EX.sourcePhotoKey,settings:EX.settings,batchKind:'design',centerDesignId:designId})}:intent=${ExploreCore.stableHash32(`${EX.freePrompt}|${EX.analysis?.summaryKo||''}`)}:color=${colorToneId}:${designId}`}
 function cacheExploreResult(designId,result,colorToneId){
   const key=exploreImageCacheKey(designId,colorToneId),existing=EX.cache.get(key);if(existing?.objectUrl&&existing.objectUrl!==result.objectUrl)URL.revokeObjectURL(existing.objectUrl);
   EX.cache.set(key,{...result,lastUsed:Date.now()});
@@ -672,7 +683,7 @@ function explorePrompt(record,colorToneId){
   const tone=HairColorPalette.hairColorToneById(colorToneId),preserveColor=!tone;
   const colorRule=preserveColor?'COLOR LOCK: preserve the original source hair color exactly.':`TARGET HAIR COLOR: ${tone.labelKo} (${tone.id}). Apply this hue consistently to the hair only while retaining realistic roots, strand variation and low-sheen depth.`;
   const identityRule=`IDENTITY LOCK: preserve the person, face, skin, expression, body, clothing, background, lighting and camera angle. Change ${preserveColor?'only the hairstyle geometry':'only the hairstyle geometry and hair color'}.`;
-  return ['TASK: edit only the hair in the single uploaded original customer front photograph.','OUTPUT CONTRACT: return exactly ONE full-frame portrait containing ONE person, ONE front view and ONE image.','PRESERVE THE ENTIRE SOURCE FRAME: no crop, zoom, enlargement, reframing, collage, contact sheet, split screen, before/after, duplicate person, inset, border or multiple view.',`DESIGN LOCK ID: ${record.id}`,`STYLE: ${record.promptAtoms.titleKo}`,`STRUCTURE: ${record.promptAtoms.structureKo}`,record.promptAtoms.frontKo?`FRONT: ${record.promptAtoms.frontKo}`:'',record.promptAtoms.finishKo?`FINISH: ${record.promptAtoms.finishKo}`:'',`CURRENT LENGTH: ${EXPLORE_DEFINITIONS[0].values[settings.currentLength]}`,`HAIR THICKNESS: ${settings.hairThickness}`,damage,!settings.permAllowed?'NO PERM OR CHEMICAL CURL PROCESS.':'',!settings.extensionAllowed?'NO EXTENSIONS, PIECES, WIGS OR ADDED HAIR.':'',record.promptAtoms.safetyKo,NATURAL_SURFACE_FINISH_PROMPT,ExploreCore.genderLineTreatmentPrompt(record.genderId),colorRule,identityRule,'No text, logo, watermark or decorative graphic.'].filter(Boolean).join('\n');
+  return ['TASK: edit only the hair in the single uploaded original customer front photograph.','OUTPUT CONTRACT: return exactly ONE full-frame portrait containing ONE person, ONE front view and ONE image.','PRESERVE THE ENTIRE SOURCE FRAME: no crop, zoom, enlargement, reframing, collage, contact sheet, split screen, before/after, duplicate person, inset, border or multiple view.',`USER REQUEST: ${EX.freePrompt||'현재 헤어에 어울리는 자연스러운 변화'}`,`AUTOMATIC HAIR PROFILE: ${EX.analysis?.summaryKo||'conservative fallback'}`,`DESIGN LOCK ID: ${record.id}`,`STYLE: ${record.promptAtoms.titleKo}`,`STRUCTURE: ${record.promptAtoms.structureKo}`,record.promptAtoms.frontKo?`FRONT: ${record.promptAtoms.frontKo}`:'',record.promptAtoms.finishKo?`FINISH: ${record.promptAtoms.finishKo}`:'',`CURRENT LENGTH: ${EXPLORE_LENGTH_LABELS[settings.currentLength]}`,`HAIR THICKNESS: ${settings.hairThickness}`,damage,!settings.permAllowed?'NO PERM OR CHEMICAL CURL PROCESS.':'',!settings.extensionAllowed?'NO EXTENSIONS, PIECES, WIGS OR ADDED HAIR.':'',record.promptAtoms.safetyKo,NATURAL_SURFACE_FINISH_PROMPT,ExploreCore.genderLineTreatmentPrompt(record.genderId),colorRule,identityRule,'No text, logo, watermark or decorative graphic.'].filter(Boolean).join('\n');
 }
 function decodeExploreImage(base64){const binary=atob(base64),bytes=Uint8Array.from(binary,char=>char.charCodeAt(0)),mimeType=ExploreCore.detectImageMime(bytes);if(!mimeType)throw new Error('unknown image MIME');const blob=new Blob([bytes],{type:mimeType}),objectUrl=URL.createObjectURL(blob);return {url:objectUrl,objectUrl,blob,mimeType,bytes:bytes.byteLength,providerKind:'b64_json'}}
 async function callExploreEdit(job,controller){
@@ -726,22 +737,33 @@ function startExploreSelection(selection,{centerDesignId=null}={}){
   for(const item of EX.batch.queue){const cached=EX.cache.get(exploreImageCacheKey(item.designId));if(cached){cached.lastUsed=Date.now();EX.batch=ExploreCore.applyQueueCompletion(EX.batch,{ok:true,url:cached.url,batchId:item.batchId,designId:item.designId,slotIndex:item.slotIndex,sourcePhotoKey:item.sourcePhotoKey,promptVersion:item.promptVersion})}}
   goto('exploreResults');renderExploreGrid();pumpExploreQueue();
 }
-async function startInitialExploreBatch(){await exploreCoreReady;await Promise.all([loadExploreCatalog(),refreshExploreModelPreviews()]);if(!EX.originalFrontDataUrl||!EX.preparedFrontBlob)return toast('전면 사진을 먼저 넣어주세요');const selection=ExploreCore.selectDiverse100(EX.index.records,EX.settings,EX.sourcePhotoKey);EX.selectedDesignIds.clear();startExploreSelection(selection)}
-async function startNeighborExplore(designId){if(!EX.batch||EX.batch.slots.find(slot=>slot.designId===designId)?.status!=='ready')return;await refreshExploreModelPreviews();const selection=ExploreCore.selectNeighbor100(EX.index.records,EX.settings,designId,EX.sourcePhotoKey);startExploreSelection(selection,{centerDesignId:designId})}
+async function startInitialExploreBatch(){await Promise.all([exploreCoreReady,hairAnalysisReady]);await Promise.all([loadExploreCatalog(),refreshExploreModelPreviews()]);if(!EX.originalFrontDataUrl||!EX.preparedFrontBlob)return toast('전면 사진을 먼저 넣어주세요');await runExploreAnalysis();const selection=ExploreCore.selectDiverse100(EX.index.records,EX.settings,exploreIntentKey());EX.selectedDesignIds.clear();startExploreSelection(selection)}
+async function startNeighborExplore(designId){if(!EX.batch||EX.batch.slots.find(slot=>slot.designId===designId)?.status!=='ready')return;await refreshExploreModelPreviews();const selection=ExploreCore.selectNeighbor100(EX.index.records,EX.settings,designId,exploreIntentKey());startExploreSelection(selection,{centerDesignId:designId})}
 function toggleExploreSelection(designId){if(EX.selectedDesignIds.has(designId))EX.selectedDesignIds.delete(designId);else{if(EX.selectedDesignIds.size>=6)return toast('최대 6개까지 선택할 수 있어요');EX.selectedDesignIds.add(designId)}const slot=EX.batch?.slots.find(item=>item.designId===designId);if(slot)renderExploreSlot(slot.slotIndex);renderExploreProgress()}
 async function setExplorePhoto(file){
-  if(!file||!file.type.startsWith('image/'))return;supersedeExploreBatch('source-change');EX.selectedDesignIds.clear();EX.originalFrontDataUrl=await fileData(file);EX.preparedFrontBlob=await prepareExploreJpeg(EX.originalFrontDataUrl);EX.sourcePhotoKey=await ExploreCore.sourcePhotoKey(new Uint8Array(await EX.preparedFrontBlob.arrayBuffer()),EX.preparedFrontBlob.type);$('#explorePreview').src=EX.originalFrontDataUrl;$('#exploreDrop').classList.add('filled');$('#toExploreSettings').classList.add('on');
+  if(!file||!file.type.startsWith('image/'))return;
+  const sourceVersion=++EX.sourceVersion;
+  supersedeExploreBatch('source-change');EX.analysisController?.abort();EX.analysisVersion+=1;EX.analysis=null;EX.analysisStatus='analyzing';EX.selectedDesignIds.clear();EX.originalFrontDataUrl=null;EX.preparedFrontDataUrl=null;EX.preparedFrontBlob=null;EX.sourcePhotoKey=null;$('#explorePreview').removeAttribute('src');$('#exploreDrop').classList.remove('filled');renderExploreAnalysis();
+  const originalFrontDataUrl=await fileData(file);if(sourceVersion!==EX.sourceVersion)return;
+  const preparedFrontBlob=await prepareExploreJpeg(originalFrontDataUrl);if(sourceVersion!==EX.sourceVersion)return;
+  const preparedFrontDataUrl=await fileData(preparedFrontBlob);if(sourceVersion!==EX.sourceVersion)return;
+  const sourceKey=await ExploreCore.sourcePhotoKey(new Uint8Array(await preparedFrontBlob.arrayBuffer()),preparedFrontBlob.type);if(sourceVersion!==EX.sourceVersion)return;
+  EX.originalFrontDataUrl=originalFrontDataUrl;EX.preparedFrontBlob=preparedFrontBlob;EX.preparedFrontDataUrl=preparedFrontDataUrl;EX.sourcePhotoKey=sourceKey;$('#explorePreview').src=originalFrontDataUrl;$('#exploreDrop').classList.add('filled');renderExploreAnalysis();await runExploreAnalysis({force:true});
 }
 function startDesignLockFromExplore(){
-  try{const payload=ExploreCore.validateExploreHandoffPayload({frontOriginalDataUrl:EX.originalFrontDataUrl,selectedDesignIds:[...EX.selectedDesignIds],catalogRecordsById:EX.recordsById,exploreSettings:EX.settings,catalogVersion:ExploreCore.catalogVersion,promptVersion:ExploreCore.promptVersion});S.designLockSource='explore-shortlist';S.designLockCatalogSelections=payload.selectedRecords;S.exploreSettings=payload.exploreSettings;S.color=designLockColorFromToneId(EX.batch?.colorToneId||EX.colorToneId);S.photos={front:payload.frontOriginalDataUrl,side:null,back:null};S.gender=payload.selectedRecords[0]?.genderId==='M'?'male':payload.selectedRecords[0]?.genderId==='F'?'female':null;S.length=ExploreCore.catalogRecordToDesignLockCut(payload.selectedRecords[0]).len;supersedeExploreBatch('handoff');buildAngles();S.history=[{id:'gender'},{id:'angles'}];show('angles')}catch(error){toast(error?.message||'선택한 디자인을 확인해 주세요')}
+  try{const payload=ExploreCore.validateExploreHandoffPayload({frontOriginalDataUrl:EX.preparedFrontDataUrl,selectedDesignIds:[...EX.selectedDesignIds],catalogRecordsById:EX.recordsById,exploreSettings:EX.settings,catalogVersion:ExploreCore.catalogVersion,promptVersion:ExploreCore.promptVersion});S.designLockSource='explore-shortlist';S.designLockCatalogSelections=payload.selectedRecords;S.exploreSettings=payload.exploreSettings;S.color=designLockColorFromToneId(EX.batch?.colorToneId||EX.colorToneId);S.photos={front:payload.frontOriginalDataUrl,side:null,back:null};S.gender=payload.selectedRecords[0]?.genderId==='M'?'male':payload.selectedRecords[0]?.genderId==='F'?'female':null;S.length=ExploreCore.catalogRecordToDesignLockCut(payload.selectedRecords[0]).len;supersedeExploreBatch('handoff');buildAngles();S.history=[{id:'gender'},{id:'angles'}];show('angles')}catch(error){toast(error?.message||'선택한 디자인을 확인해 주세요')}
 }
-$('#startExplore').addEventListener('click',async()=>{try{await Promise.all([exploreCoreReady,hairColorPaletteReady]);EX.settings=loadExploreSettings();EX.colorToneId=loadExploreColor();renderExploreSettings();loadExploreCatalog().catch(()=>toast('카탈로그를 불러오지 못했어요'));S.history=[{id:'gender'}];goto('exploreUpload')}catch(error){toast('Explore를 시작하지 못했어요')}});
-$('#exploreDrop').addEventListener('click',()=>$('#exploreFile').click());
-$('#exploreFile').addEventListener('change',async event=>{try{await setExplorePhoto(event.target.files[0])}catch(error){toast('사진을 읽지 못했어요')}event.target.value=''});
+let explorePromptTimer;
+$('#startExplore').addEventListener('click',async()=>{try{await Promise.all([exploreCoreReady,hairColorPaletteReady,hairAnalysisReady,consultationCoreReady]);EX.settings=ExploreCore.defaultExploreSettings();EX.colorToneId=HairColorPalette.PRESERVE_CURRENT_TONE_ID;EX.freePrompt='';EX.analysis=null;EX.analysisStatus='idle';$('#explorePrompt').value='';renderExploreAnalysis();loadExploreCatalog().catch(()=>toast('카탈로그를 불러오지 못했어요'));S.history=[{id:'gender'}];goto('exploreUpload')}catch(error){toast('Explore를 시작하지 못했어요')}});
+$('#exploreDrop').addEventListener('click',()=>$('#exploreGalleryFile').click());
+$('#exploreCameraButton').addEventListener('click',()=>$('#exploreCameraFile').click());
+$('#exploreGalleryButton').addEventListener('click',()=>$('#exploreGalleryFile').click());
+for(const id of ['exploreCameraFile','exploreGalleryFile'])$('#'+id).addEventListener('change',async event=>{try{await setExplorePhoto(event.target.files[0])}catch(error){EX.analysisStatus='failed';renderExploreAnalysis();toast('사진을 읽지 못했어요')}event.target.value=''});
+$('#explorePrompt').addEventListener('input',event=>{EX.freePrompt=event.target.value;EX.analysisController?.abort();EX.analysisVersion+=1;EX.analysis=null;EX.analysisStatus='idle';supersedeExploreBatch('prompt-change');renderExploreAnalysis();clearTimeout(explorePromptTimer);if(EX.preparedFrontBlob)explorePromptTimer=setTimeout(()=>runExploreAnalysis({force:true}).catch(()=>{}),650)});
+$('#reanalyzeExplore').addEventListener('click',()=>runExploreAnalysis({force:true}).catch(()=>{EX.analysisStatus='fallback';renderExploreAnalysis()}));
 ['dragover','dragenter'].forEach(name=>$('#exploreDrop').addEventListener(name,event=>{event.preventDefault();$('#exploreDrop').classList.add('hover')}));
 ['dragleave','drop'].forEach(name=>$('#exploreDrop').addEventListener(name,event=>{event.preventDefault();$('#exploreDrop').classList.remove('hover')}));
 $('#exploreDrop').addEventListener('drop',event=>setExplorePhoto(event.dataTransfer.files[0]).catch(()=>toast('사진을 읽지 못했어요')));
-$('#toExploreSettings').addEventListener('click',()=>{if(EX.originalFrontDataUrl){renderExploreSettings();goto('exploreSettings')}});
 $('#startExploreBatch').addEventListener('click',()=>startInitialExploreBatch().catch(()=>toast('Explore 생성을 시작하지 못했어요')));
 $('#exploreGrid').addEventListener('click',event=>{const tile=event.target.closest('.explore-tile');if(!tile)return;if(event.target.closest('.explore-neighbor'))return openExploreImageLightbox(tile);const designId=tile.dataset.designId;if(!designId)return;if(event.target.closest('.explore-select'))return toggleExploreSelection(designId);if(event.target.closest('.explore-similar'))startNeighborExplore(designId)});
 $('#exploreToLock').addEventListener('click',startDesignLockFromExplore);

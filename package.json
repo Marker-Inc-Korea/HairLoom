@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.mjs",
     "dev": "node server.mjs",
-    "check": "node --check server.mjs && node --check src/exploreCore.mjs && node --check src/consultationCore.mjs && node --check src/trendRegistry.mjs && node --check src/hairTrendData.mjs && node --check src/modelPreviewRegistry.mjs && node --check consultation/app.mjs && node --check model-previews/app.mjs && node --check scripts/generateHairDesignCatalog.mjs && node --check scripts/generateHairMasterCatalog.mjs && node --check scripts/syncHairTrends.mjs && node --check scripts/manageHairTrendSchedule.mjs && node --check scripts/checkHairTrendCadence.mjs && node --check scripts/checkHairTrendChanges.mjs && node -e \"const fs=require('fs');for(const file of ['index.html','consultation/index.html'].filter(fs.existsSync)){const html=fs.readFileSync(file,'utf8');const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)];for(const [,source] of scripts)new Function(source);console.log('HTML scripts parsed:',file,scripts.length)}\"",
+    "check": "node --check server.mjs && node --check service-worker.js && node --check src/exploreCore.mjs && node --check src/consultationCore.mjs && node --check src/hairAnalysis.mjs && node --check src/trendRegistry.mjs && node --check src/hairTrendData.mjs && node --check src/modelPreviewRegistry.mjs && node --check consultation/app.mjs && node --check model-previews/app.mjs && node --check scripts/generateHairDesignCatalog.mjs && node --check scripts/generateHairMasterCatalog.mjs && node --check scripts/syncHairTrends.mjs && node --check scripts/manageHairTrendSchedule.mjs && node --check scripts/checkHairTrendCadence.mjs && node --check scripts/checkHairTrendChanges.mjs && node -e \"const fs=require('fs');for(const file of ['index.html','consultation/index.html','model-previews/index.html'].filter(fs.existsSync)){const html=fs.readFileSync(file,'utf8');const scripts=[...html.matchAll(/<script>([\\s\\S]*?)<\\/script>/g)];for(const [,source] of scripts)new Function(source);console.log('HTML scripts parsed:',file,scripts.length)}\"",
     "catalog": "node scripts/generateHairDesignCatalog.mjs",
     "catalog:check": "node scripts/generateHairDesignCatalog.mjs --check",
     "master-catalog": "node scripts/generateHairMasterCatalog.mjs",
@@ -20,7 +20,7 @@
     "trend:schedule": "node scripts/manageHairTrendSchedule.mjs install",
     "trend:schedule:status": "node scripts/manageHairTrendSchedule.mjs status",
     "trend:schedule:remove": "node scripts/manageHairTrendSchedule.mjs remove",
-    "test": "node --test server.test.mjs exploreCore.test.mjs consultationCore.test.mjs catalogRuntime.test.mjs trendRegistry.test.mjs trendSchedule.test.mjs trendAutomation.test.mjs modelPreviewRegistry.test.mjs",
+    "test": "node --test server.test.mjs exploreCore.test.mjs consultationCore.test.mjs hairAnalysis.test.mjs catalogRuntime.test.mjs trendRegistry.test.mjs trendSchedule.test.mjs trendAutomation.test.mjs modelPreviewRegistry.test.mjs",
     "verify": "npm run check && npm run catalog:check && npm run master-catalog:check && npm run trend:check && npm test"
   },
   "repository": {
