@@ -143,14 +143,14 @@ test('serves only consultation route and allowlisted consultation assets', async
       assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
       assert.match(response.headers.get('cache-control') || '', /no-store/);
       const html = await response.text();
-      assert.match(html, /styles\.css\?v=20260808-mobile-ai-v1/);
-      assert.match(html, /app\.mjs\?v=20260808-mobile-ai-v1/);
+      assert.match(html, /styles\.css\?v=20260808-zoom-only-v2/);
+      assert.match(html, /app\.mjs\?v=20260808-zoom-only-v2/);
       assert.match(html, /rel="manifest" href="\/manifest\.webmanifest"/);
       assert.match(html, /serviceWorker\.register\('\/service-worker\.js'\)/);
       assert.match(html, /id="imageLightbox"/);
       assert.match(html, /class="image-lightbox-shell"/);
-      assert.match(html, /class="lightbox-variation-options"/);
-      assert.match(html, /이 스타일로 더 생성해보기/);
+      assert.doesNotMatch(html, /lightbox-variation-options/);
+      assert.doesNotMatch(html, /이 스타일로 더 생성해보기/);
     }
     for (const [path, mime] of [['/consultation/styles.css', /^text\/css/], ['/consultation/app.mjs', /^text\/javascript/], ['/src/consultationCore.mjs', /^text\/javascript/], ['/src/hairAnalysis.mjs', /^text\/javascript/], ['/src/hairColorPalette.mjs', /^text\/javascript/], ['/src/trendRegistry.mjs', /^text\/javascript/], ['/src/hairTrendData.mjs', /^text\/javascript/], ['/src/modelPreviewRegistry.mjs', /^text\/javascript/]]) {
       const response = await fetch(`http://127.0.0.1:${port}${path}`);
@@ -200,11 +200,11 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /const visibleStages = Object\.freeze/);
     assert.match(appSource, /\{ label: 'SOURCE', stateIndex: 0 \}/);
     assert.match(appSource, /\{ label: 'STRUCTURE', stateIndex: 2 \}/);
-    assert.match(appSource, /\{ label: 'COMPARE', stateIndex: 4 \}/);
+    assert.doesNotMatch(appSource, /\{ label: 'COMPARE', stateIndex:/);
     assert.match(appSource, /\{ label: 'LOCK', stateIndex: 5 \}/);
     assert.doesNotMatch(appSource, /\{ label: 'PROFILE', stateIndex:/);
     assert.doesNotMatch(appSource, /\{ label: 'VARIATION', stateIndex:/);
-    assert.match(appSource, /\/ 04/);
+    assert.match(appSource, /\/ 03/);
     assert.match(appSource, /FRONT REQUIRED/);
     assert.match(appSource, /purpose: 'structure'/);
     assert.match(appSource, /id="backToList"/);
@@ -217,7 +217,8 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /required} \/ 1 REQUIRED/);
     assert.match(appSource, /state\.sourceViewIndex === 0 \? 'REQUIRED' : 'OPTIONAL'/);
     assert.match(appSource, /assignConsultationSourceViews/);
-    assert.match(appSource, /assignConsultationGenerationAxes/);
+    assert.match(appSource, /selectConsultationStructureDesignIds/);
+    assert.doesNotMatch(appSource, /assignConsultationGenerationAxes/);
     assert.match(appSource, /sourceViewBlobs/);
     assert.doesNotMatch(appSource, /sourceViewMasks/);
     assert.doesNotMatch(appSource, /profileStep/);
@@ -281,10 +282,16 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /mosaic-3x3/);
     assert.match(appSource, /RANDOM FILL/);
     assert.match(appSource, /function currentStageStatus\(\) \{ return ''; \}/);
-    assert.match(appSource, /function openStructureLightbox/);
-    assert.match(appSource, /minimalVariationsForSelectedGroup/);
-    assert.match(appSource, /lightboxGenerate\.onclick/);
+    assert.match(appSource, /function openImageLightbox/);
+    assert.doesNotMatch(appSource, /function openStructureLightbox/);
+    assert.doesNotMatch(appSource, /minimalVariationsForSelectedGroup/);
+    assert.doesNotMatch(appSource, /lightboxGenerate/);
     assert.match(appSource, /data-preview-image/);
+    assert.match(appSource, /data-short=/);
+    assert.match(appSource, /SELECT \$\{state\.shortlist\.size\}\/6/);
+    assert.match(appSource, /id="toAgreement"/);
+    assert.doesNotMatch(appSource, /function startCompare/);
+    assert.doesNotMatch(appSource, /function renderCompare/);
     assert.doesNotMatch(appSource, /id="toVariations"/);
     assert.doesNotMatch(appSource, /id="toCompare"/);
     assert.doesNotMatch(appSource, /function generationAxisLabel/);
@@ -326,10 +333,11 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(consultationCss, /safe-area-inset-bottom/);
     assert.doesNotMatch(consultationCss, /\.mask-canvas-stage/);
     assert.match(consultationCss, /\.source-next\{/);
-    assert.match(consultationCss, /aspect-safe image review and in-place variation/);
+    assert.match(consultationCss, /aspect-safe image enlargement and direct shortlist/);
     assert.match(consultationCss, /registered-preview \.image img\{object-fit:contain/);
     assert.match(consultationCss, /\.image-lightbox\{/);
-    assert.match(consultationCss, /\.lightbox-variation-options\{/);
+    assert.doesNotMatch(consultationCss, /\.lightbox-variation-options\{/);
+    assert.match(consultationCss, /\.structure-tile>input\{/);
 
     for (const path of ['/consultation.html', '/consultation/prototype.html', '/consultation/deleted-prototype.html', '/docs/ux-segments/stylist-consultation/prototype.html', '/consultation/../package.json', '/consultation/notes.md', '/src/modules.mjs']) {
       assert.equal((await fetch(`http://127.0.0.1:${port}${path}`)).status, 404, path);

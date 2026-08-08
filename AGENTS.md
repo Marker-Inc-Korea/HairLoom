@@ -69,9 +69,10 @@ HOST=127.0.0.1 PORT=4180 npm run start
 - Shortlists contain 1–6 current `HLM-*` design IDs.
 - Explore handoff requires the current `catalogVersion` and `promptVersion`.
 - Standard Design Lock continues to use its normal recommendation path.
-- PRO remains a separate four-stage route: `SOURCE → STRUCTURE → COMPARE → LOCK`.
+- PRO remains a separate three-stage route: `SOURCE → STRUCTURE → LOCK`.
 - PRO requires FRONT and accepts optional SIDE / BACK / CROWN / NAPE / DETAIL originals.
 - PRO SOURCE contains camera/gallery intake, one free prompt, compact non-editable AI analysis status, and collapsed Provider settings. It must not render manual diagnosis or color controls.
+- PRO STRUCTURE lightboxes are enlargement-only. Additional variation/COMPARE generation controls must not be rendered; users select 1–6 completed structure tiles directly for LOCK.
 - Automatic analysis maps to the existing feasibility, diversity, color, and handoff contracts. Provider analysis failure must fall back to deterministic conservative values without blocking generation.
 - PRO does not create, confirm, or send hair masks; current and non-current natural tones use the same maskless provider path.
 - AI analysis uses a separate OpenAI-compatible vision request path from image generation, shares only the configured endpoint/key, is bounded to the current request, and is never persisted or exported.

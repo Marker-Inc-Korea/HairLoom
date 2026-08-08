@@ -12,7 +12,7 @@ Hairloom is a local-first hairstyle exploration and Design Lock application. It 
 - 100 fixed result slots with up to 32 concurrent requests and no manual constraint stage
 - Fast base Explore using only the original FRONT photo
 - FRONT / SIDE / BACK Design Lock workflow
-- Separate four-stage PRO workstation: `SOURCE → STRUCTURE → COMPARE → LOCK`
+- Separate three-stage PRO workstation: `SOURCE → STRUCTURE → LOCK`
 - Balanced optional source-view allocation, horizontal-mirror augmentation, and automatic hair/color profiles in PRO
 - Maskless PRO requests that send one prepared original and rely on strict prompt preservation for face, clothing, and background
 - Explore, PRO, and Design Lock default to natural low-sheen satin-to-matte texture with soft diffuse highlights
@@ -56,15 +56,15 @@ Open `http://127.0.0.1:4180/` in a browser.
 1. Capture a FRONT photo with the camera or select one from the gallery.
 2. Describe the desired hair, color, and mood in a natural sentence.
 3. AI analyzes current length, texture, density, color, and conservative feasibility defaults.
-4. Compare 100 results, select 1–6 candidates, and continue to Design Lock.
+4. Review 100 results, select 1–6 candidates, and continue to Design Lock.
 
 ### PRO consultation
 
 1. Capture or select the required FRONT photo and optionally add SIDE / BACK / CROWN / NAPE / DETAIL originals.
 2. Enter the desired hair, color, and mood as a free prompt. There is no separate PROFILE or COLOR constraint screen.
 3. AI analyzes the original photo. Treatment history that cannot be observed uses conservative defaults with explicit uncertainty.
-4. In STRUCTURE, choose a minimal variation inside the enlarged image and start COMPARE with `Generate more from this style`.
-5. From LOCK, hand off 1–6 design IDs and the original source views to Design Lock.
+4. In STRUCTURE, click an image to enlarge it and use the checkbox to select 1–6 designs directly.
+5. From LOCK, hand off the selected design IDs and original source views to Design Lock.
 
 Explore and PRO analysis and generation requests use only prepared original customer photos. Generated outputs and registered model photos never become analysis or generation inputs; only mirrored outputs are flipped back before the Provider result is displayed directly.
 
