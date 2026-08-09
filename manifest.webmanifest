@@ -1,7 +1,7 @@
 {
-  "name": "Hairloom PRO",
-  "short_name": "Hairloom PRO",
-  "description": "사진과 요청으로 헤어 디자인을 생성하는 Hairloom PRO",
+  "name": "Hairloom",
+  "short_name": "Hairloom",
+  "description": "사진과 요청으로 헤어 디자인을 생성하는 Hairloom",
   "lang": "ko",
   "id": "/consultation/",
   "start_url": "/consultation/",

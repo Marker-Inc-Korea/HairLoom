@@ -33,10 +33,10 @@ import {
 const app = document.querySelector('#app');
 const imageLightbox = document.querySelector('#imageLightbox');
 const imageLightboxImage = document.querySelector('#imageLightboxImage');
-const stageLabels = Object.freeze({ 0: 'SOURCE', 2: 'STRUCTURE', 5: 'LOCK' });
+const stageLabels = Object.freeze({ 0: 'SOURCE', 2: 'RESULTS', 5: 'LOCK' });
 const visibleStages = Object.freeze([
   { label: 'SOURCE', stateIndex: 0 },
-  { label: 'STRUCTURE', stateIndex: 2 },
+  { label: 'RESULTS', stateIndex: 2 },
   { label: 'LOCK', stateIndex: 5 }
 ]);
 const state = {
@@ -124,16 +124,14 @@ function render() {
   const currentContent = app.querySelector('.content');
   const preserveScroll = currentContent?.dataset.stage === String(state.stage);
   const scrollTop = preserveScroll ? currentContent.scrollTop : 0;
-  const step = Math.max(1, visibleStages.findIndex((item) => item.stateIndex === state.stage) + 1);
   const stageMarkup = ({ 0: renderSource, 2: renderStructure, 5: renderAgreement }[state.stage] || renderSource)();
   app.innerHTML = h`<div class="workspace">
     <aside class="rail">
-      ${state.stage === 5 ? '<button class="brand" id="backToList" type="button" aria-label="Back to structure list">H</button>' : '<span class="brand" aria-hidden="true">H</span>'}
+      ${state.stage === 5 ? '<button class="brand" id="backToList" type="button" aria-label="Back to results">H</button>' : '<span class="brand" aria-hidden="true">H</span>'}
       <nav class="stages" aria-label="Progress">${visibleStages.filter(({ stateIndex }) => stageEnabled(stateIndex)).map(({ label, stateIndex }) => state.stage === stateIndex ? `<span class="stage" aria-label="${label}" aria-current="true"><i></i></span>` : `<button class="stage" aria-label="${label}" data-stage="${stateIndex}"><i></i></button>`).join('')}</nav>
-      <div class="rail-count"><b>${String(step).padStart(2, '0')}</b><span>/ 03</span></div>
     </aside>
     <main class="content" data-stage="${state.stage}">
-      <header class="content-head"><b>HAIRLOOM PRO</b><span>${String(step).padStart(2, '0')} / 03 · ${currentStageLabel()}</span></header>
+      <header class="content-head"><b>HAIRLOOM</b><span>${currentStageLabel()}</span></header>
       ${state.error ? `<div class="status-banner error" role="alert">${esc(state.error)}</div>` : currentStageStatus() ? `<div class="status-banner" role="status">${esc(currentStageStatus())}</div>` : ''}
       ${stageMarkup}
     </main>
@@ -183,8 +181,8 @@ function renderSource() {
     : `<div class="source-intake-actions one"><button type="button" data-upload-input="${galleryInputId}">사진 선택</button></div>`;
   const previousButton = state.sourceViewIndex > 0 ? '<button type="button" data-source-step="-1" aria-label="Previous view">←</button>' : '<span></span>';
   const nextButton = state.sourceViewIndex < BOARD_VIEWS.length - 1 ? '<button type="button" data-source-step="1" aria-label="Next view">→</button>' : '<span></span>';
-  const generateButton = ready ? `<div class="source-next"><button class="next-button" id="toStructures" data-ready="true">${state.structurePreparing ? 'PREPARING…' : 'GENERATE 100'}</button></div>` : '';
-  return `<section class="source-step single-source"><div class="source-view-head"><b>PHOTO + REQUEST</b><span>${required} / 1 REQUIRED</span></div><div class="source-intake-layout"><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><button class="single-view-upload ${source ? 'filled' : ''}" type="button" data-upload-input="${galleryInputId}" aria-label="${source ? 'Replace' : 'Add'} ${view.label} photo" aria-busy="${processing ? 'true' : 'false'}">${uploadContent}</button>${cameraInput}<input id="${galleryInputId}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label} 갤러리 사진 선택">${intakeActions}<div class="source-view-nav">${previousButton}<nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => index === state.sourceViewIndex ? `<span class="on ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}" aria-current="true"><i></i></span>` : `<button type="button" data-source-view="${index}" class="${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav>${nextButton}</div></div><div class="source-intent"><label for="freePrompt"><b>REQUEST</b></label><textarea id="freePrompt" maxlength="500" placeholder="헤어 스타일 · 색상 · 시술 이력">${esc(state.freePrompt)}</textarea><details class="provider"><summary>API</summary><div class="cfg"><input id="baseURL" aria-label="API URL" placeholder="API URL" value="${esc(state.cfg.baseURL)}"><input id="model" aria-label="Image model" placeholder="IMAGE MODEL" value="${esc(state.cfg.model)}"><input id="size" aria-label="Size" placeholder="SIZE" value="${esc(state.cfg.size)}"><input id="apiKey" aria-label="API key" placeholder="API KEY" type="password" value="${esc(state.cfg.apiKey)}"></div></details>${generateButton}</div></div></section>`;
+  const continueButton = ready ? '<button class="next-button source-photo-next" id="toStructures">NEXT</button>' : '';
+  return `<section class="source-step single-source"><div class="source-view-head"><b>PHOTO + REQUEST</b><span>${required} / 1 REQUIRED</span></div><div class="source-intake-layout"><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><button class="single-view-upload ${source ? 'filled' : ''}" type="button" data-upload-input="${galleryInputId}" aria-label="${source ? 'Replace' : 'Add'} ${view.label} photo" aria-busy="${processing ? 'true' : 'false'}">${uploadContent}</button>${cameraInput}<input id="${galleryInputId}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label} 갤러리 사진 선택">${intakeActions}${continueButton}<div class="source-view-nav">${previousButton}<nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => index === state.sourceViewIndex ? `<span class="on ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}" aria-current="true"><i></i></span>` : `<button type="button" data-source-view="${index}" class="${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav>${nextButton}</div></div><div class="source-intent"><label for="freePrompt"><b>REQUEST</b></label><textarea id="freePrompt" maxlength="500" placeholder="헤어 스타일 · 색상 · 시술 이력">${esc(state.freePrompt)}</textarea><details class="provider"><summary>API</summary><div class="cfg"><input id="baseURL" aria-label="API URL" placeholder="API URL" value="${esc(state.cfg.baseURL)}"><input id="model" aria-label="Image model" placeholder="IMAGE MODEL" value="${esc(state.cfg.model)}"><input id="size" aria-label="Size" placeholder="SIZE" value="${esc(state.cfg.size)}"><input id="apiKey" aria-label="API key" placeholder="API KEY" type="password" value="${esc(state.cfg.apiKey)}"></div></details></div></div></section>`;
 }
 
 function toneLabel(toneId) {
@@ -208,7 +206,7 @@ function currentStageStatus() { return ''; }
 
 function renderStructure() {
   const slots = state.structureSlots.length ? state.structureSlots : Array.from({ length: 100 }, (_, slotIndex) => ({ slotIndex, status: 'queued' }));
-  return panel('STRUCTURE', `<div class="toolbar"><div class="stats"><span class="pill">ALL 500</span><span class="pill">PROFILE ${state.filteredGroups.length}</span><span class="pill">100 PICKS</span><span class="pill">RANDOM FILL</span><span class="pill">SELECT ${state.shortlist.size}/6</span></div>${state.shortlist.size ? '<button class="next-button" id="toAgreement">LOCK</button>' : ''}</div><div class="structure-board">${slots.map(structureTile).join('')}</div>`);
+  return panel('RESULTS', `<div class="toolbar"><div class="stats"><span class="pill">ALL 500</span><span class="pill">MATCH ${state.filteredGroups.length}</span><span class="pill">100 PICKS</span><span class="pill">RANDOM FILL</span><span class="pill">SELECT ${state.shortlist.size}/6</span></div>${state.shortlist.size ? '<button class="next-button" id="toAgreement">LOCK</button>' : ''}</div><div class="structure-board">${slots.map(structureTile).join('')}</div>`);
 }
 
 function visualHash(value) {
@@ -429,7 +427,7 @@ async function startStructureExplore() {
     pumpQueue();
   } catch (error) {
     state.structurePreparing = false;
-    state.error = error?.message || 'STRUCTURE ERROR';
+    state.error = error?.message || 'RESULTS ERROR';
     render();
   }
 }
@@ -791,7 +789,7 @@ function consultationPrompt(record, item) {
     colorRule,
     `DESIGN ID: ${record.id}`,
     `STYLE: ${familiarStyleName(record.promptAtoms?.titleKo || record.nameKo)}`,
-    `STRUCTURE: ${familiarStyleName(record.promptAtoms?.structureKo || record.baseKo)}`,
+    `HAIR DESIGN: ${familiarStyleName(record.promptAtoms?.structureKo || record.baseKo)}`,
     record.promptAtoms?.frontKo ? `FRONT DESIGN: ${record.promptAtoms.frontKo}` : '',
     record.promptAtoms?.finishKo ? `FINISH: ${record.promptAtoms.finishKo}` : '',
     `CURRENT HAIR: ${state.diagnosis.naturalTexture}, damage ${state.diagnosis.damage}.`,

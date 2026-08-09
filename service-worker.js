@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hairloom-pro-shell-v2';
+const CACHE_NAME = 'hairloom-shell-v3';
 const SHELL_PATHS = new Set([
   '/consultation/',
   '/consultation/index.html',

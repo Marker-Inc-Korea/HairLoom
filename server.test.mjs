@@ -42,7 +42,7 @@ function statusCode(rawResponse) {
   return Number(match[1]);
 }
 
-test('serves PRO publicly and isolates Explore behind opt-in', async () => {
+test('serves Hairloom publicly and isolates Explore behind opt-in', async () => {
   const server = createHairloomServer();
   const port = await listen(server);
   try {
@@ -54,7 +54,7 @@ test('serves PRO publicly and isolates Explore behind opt-in', async () => {
     const publicResponse = await fetch(`http://127.0.0.1:${port}/`);
     assert.equal(publicResponse.status, 200);
     assert.equal(new URL(publicResponse.url).pathname, '/consultation/');
-    assert.match(await publicResponse.text(), /HAIRLOOM · PRO/);
+    assert.match(await publicResponse.text(), /<title>HAIRLOOM<\/title>/);
 
     assert.equal((await fetch(`http://127.0.0.1:${port}/explore/`)).status, 404);
     assert.equal((await fetch(`http://127.0.0.1:${port}/model-previews/`)).status, 404);
@@ -77,9 +77,11 @@ test('serves PRO publicly and isolates Explore behind opt-in', async () => {
     assert.equal(manifest.start_url, '/consultation/');
     assert.equal(manifest.scope, '/consultation/');
     assert.equal(manifest.shortcuts, undefined);
+    assert.equal(manifest.name, 'Hairloom');
+    assert.equal(manifest.short_name, 'Hairloom');
 
     const serviceWorkerSource = await (await fetch(`http://127.0.0.1:${port}/service-worker.js`)).text();
-    assert.match(serviceWorkerSource, /hairloom-pro-shell-v2/);
+    assert.match(serviceWorkerSource, /hairloom-shell-v3/);
     assert.match(serviceWorkerSource, /'\/explore\/'/);
     assert.match(serviceWorkerSource, /'\/model-previews\/'/);
     assert.doesNotMatch(serviceWorkerSource, /modelPreviewRegistry/);
@@ -119,8 +121,8 @@ test('serves only consultation route and allowlisted consultation assets', async
       assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
       assert.match(response.headers.get('cache-control') || '', /no-store/);
       const html = await response.text();
-      assert.match(html, /styles\.css\?v=20260809-essential-v4/);
-      assert.match(html, /app\.mjs\?v=20260809-essential-v4/);
+      assert.match(html, /styles\.css\?v=20260809-results-v5/);
+      assert.match(html, /app\.mjs\?v=20260809-results-v5/);
       assert.match(html, /rel="manifest" href="\/manifest\.webmanifest"/);
       assert.match(html, /serviceWorker\.register\('\/service-worker\.js'\)/);
       assert.match(html, /id="imageLightbox"/);
@@ -159,12 +161,12 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.equal((await fetch(`http://127.0.0.1:${port}/src/modelPreviewRegistry.mjs`)).status, 404);
     assert.match(appSource, /const visibleStages = Object\.freeze/);
     assert.match(appSource, /\{ label: 'SOURCE', stateIndex: 0 \}/);
-    assert.match(appSource, /\{ label: 'STRUCTURE', stateIndex: 2 \}/);
+    assert.match(appSource, /\{ label: 'RESULTS', stateIndex: 2 \}/);
     assert.doesNotMatch(appSource, /\{ label: 'COMPARE', stateIndex:/);
     assert.match(appSource, /\{ label: 'LOCK', stateIndex: 5 \}/);
     assert.doesNotMatch(appSource, /\{ label: 'PROFILE', stateIndex:/);
     assert.doesNotMatch(appSource, /\{ label: 'VARIATION', stateIndex:/);
-    assert.match(appSource, /\/ 03/);
+    assert.doesNotMatch(appSource, /\/ 03|HAIRLOOM PRO|panel\('STRUCTURE'\)|label: 'STRUCTURE'/);
     assert.match(appSource, /FRONT REQUIRED/);
     assert.match(appSource, /purpose: 'structure'/);
     assert.match(appSource, /id="backToList"/);
@@ -199,7 +201,9 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.match(appSource, /id="freePrompt"/);
     assert.match(appSource, /<b>REQUEST<\/b>/);
     assert.match(appSource, /<summary>API<\/summary>/);
-    assert.match(appSource, /GENERATE 100/);
+    assert.match(appSource, /<button class="next-button source-photo-next" id="toStructures">NEXT<\/button>/);
+    assert.match(appSource, /\$\{intakeActions\}\$\{continueButton\}<div class="source-view-nav">/);
+    assert.doesNotMatch(appSource, /GENERATE 100/);
     assert.match(appSource, /function applyLocalProfile/);
     assert.doesNotMatch(appSource, /AI HAIR ANALYSIS|>ANALYZE<\/button>|analysisModel|reanalyze|analysisStatus|runHairAnalysis|원하는 헤어를 자유롭게 적어주세요|uncertainties|modelPreviewRegistry|model-previews|registered-model/);
     assert.match(appSource, /state\.sourceProcessing = true/);
@@ -213,9 +217,9 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.doesNotMatch(appSource, /function goToProfile/);
     assert.doesNotMatch(appSource, /id="toProfile"/);
     assert.doesNotMatch(appSource, /id="toColor"/);
-    assert.match(appSource, /PREPARING…/);
+    assert.doesNotMatch(appSource, /PREPARING…/);
     assert.match(appSource, /requestAnimationFrame/);
-    assert.match(appSource, /const generateButton = ready \?/);
+    assert.match(appSource, /const continueButton = ready \?/);
     assert.match(appSource, /visibleStages\.filter\(\(\{ stateIndex \}\) => stageEnabled\(stateIndex\)\)/);
     assert.match(appSource, /state\.stage === 5 \? '<button class="brand"/);
     assert.match(appSource, /state\.stage === stateIndex \? `<span class="stage"/);
@@ -303,7 +307,10 @@ test('serves only consultation route and allowlisted consultation assets', async
     assert.doesNotMatch(consultationCss, /\.analysis-card/);
     assert.match(consultationCss, /safe-area-inset-bottom/);
     assert.doesNotMatch(consultationCss, /\.mask-canvas-stage/);
-    assert.match(consultationCss, /\.source-next\{/);
+    assert.match(consultationCss, /\.source-photo-next\{/);
+    assert.doesNotMatch(consultationCss, /\.source-next\{/);
+    assert.match(consultationCss, /\.content\{touch-action:pan-y;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch\}/);
+    assert.match(consultationCss, /\.structure-board,\.structure-tile,\.tile-image-button\{touch-action:pan-y\}/);
     assert.match(consultationCss, /fullscreen image enlargement and direct shortlist/);
     assert.doesNotMatch(consultationCss, /registered-preview|model-preview-link|registered-model-label/);
     assert.match(consultationCss, /\.image-lightbox-shell\{[^}]*width:100vw;height:100dvh/);

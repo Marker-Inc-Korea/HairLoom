@@ -2,20 +2,20 @@
 
 [한국어 README](README.md)
 
-Hairloom is the public Hairloom PRO app for generating hairstyle designs from prepared customer originals and a freeform request.
+Hairloom is the public app for generating hairstyle designs from prepared customer originals and a freeform request.
 
 ## Features
 
 - Installable mobile PWA with camera capture and gallery selection
-- AI hair analysis from the prepared customer original and `REQUEST`
-- Three-stage `SOURCE → STRUCTURE → LOCK` flow
+- Conservative local hair profile from the prepared customer original and `REQUEST`
+- `SOURCE → RESULTS → LOCK` flow
 - 100 fixed results, fullscreen image enlargement, and direct 1–6 selection
 - Original-only Provider lineage; generated images are never request inputs
 
 ## Routes
 
 ```text
-Hairloom PRO: http://127.0.0.1:4180/
+Hairloom:    http://127.0.0.1:4180/
 Health check:  http://127.0.0.1:4180/healthz
 ```
 
@@ -31,21 +31,21 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-Open `http://127.0.0.1:4180/` in a browser. The root redirects to PRO.
+Open `http://127.0.0.1:4180/` in a browser.
 
 ### Install as a mobile app
 
 - Android Chrome: use the install icon in the address bar or choose `Install app` from the menu.
 - iPhone/iPad Safari: choose `Add to Home Screen` from the share menu.
-- The installed app contains Hairloom PRO only.
-- Only the public shell is cached. Customer photos, AI analysis, Provider traffic, generated images, and API keys are never cached.
+- The installed app contains the public Hairloom surface only.
+- Only the public shell is cached. Customer photos, local profiles, Provider traffic, generated images, and API keys are never cached.
 
 ## Usage
 
 1. Capture or select the required FRONT photo. SIDE / BACK / CROWN / NAPE / DETAIL are optional.
 2. Enter the desired hair, color, and known treatment history in `REQUEST`.
 3. Configure the URL, image model, size, and API key under `API`.
-4. Select `GENERATE 100`, then open any result as a fullscreen image.
+4. Select `NEXT` below the photo controls, then open any result as a fullscreen image.
 5. Select 1–6 results and pass them to `LOCK`.
 
 Hairloom derives a conservative local profile from the photo and REQUEST. Only prepared customer originals enter Provider generation requests, and generated images are never reused as inputs.
@@ -93,7 +93,7 @@ To use Codex itself with a ChatGPT account, run the current Codex CLI and select
 
 ## Trend registry
 
-Hairloom never uses external social images as generation inputs. The trend collector retains only style names, publication timestamps, public permalinks, sample counts, and momentum signals, then maps them to existing `HLM-C-*` structure IDs. The initial registry contains 40 stylist-reviewed baseline styles. Trend contributes at most a 0–3 Explore selection bonus and 5 PRO suitability points; feasibility and original-source lineage always win.
+Hairloom never uses external social images as generation inputs. The trend collector retains only style names, publication timestamps, public permalinks, sample counts, and momentum signals, then maps them to existing `HLM-C-*` design IDs. The initial registry contains 40 stylist-reviewed baseline styles. Trend is only a bounded secondary signal: at most 3 points in Explore and 5 points in public recommendations. Feasibility and original-source lineage always win.
 
 Verify or rebuild the deterministic local snapshot:
 
@@ -183,7 +183,7 @@ npm run verify
 Current baseline:
 
 ```text
-91 tests passing
+92 tests passing
 1,080-design taxonomy check passing
 6,500-design v2 master catalog check passing
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
@@ -194,12 +194,12 @@ trendRegistryVersion: HLM-TRENDS-2026-07-1
 ## Main files
 
 ```text
-server.mjs                        `/` → PRO redirect and public asset allowlist
-consultation/                     Public Hairloom PRO UI
+server.mjs                        `/` → Hairloom redirect and public asset allowlist
+consultation/                     Public Hairloom UI
 explore/                          Internal Explore UI enabled only by environment flag
 src/exploreCore.mjs               Shared catalog and queue domain logic
 src/consultationCore.mjs          Consultation, feasibility, and queue logic
-src/hairAnalysis.mjs              Original-photo AI analysis and internal conversion
+src/hairAnalysis.mjs              Local hair profile, color-request parsing, and internal conversion
 src/trendRegistry.mjs             Trend validation, scoring, and catalog mapping
 src/hairTrendData.mjs             Generated 40-record runtime trend snapshot
 src/modelPreviewRegistry.mjs      Deferred future model-library module
@@ -216,10 +216,10 @@ server.mjs                         Local-only static server
 ## Development principles
 
 - Hairloom and BeautyTape are separate repositories.
-- Base Explore uses only the original FRONT photo; PRO uses only source views supplied by the user.
-- PRO does not create or send a hair mask, and non-current colors require no mask-confirmation step.
+- Base Explore uses only the original FRONT photo; public Hairloom uses only source views supplied by the user.
+- The public surface does not create or send a hair mask, and non-current colors require no mask-confirmation step.
 - Horizontal mirroring exists only at the provider boundary; final results return to the original orientation.
-- PRO uses the provider result directly without source-pixel compositing.
+- Public results use the Provider output directly without source-pixel compositing.
 - High-damage profiles exclude perm and extension designs.
 - External social images are never stored, served, or used as generation inputs; only validated metadata signals are accepted.
 - Customer photos, generated images, API keys, and QA artifacts never belong in the repository.

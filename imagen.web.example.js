@@ -1,6 +1,6 @@
-// Hairloom PRO local image-provider fallback.
+// Hairloom local image-provider fallback.
 //
-// Preferred: enter Base URL / API Key / Image Model / Size under API in Hairloom PRO.
+// Preferred: enter Base URL / API Key / Image Model / Size under API in Hairloom.
 // The API key stays in sessionStorage; non-secret provider settings stay in localStorage.
 //
 // Copy this file to imagen.web.js only when persistent local defaults are needed.

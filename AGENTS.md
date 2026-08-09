@@ -9,10 +9,10 @@ This is the machine-operable guide for work in the standalone Hairloom repositor
 - Runtime: Node.js 20+
 - Module system: native ESM
 - Build step: none
-- App URL: `http://127.0.0.1:4180/` redirects to Hairloom PRO at `/consultation/`
+- App URL: `http://127.0.0.1:4180/` redirects to the public Hairloom route at `/consultation/`
 - Health URL: `http://127.0.0.1:4180/healthz`
 - Main verification: `npm run verify`
-- Expected baseline: 91 tests passing
+- Expected baseline: 92 tests passing
 
 ## Hard project boundary
 
@@ -42,39 +42,39 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, catalog/consultation/server/trend/scheduler/automation tests, deferred model-preview module tests, hair-analysis tests, and the 91-test baseline.
+`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, catalog/consultation/server/trend/scheduler/automation tests, deferred model-preview module tests, hair-analysis tests, and the 92-test baseline.
 
 ## Product invariants
 
-- Hairloom PRO is the only public product surface. `/` redirects to `/consultation/`.
+- Hairloom is the only public product surface. `/` redirects to `/consultation/`.
 - Explore is an internal route at `/explore/`, disabled unless the server starts with `HAIRLOOM_ENABLE_EXPLORE=1`.
-- PRO camera capture (`capture="user"`) and gallery selection must feed the same prepared-original FRONT pipeline.
-- PRO must not expose or call the former AI hair-analysis surface. It derives a conservative local profile from the prepared original, local color sampling, and REQUEST text only.
+- Public Hairloom camera capture (`capture="user"`) and gallery selection must feed the same prepared-original FRONT pipeline.
+- Public Hairloom must not expose or call the former AI hair-analysis surface. It derives a conservative local profile from the prepared original, local color sampling, and REQUEST text only.
 - The local profile must never infer identity, face shape, health, ethnicity, or gender identity. `catalogLine` describes haircut geometry only and may be `F`, `M`, or neutral `U`.
 - Visually unobservable history such as bleach count, recent perm, or extensions must use conservative defaults rather than fabricated certainty.
 - High visible damage excludes every perm and extension/piece design regardless of REQUEST wording.
 - Every Provider request uses a prepared original customer photo.
 - Generated pixels and catalog model photos are never subsequent request inputs.
-- The installable mobile shell contains PRO only. Its service worker must never cache Explore, model-preview routes, customer photos, analysis payloads, Provider requests/responses, generated images, API keys, `imagen.web.js`, blob URLs, or data URLs.
+- The installable mobile shell contains public Hairloom only. Its service worker must never cache Explore, model-preview routes, customer photos, analysis payloads, Provider requests/responses, generated images, API keys, `imagen.web.js`, blob URLs, or data URLs.
 - REQUEST text and local-profile settings must be included in deterministic seeds/cache keys so changed intent cannot reuse stale results.
-- Loading-model previews and the model manager are deferred future work. Their dormant source and tests may remain, but active PRO/Explore code must not import them and the server, manifest, and service worker must not expose their routes or assets.
+- Loading-model previews and the model manager are deferred future work. Their dormant source and tests may remain, but active public Hairloom/Explore code must not import them and the server, manifest, and service worker must not expose their routes or assets.
 - Explore concurrency is capped at 32 per tab.
 - Results use 100 fixed slots and must not reorder on completion.
 - Shortlists contain 1–6 current `HLM-*` design IDs.
 - Explore handoff requires the current `catalogVersion` and `promptVersion`.
 - Standard Design Lock continues to use its normal recommendation path.
-- PRO remains a separate three-stage route: `SOURCE → STRUCTURE → LOCK`.
-- PRO requires FRONT and accepts optional SIDE / BACK / CROWN / NAPE / DETAIL originals.
-- PRO SOURCE contains only camera/gallery intake, one REQUEST field, collapsed image Provider settings, and the generation action when ready. It must not render an AI hair-analysis card, analysis button, explanatory profile copy, manual diagnosis, or color controls.
-- PRO STRUCTURE lightboxes are enlargement-only. Additional variation/COMPARE generation controls must not be rendered; users select 1–6 completed structure tiles directly for LOCK.
+- Public Hairloom uses `SOURCE → RESULTS → LOCK` without numeric stage counts.
+- It requires FRONT and accepts optional SIDE / BACK / CROWN / NAPE / DETAIL originals.
+- SOURCE contains camera/gallery intake, one REQUEST field, collapsed image Provider settings, and `NEXT` directly below photo controls when the original is ready. It must not render a separate GENERATE 100 action, AI hair-analysis card, analysis button, explanatory profile copy, manual diagnosis, or color controls.
+- RESULTS lightboxes are enlargement-only. Additional variation/COMPARE generation controls must not be rendered; users select 1–6 completed result tiles directly for LOCK.
 - The silent local profile maps to the existing feasibility, diversity, color, deterministic seed, and handoff contracts without a Provider vision request.
-- PRO does not create, confirm, or send hair masks; current and non-current natural tones use the same maskless provider path.
-- PRO Provider traffic uses only `POST /images/edits`; it must not call `/responses` or `/chat/completions` for hair analysis.
+- Public Hairloom does not create, confirm, or send hair masks; current and non-current natural tones use the same maskless provider path.
+- Provider traffic uses only `POST /images/edits`; it must not call `/responses` or `/chat/completions` for hair analysis.
 - Changing the source photo or REQUEST invalidates the local profile and generated surfaces.
-- PRO and Design Lock prompts must use the shared low-sheen satin-to-matte surface contract and reject wet, oily, glassy, plastic, metallic, lacquered, or synthetic-wig shine.
+- Public Hairloom and Design Lock prompts must use the shared low-sheen satin-to-matte surface contract and reject wet, oily, glassy, plastic, metallic, lacquered, or synthetic-wig shine.
 - Core female and male records must receive distinct hair-only line-treatment prompts: feminine connected curves and blended face-framing versus masculine directional planes, broader sections, and controlled temple/nape transitions. The named design remains authoritative, and these rules must never alter face, body, or identity.
 - Trend signals are metadata-only and map to stable core design prefixes. External images, thumbnails, Base64, media URLs, and image data URLs must never be stored, served, or used as generation inputs.
-- Trend contributes at most 3 selection points in Explore and 5 suitability points in PRO; hard feasibility, damage safety, source lineage, and deterministic diversity remain authoritative.
+- Trend contributes at most 3 selection points in Explore and 5 suitability points in public Hairloom; hard feasibility, damage safety, source lineage, and deterministic diversity remain authoritative.
 - `data/hair-trend-signals.json` is the reviewed source ledger and watch configuration. `src/hairTrendData.mjs` is generated only by `scripts/syncHairTrends.mjs`; never hand-edit it.
 - Instagram hashtag watch configuration must stay at or below 30 unique queries and live collection must fail visibly without configured Meta or Naver credentials.
 - Periodic trend updates use the managed macOS launchd label `com.hairloom.trend-update`, default to 14 days (336 hours), and accept only integer intervals from 1 to 336 hours.
@@ -84,9 +84,11 @@ HOST=127.0.0.1 PORT=4180 npm run start
 - Automated trend refreshes may commit changes only from `data/hair-trend-signals.json` and `src/hairTrendData.mjs` on `automation/hair-trends`, must target the default branch and run full verification first, and must fail on every other tracked change or non-ignored untracked file.
 - GitHub Actions credentials must remain repository secrets or variables. Never write them to generated data, workflow artifacts, commits, logs, or PR text.
 - README subscription guidance must state that ChatGPT subscriptions and API billing are separate. Agents must never expose ChatGPT cookies, passwords, browser tokens, or `~/.codex/auth.json`, and must not claim Codex sign-in supplies Hairloom's `/images/edits` API.
-- PRO fixed 100-slot allocations remain deterministic, approximately balance supplied views, and retain view/mirror/color axes through retries.
+- Public Hairloom fixed 100-slot allocations remain deterministic, approximately balance supplied views, and retain view/mirror/color axes through retries.
 - Provider-side mirrored source images must be flipped back before display.
-- PRO displays the provider result directly after orientation restoration; it does not composite protected source pixels over the result.
+- Public Hairloom displays the provider result directly after orientation restoration; it does not composite protected source pixels over the result.
+- RESULTS must remain vertically scrollable while queued and active tiles are loading; tile image controls must permit `pan-y` touch scrolling.
+- REQUEST color parsing must accept catalog color labels, common Korean aliases, multiple requested colors, generic color families, and percentage-based resemblance intensity deterministically.
 - Consultation handoff schema v2 must validate schema, generation-axis, source-transform, catalog, and prompt versions; legacy v1 is migration-only.
 
 ## Runtime catalog

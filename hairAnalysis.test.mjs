@@ -37,6 +37,20 @@ test('free prompt overrides target color, resemblance and haircut geometry witho
   assert.equal('genderIdentity' in analysis, false);
 });
 
+test('prompt color aliases, multiple targets and percentages map deterministically', () => {
+  const vivid = defaultHairAnalysis({ promptIntent: '핑크 브라운과 실버 그레이를 90% 정도로 선명하게' });
+  assert.deepEqual(vivid.targetToneIds, ['rose-brown', 'ash-gray']);
+  assert.equal(vivid.colorIntensity, 'vivid');
+
+  const subtle = defaultHairAnalysis({ promptIntent: '밀크티 베이지를 55% 정도로 자연스럽게' });
+  assert.deepEqual(subtle.targetToneIds, ['beige-blonde']);
+  assert.equal(subtle.colorIntensity, 'subtle');
+
+  const generic = defaultHairAnalysis({ promptIntent: '그냥 브라운으로 중간 정도' });
+  assert.deepEqual(generic.targetToneIds, ['dark-brown']);
+  assert.equal(generic.colorIntensity, 'balanced');
+});
+
 test('analysis prompt forbids identity and hidden-history inference', () => {
   const prompt = buildHairAnalysisPrompt('부드러운 웨이브');
   assert.match(prompt, /Never infer or describe identity/);

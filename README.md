@@ -2,20 +2,20 @@
 
 [English README](README.en.md)
 
-Hairloom은 고객 원본 사진과 요청을 기반으로 헤어 디자인을 생성하는 Hairloom PRO 앱입니다.
+Hairloom은 고객 원본 사진과 요청을 기반으로 헤어 디자인을 생성하는 앱입니다.
 
 ## 주요 기능
 
 - 설치 가능한 모바일 PWA와 카메라 촬영·갤러리 선택
-- 고객 원본 사진과 자유 입력 REQUEST 기반 AI 헤어 분석
-- `SOURCE → STRUCTURE → LOCK` 3단계 흐름
+- 고객 원본 사진과 자유 입력 REQUEST 기반 로컬 헤어 프로필
+- `SOURCE → RESULTS → LOCK` 흐름
 - 고정 100개 결과, 이미지 전체화면 확대, 1–6개 직접 선택
 - 준비된 고객 원본만 Provider 입력으로 사용하는 원본 계보 유지
 
 ## 화면
 
 ```text
-Hairloom PRO: http://127.0.0.1:4180/
+Hairloom:     http://127.0.0.1:4180/
 상태 확인:    http://127.0.0.1:4180/healthz
 ```
 
@@ -31,21 +31,21 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-브라우저에서 `http://127.0.0.1:4180/`을 엽니다. 루트 주소는 PRO로 연결됩니다.
+브라우저에서 `http://127.0.0.1:4180/`을 엽니다.
 
 ### 모바일 앱으로 설치
 
 - Android Chrome: 주소창의 설치 아이콘 또는 메뉴의 `앱 설치`를 선택합니다.
 - iPhone/iPad Safari: 공유 메뉴에서 `홈 화면에 추가`를 선택합니다.
-- 설치 앱은 Hairloom PRO만 포함합니다.
-- 오프라인 앱 셸만 캐시하며 고객 사진, AI 분석, Provider 요청·응답, 생성 이미지, API 키는 캐시하지 않습니다.
+- 설치 앱에는 공개 Hairloom 화면만 포함합니다.
+- 오프라인 앱 셸만 캐시하며 고객 사진, 로컬 프로필, Provider 요청·응답, 생성 이미지, API 키는 캐시하지 않습니다.
 
 ## 사용법
 
 1. FRONT 사진을 촬영하거나 갤러리에서 선택합니다. SIDE / BACK / CROWN / NAPE / DETAIL은 선택 사항입니다.
 2. `REQUEST`에 원하는 헤어와 색상, 알고 있는 시술 이력을 입력합니다.
 3. `API`에 URL, 이미지 모델, 크기, API 키를 설정합니다.
-4. `GENERATE 100`으로 생성하고 이미지를 눌러 전체화면으로 확대합니다.
+4. 사진 선택 아래의 `NEXT`로 결과 생성을 시작하고 이미지를 눌러 전체화면으로 확대합니다.
 5. 1–6개를 선택해 `LOCK`으로 전달합니다.
 
 사진과 REQUEST에서 보수적인 로컬 헤어 프로필을 만들며, Provider에는 생성할 때 준비된 고객 원본만 전달합니다. 생성 이미지는 다음 요청의 입력으로 재사용하지 않습니다.
@@ -93,7 +93,7 @@ Codex 자체를 ChatGPT 계정으로 사용하는 절차는 최신 Codex CLI에�
 
 ## 트렌드 레지스트리
 
-Hairloom은 외부 소셜 이미지를 생성 입력으로 사용하지 않습니다. 트렌드 수집기는 스타일명, 게시 시점, 공개 permalink, 표본 수와 상승 신호만 보관하고 이를 기존 `HLM-C-*` 구조 ID에 연결합니다. 현재 40개 스타일의 스타일리스트 검수 기준선을 포함하며, 트렌드는 Explore에서 최대 3점의 선택 보너스와 PRO 적합도에서 최대 5점만 차지합니다. 시술 가능성과 원본 계보가 항상 우선합니다.
+Hairloom은 외부 소셜 이미지를 생성 입력으로 사용하지 않습니다. 트렌드 수집기는 스타일명, 게시 시점, 공개 permalink, 표본 수와 상승 신호만 보관하고 이를 기존 `HLM-C-*` 디자인 ID에 연결합니다. 현재 40개 스타일의 스타일리스트 검수 기준선을 포함하며, 트렌드는 Explore에서 최대 3점, 공개 추천에서 최대 5점의 보조 신호만 사용합니다. 시술 가능성과 원본 계보가 항상 우선합니다.
 
 로컬 기준선과 생성 레지스트리를 검사하거나 다시 생성합니다.
 
@@ -183,7 +183,7 @@ npm run verify
 현재 기준:
 
 ```text
-91 tests passing
+92 tests passing
 1,080-design taxonomy check passing
 6,500-design v2 master catalog check passing
 catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
@@ -194,12 +194,12 @@ trendRegistryVersion: HLM-TRENDS-2026-07-1
 ## 주요 파일
 
 ```text
-server.mjs                        `/` → PRO 연결 및 공개 자산 허용 목록
-consultation/                     공개 Hairloom PRO UI
+server.mjs                        `/` → Hairloom 연결 및 공개 자산 허용 목록
+consultation/                     공개 Hairloom UI
 explore/                          환경 변수로만 활성화되는 내부 Explore UI
 src/exploreCore.mjs               카탈로그·큐 공통 도메인 로직
 src/consultationCore.mjs          상담·시술 가능성·큐 로직
-src/hairAnalysis.mjs              원본 사진 AI 분석·보수적 폴백·내부 설정 변환
+src/hairAnalysis.mjs              로컬 헤어 프로필·색상 요청 해석·내부 설정 변환
 src/trendRegistry.mjs             트렌드 검증·점수·카탈로그 매핑
 src/hairTrendData.mjs             생성된 40개 런타임 트렌드 스냅샷
 src/modelPreviewRegistry.mjs      미래 작업으로 보류된 모델 라이브러리 모듈
@@ -216,10 +216,10 @@ server.mjs                         로컬 전용 정적 서버
 ## 개발 원칙
 
 - Hairloom과 BeautyTape는 별도 저장소입니다.
-- 기본 Explore는 원본 FRONT만, PRO는 사용자가 제공한 원본 뷰만 생성 입력으로 사용합니다.
-- PRO는 헤어 마스크를 생성하거나 전송하지 않으며, 다른 색상도 별도 마스크 확인 없이 생성합니다.
+- 기본 Explore는 원본 FRONT만, 공개 Hairloom은 사용자가 제공한 원본 뷰만 생성 입력으로 사용합니다.
+- 공개 화면은 헤어 마스크를 생성하거나 전송하지 않으며, 다른 색상도 별도 마스크 확인 없이 생성합니다.
 - 좌우 반전은 Provider 입력에만 적용하고 결과는 원래 방향으로 복원합니다.
-- PRO 결과에는 원본 픽셀 합성을 적용하지 않고 Provider 결과를 직접 사용합니다.
+- 공개 결과에는 원본 픽셀 합성을 적용하지 않고 Provider 결과를 직접 사용합니다.
 - 고손상 조건에서는 펌과 붙임머리를 제외합니다.
 - 외부 소셜 이미지는 저장·서빙·생성 입력으로 사용하지 않고 검증된 메타데이터 신호만 사용합니다.
 - 고객 사진, 생성 이미지, API 키와 QA 자료를 저장소에 포함하지 않습니다.

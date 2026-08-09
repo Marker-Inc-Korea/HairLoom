@@ -22,25 +22,25 @@ const DAMAGES = new Set(['low', 'medium', 'high']);
 const COLOR_INTENSITIES = new Set(['subtle', 'balanced', 'vivid']);
 const TONE_BY_ID = new Map(HAIR_COLOR_TONES.map((tone) => [tone.id, tone]));
 const TONE_TERMS = Object.freeze([
-  ['natural-black', ['자연 흑색', '자연흑색', '내추럴 블랙', '검정', '검은색', '블랙']],
-  ['soft-black', ['소프트 블랙', '부드러운 블랙']],
-  ['blue-black', ['블루 블랙', '블루블랙']],
-  ['dark-brown', ['다크 브라운', '다크브라운', '짙은 갈색']],
-  ['chocolate-brown', ['초콜릿 브라운', '초코 브라운', '초코브라운']],
-  ['mocha-brown', ['모카 브라운', '모카브라운']],
+  ['muted-ash-brown', ['뮤트 애쉬 브라운', '뮤트애쉬브라운', '토프 브라운', '토프브라운']],
+  ['chocolate-brown', ['초콜릿 브라운', '초코 브라운', '초코브라운', '초콜릿']],
+  ['burgundy-brown', ['버건디 브라운', '버건디', '와인 브라운', '와인색', '레드 브라운', '체리 브라운']],
+  ['copper-brown', ['코퍼 브라운', '코퍼브라운', '오렌지 브라운', '오렌지브라운', '구리색']],
+  ['caramel-brown', ['카라멜 브라운', '카라멜브라운', '골드 브라운', '골든 브라운']],
+  ['rose-brown', ['로즈 브라운', '로즈브라운', '핑크 브라운', '핑크브라운', '로즈 핑크', '핑크']],
+  ['lavender-ash', ['라벤더 애쉬', '라벤더애쉬', '퍼플 애쉬', '보라색', '퍼플']],
+  ['blue-black', ['블루 블랙', '블루블랙', '네이비 블랙', '남색 블랙']],
+  ['ash-blonde', ['애쉬 블론드', '애쉬블론드', '플래티넘 블론드', '백금발']],
+  ['beige-blonde', ['베이지 블론드', '베이지블론드', '밀크티 베이지', '밀크티', '샌드 베이지']],
+  ['honey-blonde', ['허니 블론드', '허니블론드', '골드 블론드', '금발']],
+  ['ash-gray', ['애쉬 그레이', '애쉬그레이', '실버 그레이', '실버', '은발', '회색']],
+  ['ash-brown', ['애쉬 브라운', '애쉬브라운', '쿨 브라운', '회갈색']],
+  ['mocha-brown', ['모카 브라운', '모카브라운', '올리브 브라운', '카키 브라운']],
   ['cacao-brown', ['카카오 브라운', '카카오브라운']],
-  ['muted-ash-brown', ['뮤트 애쉬 브라운', '뮤트애쉬브라운']],
-  ['ash-brown', ['애쉬 브라운', '애쉬브라운']],
-  ['warm-brown', ['웜 브라운', '웜브라운']],
-  ['rose-brown', ['로즈 브라운', '로즈브라운']],
-  ['burgundy-brown', ['버건디 브라운', '버건디']],
-  ['copper-brown', ['코퍼 브라운', '코퍼브라운']],
-  ['caramel-brown', ['카라멜 브라운', '카라멜브라운']],
-  ['honey-blonde', ['허니 블론드', '허니블론드']],
-  ['beige-blonde', ['베이지 블론드', '베이지블론드']],
-  ['ash-blonde', ['애쉬 블론드', '애쉬블론드']],
-  ['ash-gray', ['애쉬 그레이', '애쉬그레이', '회색']],
-  ['lavender-ash', ['라벤더 애쉬', '라벤더애쉬']]
+  ['warm-brown', ['웜 브라운', '웜브라운', '내추럴 브라운']],
+  ['dark-brown', ['다크 브라운', '다크브라운', '짙은 갈색', '흑갈색']],
+  ['soft-black', ['소프트 블랙', '부드러운 블랙']],
+  ['natural-black', ['자연 흑색', '자연흑색', '내추럴 블랙', '검정', '검은색', '블랙', '흑발']]
 ]);
 
 function clampNumber(value, min, max, fallback) {
@@ -56,15 +56,27 @@ function normalizedText(value, maxLength = 500) {
   return String(value ?? '').trim().replace(/\s+/g, ' ').slice(0, maxLength);
 }
 
-function promptToneId(prompt) {
+function promptToneIds(prompt) {
   const text = normalizedText(prompt).toLowerCase();
-  if (!text) return null;
-  if (/(현재|원래|지금).{0,8}(색|컬러|톤).{0,8}(유지|그대로)|염색.{0,4}(안|없이)/.test(text)) return PRESERVE_CURRENT_TONE_ID;
+  if (!text) return [];
+  if (/(현재|원래|지금).{0,8}(색|컬러|톤).{0,8}(유지|그대로)|염색.{0,4}(안|없이)/.test(text)) return [PRESERVE_CURRENT_TONE_ID];
+  const ids = [];
+  let remaining = text;
   for (const [id, terms] of TONE_TERMS) {
-    if (terms.some((term) => text.includes(term.toLowerCase()))) return id;
+    const matched = [...terms].sort((a, b) => b.length - a.length).find((term) => remaining.includes(term.toLowerCase()));
+    if (!matched) continue;
+    ids.push(id);
+    remaining = remaining.replaceAll(matched.toLowerCase(), ' ');
   }
-  for (const tone of HAIR_COLOR_TONES) if (text.includes(tone.id)) return tone.id;
-  return null;
+  for (const tone of HAIR_COLOR_TONES) {
+    if (text.includes(tone.id) && !ids.includes(tone.id)) ids.push(tone.id);
+  }
+  if (/(브라운|갈색)/.test(remaining)) ids.push('dark-brown');
+  if (/(블론드|금발)/.test(remaining)) ids.push('beige-blonde');
+  if (/(그레이|회색|실버|은발)/.test(remaining)) ids.push('ash-gray');
+  if (/(레드|빨강|붉은)/.test(remaining)) ids.push('burgundy-brown');
+  if (/(오렌지|주황)/.test(remaining)) ids.push('copper-brown');
+  return [...new Set(ids)];
 }
 
 function promptCatalogLine(prompt) {
@@ -77,9 +89,16 @@ function promptCatalogLine(prompt) {
 
 function promptColorIntensity(prompt) {
   const text = normalizedText(prompt).toLowerCase();
-  if (/(은은|살짝|미묘|자연스럽게)/.test(text)) return 'subtle';
-  if (/(선명|확실|강하게|선택색에 가깝|최대한 비슷)/.test(text)) return 'vivid';
-  if (/(적당|균형|비슷하게)/.test(text)) return 'balanced';
+  const percentage = /(\d{1,3})\s*%/.exec(text);
+  if (percentage) {
+    const value = Math.min(100, Number(percentage[1]));
+    if (value <= 60) return 'subtle';
+    if (value >= 85) return 'vivid';
+    return 'balanced';
+  }
+  if (/(은은|살짝|미묘|자연스럽게|거의 그대로|약하게)/.test(text)) return 'subtle';
+  if (/(선명|확실|강하게|선택색에 가깝|최대한 비슷|쨍하게|진하게)/.test(text)) return 'vivid';
+  if (/(적당|균형|비슷하게|중간 정도)/.test(text)) return 'balanced';
   return null;
 }
 
@@ -131,13 +150,12 @@ export function normalizeHairAnalysis(raw = {}, options = {}) {
     ? String(raw.damage ?? raw.damageCondition).toLowerCase()
     : 'medium';
   const catalogLine = promptCatalogLine(freePrompt) ?? (['F', 'M', 'U'].includes(String(raw.catalogLine).toUpperCase()) ? String(raw.catalogLine).toUpperCase() : 'U');
-  const promptTarget = promptToneId(freePrompt);
+  const promptTargets = promptToneIds(freePrompt);
   const currentToneId = TONE_BY_ID.has(String(raw.currentToneId ?? raw.currentTone ?? '')) ? String(raw.currentToneId ?? raw.currentTone) : 'unknown';
   const rawTargets = Array.isArray(raw.targetToneIds) ? raw.targetToneIds : [raw.targetToneId ?? raw.targetTone].filter(Boolean);
   const validTargets = rawTargets.map((value) => normalizeHairColorToneId(value, { preserve: true })).filter(Boolean);
-  const targetToneIds = Object.freeze([...new Set([promptTarget, ...validTargets].filter(Boolean).length
-    ? [promptTarget, ...validTargets].filter(Boolean)
-    : [PRESERVE_CURRENT_TONE_ID])]);
+  const requestedTargets = [...promptTargets, ...validTargets].filter(Boolean);
+  const targetToneIds = Object.freeze([...new Set(requestedTargets.length ? requestedTargets : [PRESERVE_CURRENT_TONE_ID])]);
   const colorIntensity = promptColorIntensity(freePrompt)
     ?? (COLOR_INTENSITIES.has(String(raw.colorIntensity ?? raw.intensity)) ? String(raw.colorIntensity ?? raw.intensity) : 'balanced');
   const uncertainties = uniqueStrings([
