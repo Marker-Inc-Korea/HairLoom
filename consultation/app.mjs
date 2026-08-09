@@ -23,10 +23,8 @@ import {
   buildConsultationHandoff
 } from '../src/consultationCore.mjs';
 import {
-  DEFAULT_HAIR_ANALYSIS_MODEL,
   defaultHairAnalysis,
   normalizeHairAnalysis,
-  requestHairAnalysis,
   hairAnalysisToDiagnosis,
   hairAnalysisToExploreSettings,
   hairAnalysisToColorProfile
@@ -54,10 +52,7 @@ const state = {
   providerInputCache: new Map(),
   sourceKey: '',
   freePrompt: '',
-  analysis: null,
-  analysisStatus: 'idle',
-  analysisVersion: 0,
-  analysisController: null,
+  localProfile: null,
   catalog: null,
   catalogPromise: null,
   records: [],
@@ -133,8 +128,8 @@ function render() {
   const stageMarkup = ({ 0: renderSource, 2: renderStructure, 5: renderAgreement }[state.stage] || renderSource)();
   app.innerHTML = h`<div class="workspace">
     <aside class="rail">
-      <button class="brand" id="backToList" type="button" aria-label="Back to structure list">H</button>
-      <nav class="stages" aria-label="Progress">${visibleStages.map(({ label, stateIndex }) => `<button class="stage" aria-label="${label}" aria-current="${state.stage === stateIndex}" data-stage="${stateIndex}" ${stageEnabled(stateIndex) ? '' : 'disabled'}><i></i></button>`).join('')}</nav>
+      ${state.stage === 5 ? '<button class="brand" id="backToList" type="button" aria-label="Back to structure list">H</button>' : '<span class="brand" aria-hidden="true">H</span>'}
+      <nav class="stages" aria-label="Progress">${visibleStages.filter(({ stateIndex }) => stageEnabled(stateIndex)).map(({ label, stateIndex }) => state.stage === stateIndex ? `<span class="stage" aria-label="${label}" aria-current="true"><i></i></span>` : `<button class="stage" aria-label="${label}" data-stage="${stateIndex}"><i></i></button>`).join('')}</nav>
       <div class="rail-count"><b>${String(step).padStart(2, '0')}</b><span>/ 03</span></div>
     </aside>
     <main class="content" data-stage="${state.stage}">
@@ -173,20 +168,12 @@ function assignBatchSourceViews(batch, purpose) {
   return assignConsultationSourceViews(batch, availableSourceViewKeys(), `${state.sourceKey}:${purpose}`);
 }
 
-function analysisStatusText() {
-  if (state.analysisStatus === 'analyzing') return 'ANALYZING';
-  if (state.analysisStatus === 'done') return 'READY';
-  if (state.analysisStatus === 'fallback') return 'FALLBACK';
-  if (state.analysisStatus === 'failed') return 'ERROR';
-  return 'AUTO';
-}
 
 function renderSource() {
   const view = BOARD_VIEWS[state.sourceViewIndex] ?? BOARD_VIEWS[0];
   const source = sourceViewSource(view);
   const required = state.originalJpegDataUrl ? 1 : 0;
   const processing = state.sourceProcessing && view.id === 'front';
-  const analyzing = state.analysisStatus === 'analyzing';
   const ready = requiredSourceViewsReady() && !state.sourceProcessing && !state.structurePreparing;
   const uploadContent = source ? `<img src="${esc(source)}" alt="${view.label}">` : processing ? '<span class="source-processing-mark">···</span><small>PREPARING PHOTO</small>' : `<span>＋</span><small>ADD ${view.label}</small>`;
   const galleryInputId = `view-${view.id}-gallery`;
@@ -194,7 +181,10 @@ function renderSource() {
   const intakeActions = view.id === 'front'
     ? `<div class="source-intake-actions"><button type="button" data-upload-input="view-front-camera">카메라로 바로 촬영</button><button type="button" data-upload-input="${galleryInputId}">갤러리에서 선택</button></div>`
     : `<div class="source-intake-actions one"><button type="button" data-upload-input="${galleryInputId}">사진 선택</button></div>`;
-  return `<section class="source-step single-source"><div class="source-view-head"><b>PHOTO + REQUEST</b><span>${required} / 1 REQUIRED</span></div><div class="source-intake-layout"><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><button class="single-view-upload ${source ? 'filled' : ''}" type="button" data-upload-input="${galleryInputId}" aria-label="${source ? 'Replace' : 'Add'} ${view.label} photo" aria-busy="${processing ? 'true' : 'false'}">${uploadContent}</button>${cameraInput}<input id="${galleryInputId}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label} 갤러리 사진 선택">${intakeActions}<div class="source-view-nav"><button type="button" data-source-step="-1" aria-label="Previous view">←</button><nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => `<button type="button" data-source-view="${index}" class="${index === state.sourceViewIndex ? 'on' : ''} ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav><button type="button" data-source-step="1" aria-label="Next view">→</button></div></div><div class="source-intent"><label for="freePrompt"><b>REQUEST</b></label><textarea id="freePrompt" maxlength="500" placeholder="헤어 스타일 · 색상 · 시술 이력">${esc(state.freePrompt)}</textarea><section class="analysis-card ${state.analysisStatus}" aria-live="polite" aria-busy="${analyzing}"><div><b>AI HAIR ANALYSIS</b><span>${analysisStatusText()}</span></div><button id="reanalyze" type="button" ${requiredSourceViewsReady() && !analyzing ? '' : 'disabled'}>ANALYZE</button></section><details class="provider"><summary>API</summary><div class="cfg"><input id="baseURL" aria-label="API URL" placeholder="API URL" value="${esc(state.cfg.baseURL)}"><input id="model" aria-label="Image model" placeholder="IMAGE MODEL" value="${esc(state.cfg.model)}"><input id="analysisModel" aria-label="Analysis model" placeholder="ANALYSIS MODEL" value="${esc(state.cfg.analysisModel)}"><input id="size" aria-label="Size" placeholder="SIZE" value="${esc(state.cfg.size)}"><input id="apiKey" aria-label="API key" placeholder="API KEY" type="password" value="${esc(state.cfg.apiKey)}"></div></details><div class="source-next"><button class="next-button" id="toStructures" data-ready="${ready ? 'true' : 'false'}" ${ready ? '' : 'disabled'}>${state.structurePreparing ? 'PREPARING…' : 'GENERATE 100'}</button></div></div></div></section>`;
+  const previousButton = state.sourceViewIndex > 0 ? '<button type="button" data-source-step="-1" aria-label="Previous view">←</button>' : '<span></span>';
+  const nextButton = state.sourceViewIndex < BOARD_VIEWS.length - 1 ? '<button type="button" data-source-step="1" aria-label="Next view">→</button>' : '<span></span>';
+  const generateButton = ready ? `<div class="source-next"><button class="next-button" id="toStructures" data-ready="true">${state.structurePreparing ? 'PREPARING…' : 'GENERATE 100'}</button></div>` : '';
+  return `<section class="source-step single-source"><div class="source-view-head"><b>PHOTO + REQUEST</b><span>${required} / 1 REQUIRED</span></div><div class="source-intake-layout"><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><button class="single-view-upload ${source ? 'filled' : ''}" type="button" data-upload-input="${galleryInputId}" aria-label="${source ? 'Replace' : 'Add'} ${view.label} photo" aria-busy="${processing ? 'true' : 'false'}">${uploadContent}</button>${cameraInput}<input id="${galleryInputId}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label} 갤러리 사진 선택">${intakeActions}<div class="source-view-nav">${previousButton}<nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => index === state.sourceViewIndex ? `<span class="on ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}" aria-current="true"><i></i></span>` : `<button type="button" data-source-view="${index}" class="${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav>${nextButton}</div></div><div class="source-intent"><label for="freePrompt"><b>REQUEST</b></label><textarea id="freePrompt" maxlength="500" placeholder="헤어 스타일 · 색상 · 시술 이력">${esc(state.freePrompt)}</textarea><details class="provider"><summary>API</summary><div class="cfg"><input id="baseURL" aria-label="API URL" placeholder="API URL" value="${esc(state.cfg.baseURL)}"><input id="model" aria-label="Image model" placeholder="IMAGE MODEL" value="${esc(state.cfg.model)}"><input id="size" aria-label="Size" placeholder="SIZE" value="${esc(state.cfg.size)}"><input id="apiKey" aria-label="API key" placeholder="API KEY" type="password" value="${esc(state.cfg.apiKey)}"></div></details>${generateButton}</div></div></section>`;
 }
 
 function toneLabel(toneId) {
@@ -218,7 +208,7 @@ function currentStageStatus() { return ''; }
 
 function renderStructure() {
   const slots = state.structureSlots.length ? state.structureSlots : Array.from({ length: 100 }, (_, slotIndex) => ({ slotIndex, status: 'queued' }));
-  return panel('STRUCTURE', `<div class="toolbar"><div class="stats"><span class="pill">ALL 500</span><span class="pill">PROFILE ${state.filteredGroups.length}</span><span class="pill">100 PICKS</span><span class="pill">RANDOM FILL</span><span class="pill">SELECT ${state.shortlist.size}/6</span></div><button class="next-button" id="toAgreement" ${state.shortlist.size ? '' : 'disabled'}>LOCK</button></div><div class="structure-board">${slots.map(structureTile).join('')}</div>`);
+  return panel('STRUCTURE', `<div class="toolbar"><div class="stats"><span class="pill">ALL 500</span><span class="pill">PROFILE ${state.filteredGroups.length}</span><span class="pill">100 PICKS</span><span class="pill">RANDOM FILL</span><span class="pill">SELECT ${state.shortlist.size}/6</span></div>${state.shortlist.size ? '<button class="next-button" id="toAgreement">LOCK</button>' : ''}</div><div class="structure-board">${slots.map(structureTile).join('')}</div>`);
 }
 
 function visualHash(value) {
@@ -270,7 +260,7 @@ function structureTile(slot) {
   const selected = state.shortlist.has(slot.designId);
   const ready = slot.status === 'done' && record;
   const number = String(slot.slotIndex + 1).padStart(2, '0');
-  return `<article class="structure-tile ${mosaicTileClass(slot)} ${slot.status} ${selected ? 'selected' : ''}" data-structure-tile="${slot.slotIndex}"><button type="button" class="tile-image-button" data-preview-image aria-label="${number}번 이미지 크게 보기"><img src="${esc(source)}" alt="${ready ? esc(groupLabel(group)) : ''}"></button><input type="checkbox" aria-label="후보 선택 ${slot.slotIndex + 1}" data-short="${esc(slot.designId || '')}" ${selected ? 'checked' : ''} ${ready ? '' : 'disabled'}><span class="structure-meta"><b>${number}</b></span></article>`;
+  return `<article class="structure-tile ${mosaicTileClass(slot)} ${slot.status} ${selected ? 'selected' : ''}" data-structure-tile="${slot.slotIndex}"><button type="button" class="tile-image-button" data-preview-image aria-label="${number}번 이미지 크게 보기"><img src="${esc(source)}" alt="${ready ? esc(groupLabel(group)) : ''}"></button>${ready ? `<input type="checkbox" aria-label="후보 선택 ${slot.slotIndex + 1}" data-short="${esc(slot.designId || '')}" ${selected ? 'checked' : ''}>` : ''}<span class="structure-meta"><b>${number}</b></span></article>`;
 }
 
 function groupLabel(group) { return `${group.lengthKo} · ${familiarStyleName(group.baseKo)} · ${group.frontKo}`; }
@@ -314,14 +304,6 @@ function clearProviderInputCache(viewKey = '') {
 }
 
 
-let analysisPromptTimer = 0;
-
-function scheduleHairAnalysis() {
-  clearTimeout(analysisPromptTimer);
-  analysisPromptTimer = setTimeout(() => {
-    if (requiredSourceViewsReady() && !state.sourceProcessing) runHairAnalysis().catch(() => {});
-  }, 450);
-}
 
 function handleNextAction(event) {
   const button = event.target.closest('button');
@@ -345,11 +327,9 @@ function bind() {
   document.querySelector('#freePrompt')?.addEventListener('input', (event) => {
     state.freePrompt = event.target.value;
     state.mood = state.freePrompt;
-    state.analysisStatus = state.analysis ? 'idle' : state.analysisStatus;
+    applyLocalProfile(state.hairColorDetection.toneId);
     invalidateGeneratedSurfaces('prompt-change');
-    scheduleHairAnalysis();
   });
-  document.querySelector('#reanalyze')?.addEventListener('click', () => runHairAnalysis({ force: true }).catch(() => {}));
   document.querySelectorAll('[data-preview-image]').forEach((button) => button.addEventListener('click', () => openImageLightbox(button)));
   document.querySelectorAll('[data-preview-image] img').forEach((image) => {
     const fit = () => fitMosaicTileToImage(image);
@@ -381,7 +361,7 @@ function syncIntake() {
   state.freePrompt = val('freePrompt') || state.freePrompt;
   state.mood = state.freePrompt;
   if (document.querySelector('#baseURL')) {
-    state.cfg = { baseURL: val('baseURL'), model: val('model'), analysisModel: val('analysisModel'), size: val('size'), apiKey: val('apiKey') };
+    state.cfg = { baseURL: val('baseURL'), model: val('model'), size: val('size'), apiKey: val('apiKey') };
     saveProviderConfig(state.cfg);
   }
 }
@@ -405,56 +385,15 @@ function invalidateGeneratedSurfaces(reason) {
   state.shortlist.clear();
 }
 
-function applyHairAnalysis(value, source) {
-  const analysis = normalizeHairAnalysis(value, { freePrompt: state.freePrompt, source });
-  state.analysis = analysis;
-  state.diagnosis = normalizeDiagnosis(hairAnalysisToDiagnosis(analysis));
-  state.settings = normalizeSettings(hairAnalysisToExploreSettings(analysis));
-  state.hairColorProfile = normalizeHairColorProfile(hairAnalysisToColorProfile(analysis));
+function applyLocalProfile(currentToneId = state.hairColorDetection.toneId) {
+  const profile = normalizeHairAnalysis(defaultHairAnalysis({ currentToneId, promptIntent: state.freePrompt }), { freePrompt: state.freePrompt, source: 'fallback' });
+  state.localProfile = profile;
+  state.diagnosis = normalizeDiagnosis(hairAnalysisToDiagnosis(profile));
+  state.settings = normalizeSettings(hairAnalysisToExploreSettings(profile));
+  state.hairColorProfile = normalizeHairColorProfile(hairAnalysisToColorProfile(profile));
   state.mood = state.freePrompt;
   reconcileHairColorProfile();
-  return analysis;
-}
-
-async function runHairAnalysis({ force = false } = {}) {
-  if (!requiredSourceViewsReady() || state.sourceProcessing) return null;
-  syncIntake();
-  const sourceKeyAtStart = state.sourceKey;
-  const promptAtStart = state.freePrompt;
-  if (!force && state.analysis && state.analysis.promptIntent === promptAtStart && ['done', 'fallback'].includes(state.analysisStatus)) return state.analysis;
-  state.analysisController?.abort();
-  const controller = new AbortController();
-  const version = ++state.analysisVersion;
-  state.analysisController = controller;
-  state.analysisStatus = 'analyzing';
-  render();
-  let localToneId = state.hairColorDetection.toneId;
-  try {
-    const detection = await detectCurrentHairTone('front');
-    if (!detection.stale && detection.toneId !== 'unknown') localToneId = detection.toneId;
-  } catch {
-    state.hairColorDetection = { status: 'failed', source: 'auto', toneId: 'unknown', confidence: 0 };
-  }
-  if (controller.signal.aborted || version !== state.analysisVersion || sourceKeyAtStart !== state.sourceKey || promptAtStart !== state.freePrompt) return null;
-  const fallback = defaultHairAnalysis({ currentToneId: localToneId, promptIntent: promptAtStart });
-  const cfg = resolvedProviderConfig();
-  let result = fallback;
-  let status = 'fallback';
-  if (cfg.baseURL && cfg.apiKey && cfg.apiKey !== 'YOUR_PROXY_API_KEY') {
-    try {
-      const provider = await requestHairAnalysis({ baseURL: cfg.baseURL, apiKey: cfg.apiKey, model: cfg.analysisModel, imageDataUrl: state.originalJpegDataUrl, freePrompt: promptAtStart, signal: controller.signal });
-      result = normalizeHairAnalysis({ ...provider, currentToneId: provider.currentToneId === 'unknown' ? localToneId : provider.currentToneId }, { freePrompt: promptAtStart, source: 'provider' });
-      status = 'done';
-    } catch (error) {
-      if (controller.signal.aborted || error?.name === 'AbortError') return null;
-    }
-  }
-  if (controller.signal.aborted || version !== state.analysisVersion || sourceKeyAtStart !== state.sourceKey || promptAtStart !== state.freePrompt) return null;
-  applyHairAnalysis(result, status === 'done' ? 'provider' : 'fallback');
-  state.analysisStatus = status;
-  state.analysisController = null;
-  render();
-  return state.analysis;
+  return profile;
 }
 
 
@@ -464,7 +403,7 @@ async function startStructureExplore() {
   try {
     syncIntake();
     if (!requiredSourceViewsReady()) throw new Error('FRONT REQUIRED · FRONT 사진을 먼저 추가하세요.');
-    await runHairAnalysis();
+    applyLocalProfile();
     const cfg = resolvedProviderConfig();
     if (!cfg.baseURL || !cfg.apiKey || cfg.apiKey === 'YOUR_PROXY_API_KEY') throw new Error('API REQUIRED · SOURCE의 API 설정을 확인하세요.');
     state.structurePreparing = true;
@@ -478,7 +417,7 @@ async function startStructureExplore() {
       hairColorProfile: state.hairColorProfile,
       mood: state.mood,
       preferences: { mood: state.mood, maintenance: 'medium' },
-      seedInput: `${state.sourceKey}:structure:${state.freePrompt}:${state.analysis?.summaryKo || ''}`
+      seedInput: `${state.sourceKey}:structure:${state.freePrompt}:${state.localProfile?.summaryKo || ''}`
     });
     cancelActiveBatch('structure-refresh');
     state.shortlist.clear();
@@ -521,11 +460,7 @@ async function loadPhoto(event) {
   const file = event.target.files?.[0];
   if (!file || !file.type.startsWith('image/')) return;
   const loadVersion = ++sourceLoadVersion;
-  state.analysisController?.abort();
-  state.analysisVersion += 1;
-  state.analysisController = null;
-  state.analysis = null;
-  state.analysisStatus = 'idle';
+  state.localProfile = null;
   state.error = '';
   invalidateGeneratedSurfaces('source-change');
   state.originalFile = file;
@@ -559,16 +494,17 @@ async function loadPhoto(event) {
     state.sourceViews.front = prepared.dataUrl;
     state.sourceKey = await sourcePhotoKey(new Uint8Array(await prepared.blob.arrayBuffer()), prepared.blob.type);
     if (loadVersion !== sourceLoadVersion) return;
+    let localToneId = 'unknown';
+    try {
+      const detection = await detectCurrentHairTone('front');
+      if (detection.toneId !== 'unknown') localToneId = detection.toneId;
+    } catch {
+      state.hairColorDetection = { status: 'failed', source: 'auto', toneId: 'unknown', confidence: 0 };
+    }
+    if (loadVersion !== sourceLoadVersion) return;
+    applyLocalProfile(localToneId);
     state.sourceProcessing = false;
-    state.analysisStatus = 'analyzing';
     render();
-    runHairAnalysis({ force: true }).catch(() => {
-      if (loadVersion === sourceLoadVersion) {
-        applyHairAnalysis(defaultHairAnalysis({ promptIntent: state.freePrompt }), 'fallback');
-        state.analysisStatus = 'fallback';
-        render();
-      }
-    });
   } catch {
     if (loadVersion !== sourceLoadVersion) return;
     state.sourceProcessing = false;
@@ -726,7 +662,6 @@ function resolvedProviderConfig() {
   return {
     baseURL: state.cfg.baseURL || local.baseURL || '',
     model: state.cfg.model || local.model || 'gpt-image-2',
-    analysisModel: state.cfg.analysisModel || local.analysisModel || DEFAULT_HAIR_ANALYSIS_MODEL,
     size: state.cfg.size || local.size || '1024x1024',
     apiKey: state.cfg.apiKey || local.apiKey || ''
   };
@@ -861,7 +796,6 @@ function consultationPrompt(record, item) {
     record.promptAtoms?.finishKo ? `FINISH: ${record.promptAtoms.finishKo}` : '',
     `CURRENT HAIR: ${state.diagnosis.naturalTexture}, damage ${state.diagnosis.damage}.`,
     state.freePrompt ? `USER REQUEST: ${state.freePrompt}` : '',
-    state.analysis?.summaryKo ? `AUTOMATIC HAIR ANALYSIS: ${state.analysis.summaryKo}. Confidence ${Math.round(state.analysis.confidence * 100)}%.` : '',
     'No text, logo, watermark or decorative graphic.'
   ].filter(Boolean).join('\n');
 }
@@ -909,8 +843,8 @@ function toggleShort(event) {
 function agreementPayload(includeOriginal) { const first = state.recordsById.get([...state.shortlist][0]); return { ...(includeOriginal ? { originalFrontDataUrl: state.originalJpegDataUrl, sourceViews: { ...state.sourceViews, front: state.originalJpegDataUrl } } : {}), currentDesignIds: [...state.shortlist].slice(0, 6), settings: state.settings, diagnosis: state.diagnosis, hairColorProfile: state.hairColorProfile, decision: { freePrompt: state.freePrompt, selectedStructureKey: first ? canonicalStructureKey(first) : undefined }, catalogVersion, promptVersion }; }
 function downloadJson() { const blob = new Blob([JSON.stringify(agreementPayload(false), null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'hairloom-consultation.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
 function handoff() { const payload = buildConsultationHandoff(agreementPayload(true)); sessionStorage.setItem(CONSULTATION_HANDOFF_STORAGE_KEY, JSON.stringify(payload)); location.href = CONSULTATION_HANDOFF_QUERY_TRIGGER; }
-function loadProviderConfig() { try { const cfg = JSON.parse(localStorage.getItem('HAIR_IMAGEN_CFG') || '{}'); return { baseURL: cfg.baseURL || '', model: cfg.model || 'gpt-image-2', analysisModel: cfg.analysisModel || DEFAULT_HAIR_ANALYSIS_MODEL, size: cfg.size || '1024x1024', apiKey: sessionStorage.getItem('HAIR_IMAGEN_KEY') || '' }; } catch { localStorage.removeItem('HAIR_IMAGEN_CFG'); return { baseURL: '', model: 'gpt-image-2', analysisModel: DEFAULT_HAIR_ANALYSIS_MODEL, size: '1024x1024', apiKey: '' }; } }
-function saveProviderConfig(cfg) { localStorage.setItem('HAIR_IMAGEN_CFG', JSON.stringify({ baseURL: cfg.baseURL, model: cfg.model, analysisModel: cfg.analysisModel, size: cfg.size })); if (cfg.apiKey) sessionStorage.setItem('HAIR_IMAGEN_KEY', cfg.apiKey); else sessionStorage.removeItem('HAIR_IMAGEN_KEY'); }
+function loadProviderConfig() { try { const cfg = JSON.parse(localStorage.getItem('HAIR_IMAGEN_CFG') || '{}'); return { baseURL: cfg.baseURL || '', model: cfg.model || 'gpt-image-2', size: cfg.size || '1024x1024', apiKey: sessionStorage.getItem('HAIR_IMAGEN_KEY') || '' }; } catch { localStorage.removeItem('HAIR_IMAGEN_CFG'); return { baseURL: '', model: 'gpt-image-2', size: '1024x1024', apiKey: '' }; } }
+function saveProviderConfig(cfg) { localStorage.setItem('HAIR_IMAGEN_CFG', JSON.stringify({ baseURL: cfg.baseURL, model: cfg.model, size: cfg.size })); if (cfg.apiKey) sessionStorage.setItem('HAIR_IMAGEN_KEY', cfg.apiKey); else sessionStorage.removeItem('HAIR_IMAGEN_KEY'); }
 
 document.querySelector('#imageLightboxClose')?.addEventListener('click', closeImageLightbox);
 imageLightbox?.addEventListener('click', (event) => { if (event.target === imageLightbox) closeImageLightbox(); });

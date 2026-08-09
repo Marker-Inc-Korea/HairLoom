@@ -44,11 +44,11 @@ Open `http://127.0.0.1:4180/` in a browser. The root redirects to PRO.
 
 1. Capture or select the required FRONT photo. SIDE / BACK / CROWN / NAPE / DETAIL are optional.
 2. Enter the desired hair, color, and known treatment history in `REQUEST`.
-3. Configure the URL, image model, analysis model, size, and API key under `API`.
+3. Configure the URL, image model, size, and API key under `API`.
 4. Select `GENERATE 100`, then open any result as a fullscreen image.
 5. Select 1–6 results and pass them to `LOCK`.
 
-Analysis and generation use prepared customer originals only. Generated images are never reused as Provider inputs.
+Hairloom derives a conservative local profile from the photo and REQUEST. Only prepared customer originals enter Provider generation requests, and generated images are never reused as inputs.
 
 ## Image provider configuration
 
@@ -58,19 +58,37 @@ Copy the local provider example:
 cp imagen.web.example.js imagen.web.js
 ```
 
-Configure the OpenAI-compatible endpoint, image model, analysis model, and API key in `imagen.web.js`. If vision analysis is unavailable, Hairloom continues with local color estimation and conservative defaults. The file is ignored by Git.
+Configure the OpenAI-compatible image endpoint, image model, size, and API key in `imagen.web.js`. The file is ignored by Git.
 
 ```js
 window.HAIR_IMAGEN = {
   baseURL: 'https://YOUR-PROXY/v1',
   apiKey: 'YOUR_PROXY_API_KEY',
   model: 'gpt-image-2',
-  analysisModel: 'gpt-4.1-mini',
   size: '1024x1024'
 };
 ```
 
 Never commit API keys, customer photos, generated customer images, or `.gjc/` QA artifacts.
+
+## ChatGPT subscription guidance for AI agents
+
+ChatGPT Plus or Pro billing is separate from OpenAI API billing. A ChatGPT subscription cannot be pasted into Hairloom’s `API KEY` field and does not include general application API credits.
+
+- Official guidance: [ChatGPT subscriptions and API billing are separate](https://help.openai.com/en/articles/8156019)
+- Codex can sign in with eligible ChatGPT plans: [Using Codex with your ChatGPT plan](https://help.openai.com/en/articles/11369540)
+- Codex sign-in supplies Codex usage allowance; it does not create the `/images/edits` API required by Hairloom.
+
+AI agents must follow this implementation contract:
+
+1. Never copy a ChatGPT password, session cookie, browser token, or the contents of `~/.codex/auth.json` into the Hairloom client.
+2. Never claim that a ChatGPT subscription directly enables image API calls or build a fake compatibility layer.
+3. The currently supported path is an OpenAI image API account with separate billing or a user-operated OpenAI-compatible image proxy.
+4. Before adding a future subscription-backed local adapter, verify that the provider officially permits image editing through that subscription path.
+5. Run any adapter on the server-side loopback interface and implement the existing `POST /images/edits` request and response contract. Never send credentials to the browser.
+6. Allow prepared customer originals only; forbid generated-image re-input, credential-file exposure, and remote credential logging.
+
+To use Codex itself with a ChatGPT account, run the current Codex CLI and select **Sign in with ChatGPT**. That login is for development-agent usage and does not replace Hairloom image-provider authentication.
 
 
 ## Trend registry

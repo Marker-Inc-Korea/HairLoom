@@ -44,11 +44,11 @@ HOST=127.0.0.1 PORT=4180 npm run start
 
 1. FRONT 사진을 촬영하거나 갤러리에서 선택합니다. SIDE / BACK / CROWN / NAPE / DETAIL은 선택 사항입니다.
 2. `REQUEST`에 원하는 헤어와 색상, 알고 있는 시술 이력을 입력합니다.
-3. `API`에 URL, 이미지 모델, 분석 모델, 크기, API 키를 설정합니다.
+3. `API`에 URL, 이미지 모델, 크기, API 키를 설정합니다.
 4. `GENERATE 100`으로 생성하고 이미지를 눌러 전체화면으로 확대합니다.
 5. 1–6개를 선택해 `LOCK`으로 전달합니다.
 
-분석과 생성에는 준비된 고객 원본 사진만 사용합니다. 생성 이미지는 다음 Provider 요청의 입력으로 재사용하지 않습니다.
+사진과 REQUEST에서 보수적인 로컬 헤어 프로필을 만들며, Provider에는 생성할 때 준비된 고객 원본만 전달합니다. 생성 이미지는 다음 요청의 입력으로 재사용하지 않습니다.
 
 ## 이미지 Provider 설정
 
@@ -58,19 +58,37 @@ HOST=127.0.0.1 PORT=4180 npm run start
 cp imagen.web.example.js imagen.web.js
 ```
 
-`imagen.web.js`에서 OpenAI 호환 API의 URL, 이미지 모델, 분석 모델, API 키를 설정합니다. 분석 API를 사용할 수 없으면 Hairloom은 로컬 색상 추정과 보수적인 기본값으로 계속 진행합니다. 이 파일은 Git에서 제외됩니다.
+`imagen.web.js`에서 OpenAI 호환 이미지 API의 URL, 이미지 모델, 크기, API 키를 설정합니다. 이 파일은 Git에서 제외됩니다.
 
 ```js
 window.HAIR_IMAGEN = {
   baseURL: 'https://YOUR-PROXY/v1',
   apiKey: 'YOUR_PROXY_API_KEY',
   model: 'gpt-image-2',
-  analysisModel: 'gpt-4.1-mini',
   size: '1024x1024'
 };
 ```
 
 API 키, 고객 사진, 생성 고객 이미지, `.gjc/` QA 자료는 커밋하지 마세요.
+
+## ChatGPT 구독 연결 안내 · AI 에이전트용
+
+ChatGPT Plus·Pro 구독과 OpenAI API 결제는 별개입니다. ChatGPT 구독을 Hairloom의 `API KEY` 칸에 직접 연결할 수 없으며, 구독료에 일반 애플리케이션용 API 크레딧이 포함되지 않습니다.
+
+- 공식 안내: [ChatGPT 구독과 API 결제는 별도](https://help.openai.com/en/articles/8156019)
+- Codex는 지원되는 ChatGPT 플랜으로 로그인할 수 있습니다: [Using Codex with your ChatGPT plan](https://help.openai.com/en/articles/11369540)
+- Codex 로그인은 Codex 사용 한도를 제공할 뿐, Hairloom이 요구하는 `/images/edits` API를 자동으로 만들지 않습니다.
+
+AI 에이전트는 다음 규칙을 지켜야 합니다.
+
+1. ChatGPT 비밀번호, 세션 쿠키, 브라우저 토큰 또는 `~/.codex/auth.json` 내용을 Hairloom 클라이언트에 복사하지 않습니다.
+2. “ChatGPT 구독만으로 이미지 API가 연결된다”고 표시하거나 가짜 호환 레이어를 만들지 않습니다.
+3. 현재 지원 방식은 별도 결제가 설정된 OpenAI 이미지 API 또는 사용자가 관리하는 OpenAI 호환 이미지 프록시입니다.
+4. 향후 구독 기반 로컬 어댑터를 추가하려면 해당 제공자가 이미지 편집을 공식 지원하는지 먼저 확인합니다.
+5. 어댑터는 서버 측 loopback에서만 실행하고 기존 `POST /images/edits` 요청·응답 계약을 구현합니다. 인증 정보는 브라우저로 보내지 않습니다.
+6. 준비된 고객 원본만 입력으로 허용하고 생성 결과의 재입력, 인증 파일 노출, 원격 로그 저장을 금지합니다.
+
+Codex 자체를 ChatGPT 계정으로 사용하는 절차는 최신 Codex CLI에서 `codex`를 실행한 뒤 **Sign in with ChatGPT**를 선택하는 것입니다. 이 로그인은 개발 에이전트 작업용이며 Hairloom 이미지 생성 API 인증을 대신하지 않습니다.
 
 
 ## 트렌드 레지스트리
