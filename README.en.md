@@ -2,30 +2,21 @@
 
 [한국어 README](README.md)
 
-Hairloom is a local-first hairstyle exploration and Design Lock application. It generates hairstyle alternatives from original customer photos while keeping generated images out of subsequent requests.
+Hairloom is the public Hairloom PRO app for generating hairstyle designs from prepared customer originals and a freeform request.
 
 ## Features
 
-- Explore powered by the versioned 6,500-design v2 catalog
 - Installable mobile PWA with camera capture and gallery selection
-- AI hair analysis driven by the original customer photo and one freeform prompt
-- 100 fixed result slots with up to 32 concurrent requests and no manual constraint stage
-- Fast base Explore using only the original FRONT photo
-- FRONT / SIDE / BACK Design Lock workflow
-- Separate three-stage PRO workstation: `SOURCE → STRUCTURE → LOCK`
-- Balanced optional source-view allocation, horizontal-mirror augmentation, and automatic hair/color profiles in PRO
-- Maskless PRO requests that send one prepared original and rely on strict prompt preservation for face, clothing, and background
-- Explore, PRO, and Design Lock default to natural low-sheen satin-to-matte texture with soft diffuse highlights
-- Feminine designs use connected curves, nuanced face-framing, and fluid ends; masculine designs use directional planes, broader sections, and controlled temple/nape lines
-- A versioned trend registry maps Instagram, Naver, Google, Pinterest, and stylist signals to stable catalog IDs with visible `RISING/WATCH` provenance
-- Generated images are never reused as generation inputs
+- AI hair analysis from the prepared customer original and `REQUEST`
+- Three-stage `SOURCE → STRUCTURE → LOCK` flow
+- 100 fixed results, fullscreen image enlargement, and direct 1–6 selection
+- Original-only Provider lineage; generated images are never request inputs
 
 ## Routes
 
 ```text
-Explore:          http://127.0.0.1:4180/
-PRO consultation: http://127.0.0.1:4180/consultation/
-Health check:     http://127.0.0.1:4180/healthz
+Hairloom PRO: http://127.0.0.1:4180/
+Health check:  http://127.0.0.1:4180/healthz
 ```
 
 ## Installation
@@ -40,33 +31,24 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-Open `http://127.0.0.1:4180/` in a browser.
+Open `http://127.0.0.1:4180/` in a browser. The root redirects to PRO.
 
 ### Install as a mobile app
 
 - Android Chrome: use the install icon in the address bar or choose `Install app` from the menu.
 - iPhone/iPad Safari: choose `Add to Home Screen` from the share menu.
-- Installed mode keeps the Explore `/`, PRO `/consultation/`, and model manager `/model-previews/` routes.
-- Only the public app shell is cached. Customer photos, AI analysis, Provider traffic, generated images, and API keys are never cached.
+- The installed app contains Hairloom PRO only.
+- Only the public shell is cached. Customer photos, AI analysis, Provider traffic, generated images, and API keys are never cached.
 
 ## Usage
 
-### Explore
+1. Capture or select the required FRONT photo. SIDE / BACK / CROWN / NAPE / DETAIL are optional.
+2. Enter the desired hair, color, and known treatment history in `REQUEST`.
+3. Configure the URL, image model, analysis model, size, and API key under `API`.
+4. Select `GENERATE 100`, then open any result as a fullscreen image.
+5. Select 1–6 results and pass them to `LOCK`.
 
-1. Capture a FRONT photo with the camera or select one from the gallery.
-2. Describe the desired hair, color, and mood in a natural sentence.
-3. AI analyzes current length, texture, density, color, and conservative feasibility defaults.
-4. Review 100 results, select 1–6 candidates, and continue to Design Lock.
-
-### PRO consultation
-
-1. Capture or select the required FRONT photo and optionally add SIDE / BACK / CROWN / NAPE / DETAIL originals.
-2. Enter the desired hair, color, and mood as a free prompt. There is no separate PROFILE or COLOR constraint screen.
-3. AI analyzes the original photo. Treatment history that cannot be observed uses conservative defaults with explicit uncertainty.
-4. In STRUCTURE, click an image to enlarge it and use the checkbox to select 1–6 designs directly.
-5. From LOCK, hand off the selected design IDs and original source views to Design Lock.
-
-Explore and PRO analysis and generation requests use only prepared original customer photos. Generated outputs and registered model photos never become analysis or generation inputs; only mirrored outputs are flipped back before the Provider result is displayed directly.
+Analysis and generation use prepared customer originals only. Generated images are never reused as Provider inputs.
 
 ## Image provider configuration
 
@@ -90,21 +72,6 @@ window.HAIR_IMAGEN = {
 
 Never commit API keys, customer photos, generated customer images, or `.gjc/` QA artifacts.
 
-## Loading model images
-
-Open `http://127.0.0.1:4180/model-previews/` to register real model photos shown in Explore and PRO cards until generated results arrive. The manager is also linked from the Explore and PRO SOURCE surfaces.
-
-- Register salon-owned files or rights-cleared HTTPS images; salon mode supports multi-file registration.
-- Gender, length, texture, and optional stable `HLM-*` design IDs/prefixes deterministically match the closest registered model.
-- Internet URLs are copied into local IndexedDB only when CORS permits. Registration strips metadata and normalizes each copy to a JPEG with a 1,400px maximum edge; the library is capped at 80 images and 160MB.
-- Record the rights basis, attribution, confirmed model-image consent, and consent verification date, with optional expiry, rights-reference, and reviewer metadata. Expired, revoked, or disabled photos are automatically excluded.
-- The manager supports editing, disable/re-enable, confirmed deletion, search/status filters, focal positioning, duplicate rejection, and storage status. Select the visible list to atomically apply design tags, activation state, or deletion across multiple records.
-- Export or transfer the local library only through the passphrase-protected AES-GCM archive. Passphrases are never persisted.
-- Add/update/delete/import changes propagate to open Explore and PRO tabs. Registry or IndexedDB failures fall back to customer source previews without blocking generation.
-- Photos remain only in the current browser and are never uploaded to the server, Git, or trend data.
-- Registered photos are `DISPLAY ONLY`: they appear only for `queued` or `active` slots, never enter provider requests, generation chains, normal exports, or Design Lock handoffs, and are replaced in the same fixed slot when provider output arrives.
-
-See [`docs/MODEL-PREVIEW-FLOW.md`](./docs/MODEL-PREVIEW-FLOW.md) for the render-safe flow, data boundaries, rights operations, and intentionally retained limitations.
 
 ## Trend registry
 
@@ -209,15 +176,15 @@ trendRegistryVersion: HLM-TRENDS-2026-07-1
 ## Main files
 
 ```text
-index.html                         Explore and Design Lock UI
-consultation/                      PRO consultation UI
-model-previews/                      Local loading-model registration UI
-src/exploreCore.mjs                Explore domain logic
-src/consultationCore.mjs           Consultation, feasibility, and queue logic
-src/hairAnalysis.mjs               Original-photo AI analysis, conservative fallback, and internal setting conversion
-src/trendRegistry.mjs              Trend validation, scoring, and catalog mapping
-src/hairTrendData.mjs              Generated 40-record runtime trend snapshot
-src/modelPreviewRegistry.mjs        Rights validation, IndexedDB, and deterministic matching
+server.mjs                        `/` → PRO redirect and public asset allowlist
+consultation/                     Public Hairloom PRO UI
+explore/                          Internal Explore UI enabled only by environment flag
+src/exploreCore.mjs               Shared catalog and queue domain logic
+src/consultationCore.mjs          Consultation, feasibility, and queue logic
+src/hairAnalysis.mjs              Original-photo AI analysis and internal conversion
+src/trendRegistry.mjs             Trend validation, scoring, and catalog mapping
+src/hairTrendData.mjs             Generated 40-record runtime trend snapshot
+src/modelPreviewRegistry.mjs      Deferred future model-library module
 scripts/generateHairMasterCatalog.mjs  6,500-design catalog generator
 scripts/syncHairTrends.mjs         Local checks, imports, and optional live collection
 scripts/manageHairTrendSchedule.mjs macOS periodic install, status, and removal

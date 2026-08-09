@@ -3,14 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<base href="/">
 <title>HAIRLOOM · Design Book</title>
 <meta name="theme-color" content="#161010">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Hairloom">
-<link rel="manifest" href="/manifest.webmanifest">
-<link rel="icon" href="/icons/hairloom-icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="/icons/hairloom-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;1,500&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet">
@@ -153,7 +149,6 @@ body[data-stage^="explore"] .zoomctl{display:none}
 .explore-results-main{padding:18px clamp(12px,3vw,34px) 38px}.explore-results-head{position:sticky;top:0;z-index:18;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 0 16px;background:linear-gradient(var(--bg) 72%,transparent)}.explore-results-head strong{font-family:var(--serif);font-size:26px;font-weight:500}.explore-results-head small{font-size:10px;color:var(--muted);letter-spacing:.12em}.explore-result-actions{display:flex;align-items:center;gap:8px}.explore-shortlist-count{font-size:11px;color:var(--accent);min-width:34px;text-align:center}.explore-lock{padding:10px 15px;border-radius:999px;background:var(--ink);color:#0b0808;font-size:11px;font-weight:800;opacity:0;visibility:hidden;pointer-events:none}.explore-lock.on{opacity:1;visibility:visible;pointer-events:auto}.explore-lock:hover{background:var(--accent)}
 .explore-grid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:7px}.explore-tile{position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--bg2);isolation:isolate}.explore-neighbor{position:absolute;inset:0;width:100%;height:100%;display:block;background:var(--bg2);text-align:left}.explore-tile img{width:100%;height:100%;object-fit:contain;background:var(--bg2);transition:filter .7s var(--ease),opacity .7s var(--ease)}.explore-tile.queued img,.explore-tile.active img{filter:blur(13px) brightness(.48) saturate(.72);opacity:.74}.explore-tile.active:after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 35% 32%,rgba(244,236,227,.13),transparent 30%),radial-gradient(circle at 70% 68%,rgba(202,164,115,.12),transparent 32%);animation:diffuse-drift 3.4s ease-in-out infinite alternate;pointer-events:none}.explore-tile.ready:hover{border-color:rgba(217,138,160,.72)}.explore-tile.failed img{filter:blur(15px) grayscale(.7) brightness(.28);opacity:.48}.explore-tile .tile-id{position:absolute;left:7px;bottom:6px;z-index:2;font-size:7px;letter-spacing:.04em;color:rgba(244,236,227,.68);text-shadow:0 1px 6px #000}.explore-select{position:absolute;right:6px;top:6px;z-index:5;width:24px;height:24px;border-radius:8px;background:rgba(8,6,6,.68);border:1px solid rgba(244,236,227,.34);display:grid;place-items:center;font-size:13px;color:var(--ink);backdrop-filter:blur(6px)}.explore-select[hidden]{display:none}.explore-select.on{background:var(--accent);border-color:var(--accent);color:#0b0808;font-weight:900}.explore-select:hover{border-color:var(--accent)}.explore-empty{display:none;padding:80px 20px;text-align:center;color:var(--muted);font-size:13px}.explore-empty.on{display:block}
 .explore-neighbor:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
-.explore-tile.registered-preview.queued img,.explore-tile.registered-preview.active img{object-fit:cover;filter:brightness(.66) saturate(.86);opacity:.92}.registered-model-label{position:absolute;z-index:4;left:6px;top:6px;max-width:calc(100% - 12px);padding:5px 7px;border:1px solid rgba(202,164,115,.3);border-radius:999px;background:rgba(8,6,6,.82);color:var(--gold);font-size:9px;line-height:1.15;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;backdrop-filter:blur(7px)}.registered-model-label[hidden]{display:none}
 #angles.explore-handoff .anglepresets [data-preset]{display:none}#angles.explore-handoff .consistency{top:112px}
 @media(max-width:1099px){.explore-shell{grid-template-columns:1fr}.explore-rail{display:none}.explore-main{padding-top:34px}.explore-grid{grid-template-columns:repeat(8,minmax(0,1fr))}}
 @media(max-width:699px){.explore-start{bottom:78px;padding:11px 21px}.explore-stage{padding-top:60px}.explore-main{padding:18px 14px 30px}.explore-upload-wrap{justify-content:flex-start;padding-top:34px}.explore-drop{width:min(300px,82vw)}.explore-results-main{padding:7px 8px 24px}.explore-results-head{padding:8px 3px 12px}.explore-results-head strong{font-size:20px}.explore-results-head small{display:none}.explore-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.explore-tile{border-radius:8px}.explore-tile .tile-id{font-size:6px;left:4px;bottom:4px}.explore-select{width:22px;height:22px;right:4px;top:4px}.explore-lock{padding:9px 12px}.explore-shortlist-count{font-size:10px}}
@@ -163,7 +158,7 @@ body[data-stage^="explore"] .zoomctl{display:none}
 
 /* 2026-08-04 · aspect-safe tiles and image viewer */
 body.explore-lightbox-open{overflow:hidden}
-.explore-tile img,.explore-tile.registered-preview.queued img,.explore-tile.registered-preview.active img{object-fit:contain;background:#ddd6cc}
+.explore-tile img{object-fit:contain;background:#ddd6cc}
 .explore-neighbor{cursor:zoom-in}
 .explore-neighbor:disabled{opacity:1;cursor:zoom-in}
 .explore-tile .tile-id{padding:5px 7px;border-radius:999px;background:rgba(20,17,14,.78);color:var(--ink);font-size:9px;font-weight:700;text-shadow:none}
@@ -324,7 +319,6 @@ body.explore-lightbox-open{overflow:hidden}
 .cfgcard{position:relative;width:min(420px,100%);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:26px 24px;display:flex;flex-direction:column;gap:13px}
 .cfgcard h3{font-family:var(--serif);font-weight:500;font-size:22px}
 .cfghint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:-4px}
-.cfgpreviewlink{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border:1px solid rgba(202,164,115,.3);border-radius:10px;color:var(--gold);font-size:11px;text-decoration:none}.cfgpreviewlink:hover{border-color:var(--accent);color:var(--ink)}
 .cfgcard label{display:flex;flex-direction:column;gap:6px;font-size:11px;letter-spacing:.14em;color:var(--faint);text-transform:uppercase}
 .cfgcard input{font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;text-transform:none;letter-spacing:normal}
 .cfgcard input:focus{outline:none;border-color:var(--accent)}
@@ -349,8 +343,6 @@ body.explore-lightbox-open{overflow:hidden}
   <div class="cfgcard">
     <button class="cfgx" id="cfgClose" aria-label="닫기">✕</button>
     <h3>AI 연결</h3>
-    <p class="cfghint">OpenAI 호환 이미지 생성·분석 API를 연결하세요. API Key는 현재 탭에만 보관되고, 주소·모델·크기만 이 브라우저에 저장됩니다.</p>
-    <a class="cfgpreviewlink" href="/model-previews/" target="_blank" rel="noopener">대기 모델 이미지 관리 <span>↗</span></a>
     <label>Base URL<input id="cfgBase" placeholder="https://api.openai.com/v1" autocomplete="off"></label>
     <label>API Key<input id="cfgKey" type="password" placeholder="sk-..." autocomplete="off"></label>
     <label>Image Model<input id="cfgModel" placeholder="gpt-image-2" autocomplete="off"></label>
@@ -368,14 +360,9 @@ body.explore-lightbox-open{overflow:hidden}
 <div class="toast" id="toast"></div>
 
 <script src="imagen.web.js"></script>
-<script>if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/service-worker.js').catch(()=>{}));</script>
 <script>
 let ExploreCore=null;
 const exploreCoreReady=import('./src/exploreCore.mjs').then(core=>(ExploreCore=core));
-let ModelPreviewRegistry=null;
-let exploreModelPreviewDisposed=false;
-let exploreModelPreviewUnsubscribe=()=>{};
-const modelPreviewRegistryReady=import('./src/modelPreviewRegistry.mjs').then(registry=>(ModelPreviewRegistry=registry)).catch(()=>null);
 let HairColorPalette=null;
 const hairColorPaletteReady=import('./src/hairColorPalette.mjs').then(palette=>(HairColorPalette=palette));
 let HairAnalysis=null;
@@ -526,7 +513,7 @@ const PRESETS={
   realMale:'docs/assets/test-subjects/real-male-01'
 };
 const S={gender:null,length:null,tex:'',color:COLORS[2],photos:{front:null,side:null,back:null},results:[],adminEdit:false,history:[{id:'gender'}],designLockSource:'standard',designLockCatalogSelections:[],exploreSettings:null};
-const EX={catalog:null,index:null,recordsById:new Map(),originalFrontDataUrl:null,preparedFrontDataUrl:null,preparedFrontBlob:null,sourcePhotoKey:null,sourceVersion:0,settings:null,colorToneId:'preserve-current',freePrompt:'',analysis:null,analysisStatus:'idle',analysisVersion:0,analysisController:null,batch:null,batchCounter:0,controllers:new Map(),selectedDesignIds:new Set(),cache:new Map(),catalogPromise:null,modelPreviews:[],modelPreviewUrls:new Map()};
+const EX={catalog:null,index:null,recordsById:new Map(),originalFrontDataUrl:null,preparedFrontDataUrl:null,preparedFrontBlob:null,sourcePhotoKey:null,sourceVersion:0,settings:null,colorToneId:'preserve-current',freePrompt:'',analysis:null,analysisStatus:'idle',analysisVersion:0,analysisController:null,batch:null,batchCounter:0,controllers:new Map(),selectedDesignIds:new Set(),cache:new Map(),catalogPromise:null};
 const PHOTO_SCALE_KEY='HAIRLOOM_PHOTO_SCALE';
 let photoScale=Math.max(70,Math.min(100,Number(localStorage.getItem(PHOTO_SCALE_KEY))||90));
 function applyPhotoScale(){document.documentElement.style.zoom='';document.documentElement.style.setProperty('--photo-scale',photoScale/100);$('#zoomText').textContent=photoScale+'%';localStorage.setItem(PHOTO_SCALE_KEY,String(photoScale))}
@@ -674,9 +661,6 @@ function cacheExploreResult(designId,result,colorToneId){
   EX.cache.set(key,{...result,lastUsed:Date.now()});
   while(EX.cache.size>200||[...EX.cache.values()].reduce((sum,entry)=>sum+(entry.bytes||0),0)>180*1024*1024){const [oldestKey,oldest]=[...EX.cache.entries()].sort((a,b)=>a[1].lastUsed-b[1].lastUsed)[0];if(oldest.objectUrl)URL.revokeObjectURL(oldest.objectUrl);EX.cache.delete(oldestKey)}
 }
-function releaseExploreModelPreviewUrls(){for(const url of EX.modelPreviewUrls.values())URL.revokeObjectURL(url);EX.modelPreviewUrls.clear()}
-async function refreshExploreModelPreviews(){releaseExploreModelPreviewUrls();try{const registry=await modelPreviewRegistryReady;if(!registry){EX.modelPreviews=[];return false}EX.modelPreviews=await registry.listModelPreviews();return true}catch{EX.modelPreviews=[];return false}}
-function exploreRegisteredPreview(record,slotIndex,state){if(!record||!ModelPreviewRegistry?.modelPreviewAllowedForSlot(state)||!EX.modelPreviews.length)return null;const preview=ModelPreviewRegistry.selectModelPreview(EX.modelPreviews,record,slotIndex);if(!preview?.blob)return null;if(!EX.modelPreviewUrls.has(preview.id))EX.modelPreviewUrls.set(preview.id,URL.createObjectURL(preview.blob));return {...preview,url:EX.modelPreviewUrls.get(preview.id)}}
 const NATURAL_SURFACE_FINISH_PROMPT='SURFACE FINISH LOCK: use natural low-sheen satin-to-matte hair with soft, diffuse, broken highlights, realistic strand variation and shadow depth. No wet or oily look, glassy or plastic shine, mirror-like specular bands, metallic gloss, lacquered finish or synthetic wig sheen. Keep subtle healthy highlights; do not make the hair chalky or flat.';
 function explorePrompt(record,colorToneId){
   const settings=EX.settings,damage={low:'현재 모발 손상이 낮음',medium:'현재 모발 손상이 보통',high:'현재 모발 손상이 높음. 화학 펌, 붙임, 피스, 강한 장력과 고열을 절대 사용하지 않음'}[settings.damageCondition];
@@ -715,10 +699,10 @@ function fitExploreMosaicTile(tile,image,slotIndex,designId){if(!image?.naturalW
 function openExploreImageLightbox(tile){const image=tile?.querySelector('.explore-neighbor img');if(!image?.src)return;$('#exploreImageLightboxImage').src=image.src;$('#exploreImageLightboxImage').alt=image.alt||'확대 이미지';$('#exploreImageLightbox').hidden=false;document.body.classList.add('explore-lightbox-open');$('#exploreImageLightboxClose').focus()}
 function closeExploreImageLightbox(){$('#exploreImageLightbox').hidden=true;$('#exploreImageLightboxImage').removeAttribute('src');document.body.classList.remove('explore-lightbox-open')}
 function renderExploreSlot(slotIndex){
-  const tile=$(`#exploreGrid [data-slot="${slotIndex}"]`),slot=EX.batch?.slots[slotIndex];if(!tile)return;const state=slot?.status||'queued',record=slot?.designId?EX.recordsById.get(slot.designId):null,interactive=state==='ready',preview=exploreRegisteredPreview(record,slotIndex,state),previewState=state==='active'?'생성 중':'생성 대기',url=slot?.imageUrl||preview?.url||EX.originalFrontDataUrl,imageButton=tile.querySelector('.explore-neighbor'),image=tile.querySelector('img'),number=String(slotIndex+1).padStart(2,'0');tile.className=`explore-tile ${exploreMosaicClass(slotIndex,slot?.designId)} ${state} ${preview?'registered-preview':''}`;tile.dataset.designId=slot?.designId||'';imageButton.disabled=false;imageButton.setAttribute('aria-label',`${number}번 이미지 크게 보기`);const fit=()=>fitExploreMosaicTile(tile,image,slotIndex,slot?.designId||'');image.onload=fit;image.src=url;if(image.complete&&image.naturalWidth)requestAnimationFrame(fit);image.style.objectPosition=preview?`${preview.focalX*100}% ${preview.focalY*100}%`:'';image.alt=preview?`${preview.title} · 등록 모델 미리보기 · ${previewState}`:interactive?(record?.nameKo||`${number}번 헤어 이미지`):`${number}번 생성 대기 이미지`;tile.querySelector('.tile-id').textContent=number;const label=tile.querySelector('.registered-model-label');label.hidden=!preview;label.textContent=preview?`등록 모델 · ${previewState}`:'';const similar=tile.querySelector('.explore-similar');similar.hidden=!interactive;const select=tile.querySelector('.explore-select');select.hidden=!slot?.designId||state!=='ready';select.classList.toggle('on',EX.selectedDesignIds.has(slot?.designId));select.textContent=EX.selectedDesignIds.has(slot?.designId)?'✓':'＋';
+  const tile=$(`#exploreGrid [data-slot="${slotIndex}"]`),slot=EX.batch?.slots[slotIndex];if(!tile)return;const state=slot?.status||'queued',record=slot?.designId?EX.recordsById.get(slot.designId):null,interactive=state==='ready',url=slot?.imageUrl||EX.originalFrontDataUrl,imageButton=tile.querySelector('.explore-neighbor'),image=tile.querySelector('img'),number=String(slotIndex+1).padStart(2,'0');tile.className=`explore-tile ${exploreMosaicClass(slotIndex,slot?.designId)} ${state}`;tile.dataset.designId=slot?.designId||'';imageButton.disabled=false;imageButton.setAttribute('aria-label',`${number}번 이미지 크게 보기`);const fit=()=>fitExploreMosaicTile(tile,image,slotIndex,slot?.designId||'');image.onload=fit;image.src=url;if(image.complete&&image.naturalWidth)requestAnimationFrame(fit);image.style.objectPosition='';image.alt=interactive?(record?.nameKo||`${number}번 헤어 이미지`):`${number}번 생성 대기 이미지`;tile.querySelector('.tile-id').textContent=number;const similar=tile.querySelector('.explore-similar');similar.hidden=!interactive;const select=tile.querySelector('.explore-select');select.hidden=!slot?.designId||state!=='ready';select.classList.toggle('on',EX.selectedDesignIds.has(slot?.designId));select.textContent=EX.selectedDesignIds.has(slot?.designId)?'✓':'＋';
 }
 function renderExploreGrid(){
-  $('#exploreGrid').innerHTML=Array.from({length:100},(_,slotIndex)=>{const slot=EX.batch.slots[slotIndex];return `<article class="explore-tile ${exploreMosaicClass(slotIndex,slot?.designId)} queued" data-slot="${slotIndex}"><button class="explore-neighbor" type="button" aria-label="${String(slotIndex+1).padStart(2,'0')}번 이미지 크게 보기"><img src="${EX.originalFrontDataUrl}" alt=""><span class="registered-model-label" hidden></span><span class="tile-id">${String(slotIndex+1).padStart(2,'0')}</span></button><button class="explore-select" type="button" aria-label="3각 후보 선택" hidden>＋</button><button class="explore-similar" type="button" aria-label="이 디자인과 유사한 100개 보기" title="유사 디자인" hidden>≈</button></article>`}).join('');
+  $('#exploreGrid').innerHTML=Array.from({length:100},(_,slotIndex)=>{const slot=EX.batch.slots[slotIndex];return `<article class="explore-tile ${exploreMosaicClass(slotIndex,slot?.designId)} queued" data-slot="${slotIndex}"><button class="explore-neighbor" type="button" aria-label="${String(slotIndex+1).padStart(2,'0')}번 이미지 크게 보기"><img src="${EX.originalFrontDataUrl}" alt=""><span class="tile-id">${String(slotIndex+1).padStart(2,'0')}</span></button><button class="explore-select" type="button" aria-label="3각 후보 선택" hidden>＋</button><button class="explore-similar" type="button" aria-label="이 디자인과 유사한 100개 보기" title="유사 디자인" hidden>≈</button></article>`}).join('');
   for(let index=0;index<100;index++)renderExploreSlot(index);renderExploreProgress();$('#exploreEmpty').classList.toggle('on',EX.batch.slots.length<100);
 }
 function completeExploreJob(job,result){
@@ -737,8 +721,8 @@ function startExploreSelection(selection,{centerDesignId=null}={}){
   for(const item of EX.batch.queue){const cached=EX.cache.get(exploreImageCacheKey(item.designId));if(cached){cached.lastUsed=Date.now();EX.batch=ExploreCore.applyQueueCompletion(EX.batch,{ok:true,url:cached.url,batchId:item.batchId,designId:item.designId,slotIndex:item.slotIndex,sourcePhotoKey:item.sourcePhotoKey,promptVersion:item.promptVersion})}}
   goto('exploreResults');renderExploreGrid();pumpExploreQueue();
 }
-async function startInitialExploreBatch(){await Promise.all([exploreCoreReady,hairAnalysisReady]);await Promise.all([loadExploreCatalog(),refreshExploreModelPreviews()]);if(!EX.originalFrontDataUrl||!EX.preparedFrontBlob)return toast('전면 사진을 먼저 넣어주세요');await runExploreAnalysis();const selection=ExploreCore.selectDiverse100(EX.index.records,EX.settings,exploreIntentKey());EX.selectedDesignIds.clear();startExploreSelection(selection)}
-async function startNeighborExplore(designId){if(!EX.batch||EX.batch.slots.find(slot=>slot.designId===designId)?.status!=='ready')return;await refreshExploreModelPreviews();const selection=ExploreCore.selectNeighbor100(EX.index.records,EX.settings,designId,exploreIntentKey());startExploreSelection(selection,{centerDesignId:designId})}
+async function startInitialExploreBatch(){await Promise.all([exploreCoreReady,hairAnalysisReady]);await loadExploreCatalog();if(!EX.originalFrontDataUrl||!EX.preparedFrontBlob)return toast('전면 사진을 먼저 넣어주세요');await runExploreAnalysis();const selection=ExploreCore.selectDiverse100(EX.index.records,EX.settings,exploreIntentKey());EX.selectedDesignIds.clear();startExploreSelection(selection)}
+async function startNeighborExplore(designId){if(!EX.batch||EX.batch.slots.find(slot=>slot.designId===designId)?.status!=='ready')return;const selection=ExploreCore.selectNeighbor100(EX.index.records,EX.settings,designId,exploreIntentKey());startExploreSelection(selection,{centerDesignId:designId})}
 function toggleExploreSelection(designId){if(EX.selectedDesignIds.has(designId))EX.selectedDesignIds.delete(designId);else{if(EX.selectedDesignIds.size>=6)return toast('최대 6개까지 선택할 수 있어요');EX.selectedDesignIds.add(designId)}const slot=EX.batch?.slots.find(item=>item.designId===designId);if(slot)renderExploreSlot(slot.slotIndex);renderExploreProgress()}
 async function setExplorePhoto(file){
   if(!file||!file.type.startsWith('image/'))return;
@@ -770,8 +754,6 @@ $('#exploreToLock').addEventListener('click',startDesignLockFromExplore);
 $('#exploreImageLightboxClose').addEventListener('click',closeExploreImageLightbox);
 $('#exploreImageLightbox').addEventListener('click',event=>{if(event.target===$('#exploreImageLightbox'))closeExploreImageLightbox()});
 window.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('#exploreImageLightbox').hidden)closeExploreImageLightbox()});
-modelPreviewRegistryReady.then(registry=>{if(!registry||exploreModelPreviewDisposed)return;exploreModelPreviewUnsubscribe=registry.subscribeModelPreviewChanges(async()=>{if(exploreModelPreviewDisposed)return;await refreshExploreModelPreviews();if(EX.batch)for(let index=0;index<100;index++)renderExploreSlot(index)})});
-window.addEventListener('pagehide',event=>{if(event.persisted)return;exploreModelPreviewDisposed=true;exploreModelPreviewUnsubscribe();releaseExploreModelPreviewUrls()});
 
 /* GENDER */
 document.querySelectorAll('#gender .gcol').forEach(c=>c.addEventListener('click',()=>{S.designLockSource='standard';S.designLockCatalogSelections=[];S.exploreSettings=null;S.gender=c.dataset.g;buildPersonal();goto('personal')}));

@@ -1,15 +1,9 @@
-const CACHE_NAME = 'hairloom-shell-v1';
+const CACHE_NAME = 'hairloom-pro-shell-v2';
 const SHELL_PATHS = new Set([
-  '/',
-  '/index.html',
   '/consultation/',
   '/consultation/index.html',
   '/consultation/styles.css',
   '/consultation/app.mjs',
-  '/model-previews/',
-  '/model-previews/index.html',
-  '/model-previews/styles.css',
-  '/model-previews/app.mjs',
   '/manifest.webmanifest',
   '/icons/hairloom-icon.svg',
   '/icons/hairloom-192.png',
@@ -19,11 +13,12 @@ const SHELL_PATHS = new Set([
   '/src/hairAnalysis.mjs',
   '/src/hairColorPalette.mjs',
   '/src/trendRegistry.mjs',
-  '/src/hairTrendData.mjs',
-  '/src/modelPreviewRegistry.mjs'
+  '/src/hairTrendData.mjs'
 ]);
 const NEVER_CACHE_PREFIXES = Object.freeze([
   '/healthz',
+  '/explore/',
+  '/model-previews/',
   '/imagen.web.js',
   '/api/',
   '/v1/',
@@ -60,15 +55,7 @@ async function networkFirstNavigation(request) {
     return cacheShellResponse(request, response);
   } catch {
     const cache = await caches.open(CACHE_NAME);
-    const direct = await cache.match(request);
-    if (direct) return direct;
-    const url = new URL(request.url);
-    const fallbackPath = url.pathname.startsWith('/consultation/')
-      ? '/consultation/index.html'
-      : url.pathname.startsWith('/model-previews/')
-        ? '/model-previews/index.html'
-        : '/index.html';
-    return cache.match(fallbackPath) ?? Response.error();
+    return cache.match(request) ?? cache.match('/consultation/index.html') ?? Response.error();
   }
 }
 

@@ -1,16 +1,16 @@
 {
-  "name": "Hairloom 헤어 디자인",
-  "short_name": "Hairloom",
-  "description": "원본 고객 사진과 AI 분석으로 헤어 디자인을 탐색하고 비교하는 로컬 우선 모바일 앱",
+  "name": "Hairloom PRO",
+  "short_name": "Hairloom PRO",
+  "description": "사진과 요청으로 헤어 디자인을 생성하는 Hairloom PRO",
   "lang": "ko",
-  "id": "/",
-  "start_url": "/",
-  "scope": "/",
+  "id": "/consultation/",
+  "start_url": "/consultation/",
+  "scope": "/consultation/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#080606",
   "theme_color": "#161010",
-  "categories": ["beauty", "lifestyle", "productivity"],
+  "categories": ["beauty", "productivity"],
   "icons": [
     {
       "src": "/icons/hairloom-192.png",
@@ -29,26 +29,6 @@
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "Explore 100",
-      "short_name": "Explore",
-      "url": "/",
-      "icons": [{ "src": "/icons/hairloom-icon.svg", "sizes": "any", "type": "image/svg+xml" }]
-    },
-    {
-      "name": "Hairloom PRO",
-      "short_name": "PRO",
-      "url": "/consultation/",
-      "icons": [{ "src": "/icons/hairloom-icon.svg", "sizes": "any", "type": "image/svg+xml" }]
-    },
-    {
-      "name": "대기 모델 사진",
-      "short_name": "모델 관리",
-      "url": "/model-previews/",
-      "icons": [{ "src": "/icons/hairloom-icon.svg", "sizes": "any", "type": "image/svg+xml" }]
     }
   ]
 }

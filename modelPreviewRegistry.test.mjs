@@ -391,48 +391,28 @@ test('unavailable change channels never reverse completed preview persistence', 
   }
 });
 
-test('Explore and PRO keep previews optional, queued/active-only, synchronized, and original-input-only', async () => {
-  const [explore, pro, manager, proStyles, managerHtml, managerStyles] = await Promise.all([
-    readFile(new URL('./index.html', import.meta.url), 'utf8'),
+test('model preview manager remains deferred and disconnected from public runtime', async () => {
+  const [explore, pro, manager, managerHtml, managerStyles, serviceWorker, manifest, server] = await Promise.all([
+    readFile(new URL('./explore/index.html', import.meta.url), 'utf8'),
     readFile(new URL('./consultation/app.mjs', import.meta.url), 'utf8'),
     readFile(new URL('./model-previews/app.mjs', import.meta.url), 'utf8'),
-    readFile(new URL('./consultation/styles.css', import.meta.url), 'utf8'),
     readFile(new URL('./model-previews/index.html', import.meta.url), 'utf8'),
-    readFile(new URL('./model-previews/styles.css', import.meta.url), 'utf8')
+    readFile(new URL('./model-previews/styles.css', import.meta.url), 'utf8'),
+    readFile(new URL('./service-worker.js', import.meta.url), 'utf8'),
+    readFile(new URL('./manifest.webmanifest', import.meta.url), 'utf8'),
+    readFile(new URL('./server.mjs', import.meta.url), 'utf8')
   ]);
-  assert.match(explore, /modelPreviewAllowedForSlot\(state\)/);
-  assert.match(pro, /modelPreviewAllowedForSlot\(slot\.status\)/);
-  assert.match(explore, /subscribeModelPreviewChanges/);
-  assert.match(pro, /subscribeModelPreviewChanges/);
-  assert.match(explore, /modelPreviewRegistryReady=.*\.catch\(\(\)=>null\)/);
-  assert.match(pro, /modelPreviewRegistryReady = import[^\n]+\.catch\(\(\) => null\)/);
-  assert.match(explore, /pagehide',event=>\{if\(event\.persisted\)return/);
-  assert.match(pro, /if \(event\.persisted\) return/);
-  assert.match(manager, /if \(event\.persisted\) return/);
-  assert.match(explore, /등록 모델 · \$\{previewState\}/);
-  assert.match(pro, /등록 모델 · \$\{previewState\}/);
-  assert.match(explore, /form\.append\('image',EX\.preparedFrontBlob/);
-  assert.match(pro, /form\.append\('image', inputs\.sourceBlob/);
-  assert.doesNotMatch(explore, /form\.append\('image',[^\n]*(?:modelPreview|registeredPreview)/i);
-  assert.doesNotMatch(pro, /form\.append\('image',[^\n]*(?:modelPreview|registeredPreview)/i);
+  assert.doesNotMatch(explore, /modelPreviewRegistry|model-previews|registered-model-label|registered-preview/);
+  assert.doesNotMatch(pro, /modelPreviewRegistry|model-previews|registered-model-label|registered-preview/);
+  assert.doesNotMatch(server, /model-previews|modelPreviewRegistry/);
+  assert.match(serviceWorker, /'\/model-previews\/'/);
+  assert.doesNotMatch(serviceWorker, /model-previews\/index\.html|modelPreviewRegistry/);
+  assert.doesNotMatch(manifest, /model-previews|대기 모델|Explore 100/);
   assert.match(manager, /exportModelPreviewArchive/);
   assert.match(manager, /importModelPreviewArchive/);
   assert.match(manager, /navigator\.storage/);
-  assert.match(manager, /multiple/);
   assert.match(manager, /setModelPreviewsEnabled/);
-  assert.doesNotMatch(managerHtml, /bulkApplyDesignRefs|디자인 ID|DISPLAY ONLY|Design Lock/);
   assert.match(manager, /deleteModelPreviews/);
-  assert.match(manager, /selectVisible/);
   assert.match(managerHtml, /class="photo-picker"/);
-  assert.match(managerHtml, /사진 사용 정보/);
-  assert.match(manager, /const requestedTitle/);
-  assert.match(manager, /fileTitle\(file\)/);
-  assert.match(proStyles, /font-size:9px/);
-  assert.match(manager, /AbortController/);
-  assert.match(manager, /20000/);
-  assert.match(managerHtml, /aria-live="polite"/);
-  assert.match(managerHtml, /autocomplete="new-password"/);
   assert.match(managerStyles, /focus-visible/);
-  assert.match(managerStyles, /font-size:9px/);
-  assert.match(explore, /registered-model-label[^\n]+font-size:9px/);
 });

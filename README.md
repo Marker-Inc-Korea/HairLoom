@@ -2,29 +2,20 @@
 
 [English README](README.en.md)
 
-Hairloom은 원본 인물 사진을 유지하면서 다양한 헤어 디자인을 탐색하고, 선택한 스타일을 정면·측면·후면 사진에 적용하는 로컬 우선 헤어 디자인 도구입니다.
+Hairloom은 고객 원본 사진과 요청을 기반으로 헤어 디자인을 생성하는 Hairloom PRO 앱입니다.
 
 ## 주요 기능
 
-- 6,500개 v2 헤어 디자인 카탈로그 기반 Explore
 - 설치 가능한 모바일 PWA와 카메라 촬영·갤러리 선택
-- 고객 원본 사진과 자유 입력 프롬프트 기반 AI 헤어 분석
-- 수동 제약 설정 없이 고정 100개 결과 슬롯과 최대 동시 요청 32개
-- 기본 Explore는 원본 FRONT 사진만 사용하는 빠른 탐색
-- FRONT / SIDE / BACK 기반 Design Lock
-- 별도 PRO 워크스테이션의 3단계 흐름: `SOURCE → STRUCTURE → LOCK`
-- PRO의 선택 원본 뷰 균형 배분, 좌우 반전 증강, 자동 색상·헤어 프로필 적용
-- PRO는 헤어 마스크 없이 준비된 원본 한 장을 Provider에 전달하고 얼굴·의상·배경 보존을 프롬프트로 제어
-- Explore, PRO, Design Lock 모두 자연스러운 저광택 새틴-매트 질감과 부드러운 분산 하이라이트를 기본으로 사용
-- 여성 디자인은 연결된 곡선·부드러운 페이스 프레임·유연한 끝선을, 남성 디자인은 방향성 있는 면·넓은 모발 섹션·절제된 템플과 네이프 라인을 별도 계약으로 사용
-- 버전된 트렌드 레지스트리가 Instagram·Naver·Google·Pinterest·전문가 신호를 안정된 카탈로그 ID에 연결하고 `RISING/WATCH` 근거를 표시
-- 생성 이미지를 다음 생성 입력으로 재사용하지 않는 원본 계보 유지
+- 고객 원본 사진과 자유 입력 REQUEST 기반 AI 헤어 분석
+- `SOURCE → STRUCTURE → LOCK` 3단계 흐름
+- 고정 100개 결과, 이미지 전체화면 확대, 1–6개 직접 선택
+- 준비된 고객 원본만 Provider 입력으로 사용하는 원본 계보 유지
 
 ## 화면
 
 ```text
-기본 Explore: http://127.0.0.1:4180/
-PRO 상담:     http://127.0.0.1:4180/consultation/
+Hairloom PRO: http://127.0.0.1:4180/
 상태 확인:    http://127.0.0.1:4180/healthz
 ```
 
@@ -40,33 +31,24 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-브라우저에서 `http://127.0.0.1:4180/`을 엽니다.
+브라우저에서 `http://127.0.0.1:4180/`을 엽니다. 루트 주소는 PRO로 연결됩니다.
 
 ### 모바일 앱으로 설치
 
 - Android Chrome: 주소창의 설치 아이콘 또는 메뉴의 `앱 설치`를 선택합니다.
 - iPhone/iPad Safari: 공유 메뉴에서 `홈 화면에 추가`를 선택합니다.
-- 설치 후에도 Explore `/`, PRO `/consultation/`, 모델 관리 `/model-previews/` 경로를 그대로 사용합니다.
+- 설치 앱은 Hairloom PRO만 포함합니다.
 - 오프라인 앱 셸만 캐시하며 고객 사진, AI 분석, Provider 요청·응답, 생성 이미지, API 키는 캐시하지 않습니다.
 
 ## 사용법
 
-### Explore
+1. FRONT 사진을 촬영하거나 갤러리에서 선택합니다. SIDE / BACK / CROWN / NAPE / DETAIL은 선택 사항입니다.
+2. `REQUEST`에 원하는 헤어와 색상, 알고 있는 시술 이력을 입력합니다.
+3. `API`에 URL, 이미지 모델, 분석 모델, 크기, API 키를 설정합니다.
+4. `GENERATE 100`으로 생성하고 이미지를 눌러 전체화면으로 확대합니다.
+5. 1–6개를 선택해 `LOCK`으로 전달합니다.
 
-1. FRONT 사진을 카메라로 촬영하거나 갤러리에서 선택합니다.
-2. 원하는 헤어·색상·분위기를 자연스러운 문장으로 입력합니다.
-3. AI가 현재 기장·질감·밀도·색상과 보수적인 시술 가능성 기본값을 자동 분석합니다.
-4. 100개 헤어 결과에서 1–6개 디자인을 선택해 Design Lock으로 이동합니다.
-
-### PRO 상담
-
-1. FRONT 사진을 카메라로 촬영하거나 갤러리에서 선택하고, SIDE / BACK / CROWN / NAPE / DETAIL 원본을 선택적으로 추가합니다.
-2. 원하는 헤어·색상·분위기를 자유 입력합니다. 별도 PROFILE·COLOR 제약 설정 화면은 없습니다.
-3. AI가 원본 사진의 현재 헤어 프로필과 색상을 분석하고, 관찰할 수 없는 시술 이력은 보수적인 기본값과 불확실성으로 처리합니다.
-4. STRUCTURE의 100개 결과는 클릭해서 확대하고, 체크박스로 1–6개 디자인을 바로 선택합니다.
-5. LOCK에서 선택한 디자인과 고객 원본 뷰를 Design Lock으로 전달합니다.
-
-Explore와 PRO 분석·생성 요청은 항상 준비된 고객 원본 사진만 사용합니다. 생성 결과와 등록 모델 사진은 분석 또는 다음 생성의 입력이 되지 않으며, 좌우 반전 입력의 결과만 원래 방향으로 복원한 뒤 Provider 결과를 직접 표시합니다.
+분석과 생성에는 준비된 고객 원본 사진만 사용합니다. 생성 이미지는 다음 Provider 요청의 입력으로 재사용하지 않습니다.
 
 ## 이미지 Provider 설정
 
@@ -90,21 +72,6 @@ window.HAIR_IMAGEN = {
 
 API 키, 고객 사진, 생성 고객 이미지, `.gjc/` QA 자료는 커밋하지 마세요.
 
-## 생성 대기 모델 이미지
-
-`http://127.0.0.1:4180/model-previews/`에서 AI 생성 결과가 도착하기 전 Explore와 PRO의 대기 카드에 표시할 실제 모델 사진을 등록할 수 있습니다. Explore와 PRO의 SOURCE 화면에서도 관리 화면을 열 수 있습니다.
-
-- 살롱 촬영 파일 또는 사용 권리가 확인된 HTTPS 이미지를 등록하며, 살롱 파일은 여러 장을 한 번에 추가할 수 있습니다.
-- 성별, 기장, 질감과 선택적 `HLM-*` 디자인 ID·접두어로 후보에 가장 가까운 등록 모델을 결정적으로 선택합니다.
-- 인터넷 URL은 브라우저가 CORS로 가져올 수 있을 때만 로컬 IndexedDB에 복사합니다. 등록 시 메타데이터를 제거한 최대 변 1,400px JPEG로 정규화하며 라이브러리는 최대 80장·160MB로 제한됩니다.
-- 권리 근거, 출처·크레딧, 모델 초상 사용 동의, 동의 확인일을 기록하고 선택적으로 만료일·권리 기록 번호·검토자를 관리합니다. 만료·철회·비활성 사진은 자동으로 대기 카드에서 제외됩니다.
-- 관리 화면은 수정, 사용 중지·재활성화, 삭제 확인, 검색·상태 필터, 카드 초점, 중복 감지, 저장 공간 확인을 지원합니다. 현재 목록을 선택해 디자인 태그, 사용 상태, 삭제를 여러 레코드에 원자적으로 적용할 수 있습니다.
-- 라이브러리는 10자 이상 암호의 AES-GCM 보관 파일로 내보내고 다른 Hairloom 브라우저로 가져올 수 있습니다. 암호는 저장되지 않습니다.
-- 등록·수정·삭제·가져오기 변경은 열린 Explore와 PRO 탭에 즉시 반영되며, 등록 모듈이나 IndexedDB가 실패해도 고객 원본 미리보기와 AI 생성은 계속 작동합니다.
-- 등록 사진은 현재 브라우저에만 저장되며 서버, Git, 트렌드 데이터에 업로드되지 않습니다.
-- 등록 사진은 `DISPLAY ONLY`입니다. `queued`·`active` 슬롯에만 표시되고 Provider 입력, 생성 재입력, 일반 Export, Design Lock handoff에는 포함되지 않으며 실제 생성 결과가 도착하면 같은 고정 슬롯에서 교체됩니다.
-
-상세 상태 흐름, 데이터 경계, 권리 운영과 의도적으로 남긴 제한은 [`docs/MODEL-PREVIEW-FLOW.md`](./docs/MODEL-PREVIEW-FLOW.md)를 참고하세요.
 
 ## 트렌드 레지스트리
 
@@ -209,15 +176,15 @@ trendRegistryVersion: HLM-TRENDS-2026-07-1
 ## 주요 파일
 
 ```text
-index.html                         기본 Explore 및 Design Lock UI
-consultation/                      PRO 상담 UI
-model-previews/                      대기 모델 사진 로컬 등록 UI
-src/exploreCore.mjs                Explore 도메인 로직
-src/consultationCore.mjs           상담·시술 가능성·큐 로직
-src/hairAnalysis.mjs               원본 사진 AI 분석·보수적 폴백·내부 설정 변환
-src/trendRegistry.mjs              트렌드 검증·점수·카탈로그 매핑
-src/hairTrendData.mjs              생성된 40개 런타임 트렌드 스냅샷
-src/modelPreviewRegistry.mjs        권리 검증·IndexedDB·결정적 모델 매칭
+server.mjs                        `/` → PRO 연결 및 공개 자산 허용 목록
+consultation/                     공개 Hairloom PRO UI
+explore/                          환경 변수로만 활성화되는 내부 Explore UI
+src/exploreCore.mjs               카탈로그·큐 공통 도메인 로직
+src/consultationCore.mjs          상담·시술 가능성·큐 로직
+src/hairAnalysis.mjs              원본 사진 AI 분석·보수적 폴백·내부 설정 변환
+src/trendRegistry.mjs             트렌드 검증·점수·카탈로그 매핑
+src/hairTrendData.mjs             생성된 40개 런타임 트렌드 스냅샷
+src/modelPreviewRegistry.mjs      미래 작업으로 보류된 모델 라이브러리 모듈
 scripts/generateHairMasterCatalog.mjs  6,500개 카탈로그 생성기
 scripts/syncHairTrends.mjs         로컬 검사·가져오기·선택적 라이브 수집
 scripts/manageHairTrendSchedule.mjs macOS 주기 실행 설치·상태·제거

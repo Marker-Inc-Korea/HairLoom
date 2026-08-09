@@ -9,7 +9,7 @@ This is the machine-operable guide for work in the standalone Hairloom repositor
 - Runtime: Node.js 20+
 - Module system: native ESM
 - Build step: none
-- App URL: `http://127.0.0.1:4180/`
+- App URL: `http://127.0.0.1:4180/` redirects to Hairloom PRO at `/consultation/`
 - Health URL: `http://127.0.0.1:4180/healthz`
 - Main verification: `npm run verify`
 - Expected baseline: 91 tests passing
@@ -42,28 +42,21 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, Explore/catalog/consultation/server/trend/scheduler/automation/model-preview tests, hair-analysis tests, and the 91-test baseline.
+`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, catalog/consultation/server/trend/scheduler/automation tests, deferred model-preview module tests, hair-analysis tests, and the 91-test baseline.
 
 ## Product invariants
 
-- Explore is front-only, fast, and low-quality.
-- Design Lock is separate, high-quality, and front/side/back.
-- Explore is photo-and-prompt driven. It does not expose the former six manual constraint settings or a separate color picker.
-- Camera capture (`capture="user"`) and gallery selection must both feed the same prepared-original FRONT pipeline.
+- Hairloom PRO is the only public product surface. `/` redirects to `/consultation/`.
+- Explore is an internal route at `/explore/`, disabled unless the server starts with `HAIRLOOM_ENABLE_EXPLORE=1`.
+- PRO camera capture (`capture="user"`) and gallery selection must feed the same prepared-original FRONT pipeline.
 - Hair analysis may use only the prepared original customer image and must never infer identity, face shape, or gender identity. `catalogLine` describes haircut geometry only and may be `F`, `M`, or neutral `U`.
 - Visually unobservable history such as bleach count, recent perm, or extensions must use conservative defaults plus explicit uncertainty rather than fabricated certainty.
 - High visible damage excludes every perm and extension/piece design regardless of free-prompt wording.
-- Every Explore request uses the prepared original front photo.
+- Every Provider request uses a prepared original customer photo.
 - Generated pixels and catalog model photos are never subsequent request inputs.
-- The installable mobile shell is a local-first PWA. Its service worker must never cache customer photos, analysis payloads, Provider requests/responses, generated images, registered model data, API keys, `imagen.web.js`, blob URLs, or data URLs.
+- The installable mobile shell contains PRO only. Its service worker must never cache Explore, model-preview routes, customer photos, analysis payloads, Provider requests/responses, generated images, API keys, `imagen.web.js`, blob URLs, or data URLs.
 - Free prompts may express style, target color, resemblance, and maintenance intent. Analysis-derived normalized settings remain internal and must be included in deterministic seeds/cache keys so changed intent cannot reuse stale results.
-- Registered loading model photos are display-only browser-local assets. They may replace only `queued` or `active` card visuals and must never become provider inputs, generated-image inputs, catalog records, trend records, cache keys, customer/generation exports, or handoff fields. The only permitted photo export is the explicit passphrase-encrypted operator library archive.
-- Model preview registration must require an explicit rights basis, attribution, confirmed model-image consent, consent verification date, and optional expiry/revocation audit data. Web registration accepts credential-free HTTPS only and stores a normalized metadata-free local JPEG rather than runtime hotlinking; cap the browser library at 80 images and 160MB.
-- Explore and PRO must deterministically match registered previews by gender, length, texture, and optional stable design IDs/prefixes, preserve 100 fixed-slot ownership, distinguish queued from active labels, and replace previews in place when provider output arrives.
-- Add/update/delete/import changes must propagate to open same-origin tabs, revoke stale object URLs, and rerender without restarting generation. Expired, revoked, disabled, failed, aborted, superseded, ready, and done records/slots must not display loading previews.
-- Registered preview loading is optional and must fail safely to customer source previews without blocking Explore or PRO generation.
-- The local operator library supports metadata editing, enable/disable, atomic multi-file upload, focal positioning, duplicate rejection, search/filter, storage status, atomic selected-record design-tag/status/delete operations, and passphrase-encrypted export/import. Passphrases must never persist.
-- The authoritative model-preview lifecycle, data-boundary diagram, rights operations, and remaining intentional limitations are documented in `docs/MODEL-PREVIEW-FLOW.md`.
+- Loading-model previews and the model manager are deferred future work. Their dormant source and tests may remain, but active PRO/Explore code must not import them and the server, manifest, and service worker must not expose their routes or assets.
 - Explore concurrency is capped at 32 per tab.
 - Results use 100 fixed slots and must not reorder on completion.
 - Shortlists contain 1–6 current `HLM-*` design IDs.
@@ -71,13 +64,13 @@ HOST=127.0.0.1 PORT=4180 npm run start
 - Standard Design Lock continues to use its normal recommendation path.
 - PRO remains a separate three-stage route: `SOURCE → STRUCTURE → LOCK`.
 - PRO requires FRONT and accepts optional SIDE / BACK / CROWN / NAPE / DETAIL originals.
-- PRO SOURCE contains camera/gallery intake, one free prompt, compact non-editable AI analysis status, and collapsed Provider settings. It must not render manual diagnosis or color controls.
+- PRO SOURCE contains camera/gallery intake, one free prompt, a compact status-only AI analysis control, and collapsed Provider settings. It must not render explanatory analysis copy, uncertainty prose, manual diagnosis, or color controls.
 - PRO STRUCTURE lightboxes are enlargement-only. Additional variation/COMPARE generation controls must not be rendered; users select 1–6 completed structure tiles directly for LOCK.
 - Automatic analysis maps to the existing feasibility, diversity, color, and handoff contracts. Provider analysis failure must fall back to deterministic conservative values without blocking generation.
 - PRO does not create, confirm, or send hair masks; current and non-current natural tones use the same maskless provider path.
 - AI analysis uses a separate OpenAI-compatible vision request path from image generation, shares only the configured endpoint/key, is bounded to the current request, and is never persisted or exported.
 - Changing the source photo or free prompt invalidates stale analysis and generated surfaces.
-- Explore, PRO, and Design Lock prompts must use the shared low-sheen satin-to-matte surface contract and reject wet, oily, glassy, plastic, metallic, lacquered, or synthetic-wig shine.
+- PRO and Design Lock prompts must use the shared low-sheen satin-to-matte surface contract and reject wet, oily, glassy, plastic, metallic, lacquered, or synthetic-wig shine.
 - Core female and male records must receive distinct hair-only line-treatment prompts: feminine connected curves and blended face-framing versus masculine directional planes, broader sections, and controlled temple/nape transitions. The named design remains authoritative, and these rules must never alter face, body, or identity.
 - Trend signals are metadata-only and map to stable core design prefixes. External images, thumbnails, Base64, media URLs, and image data URLs must never be stored, served, or used as generation inputs.
 - Trend contributes at most 3 selection points in Explore and 5 suitability points in PRO; hard feasibility, damage safety, source lineage, and deterministic diversity remain authoritative.
@@ -153,14 +146,14 @@ npm run trend:cadence -- --date=2026-08-17
 node --test trendAutomation.test.mjs
 ```
 
-Model preview changes:
+Deferred model-preview module changes:
 
 ```bash
-node --test modelPreviewRegistry.test.mjs server.test.mjs exploreCore.test.mjs consultationCore.test.mjs
+node --test modelPreviewRegistry.test.mjs
 npm run verify
 ```
 
-Use Aside to register an ignored test model through `/model-previews/`, hold provider requests, and verify Explore and PRO show 32 active / 68 queued registered previews at 1440×1000, 834×1112, and 390×844 with zero horizontal overflow.
+Do not reconnect the dormant model-preview module to public routes or runtime surfaces.
 
 Server changes:
 

@@ -1,8 +1,4 @@
 import { catalogVersion, promptVersion, hydrateCatalogPayload, normalizeProviderResult, normalizeSettings, sourcePhotoKey, genderLineTreatmentPrompt } from '../src/exploreCore.mjs';
-let ModelPreviewRegistry = null;
-let modelPreviewDisposed = false;
-let modelPreviewUnsubscribe = () => {};
-const modelPreviewRegistryReady = import('../src/modelPreviewRegistry.mjs').then((registry) => (ModelPreviewRegistry = registry)).catch(() => null);
 import {
   CONSULTATION_HANDOFF_STORAGE_KEY,
   CONSULTATION_HANDOFF_QUERY_TRIGGER,
@@ -71,8 +67,6 @@ const state = {
   groupSummaries: new Map(),
   groupsByKey: new Map(),
   structureSlots: [],
-  modelPreviews: [],
-  modelPreviewUrls: new Map(),
   structurePreparing: false,
   diagnosis: normalizeDiagnosis({ profileGender: 'U' }),
   hairColorProfile: normalizeHairColorProfile({}),
@@ -174,42 +168,17 @@ function sourceViewPreview(key = 'front') {
   return state.sourceViews[key] || state.originalJpegDataUrl || state.originalDataUrl;
 }
 
-function releaseModelPreviewUrls() {
-  for (const url of state.modelPreviewUrls.values()) URL.revokeObjectURL(url);
-  state.modelPreviewUrls.clear();
-}
-
-async function refreshModelPreviews() {
-  releaseModelPreviewUrls();
-  try {
-    const registry = await modelPreviewRegistryReady;
-    if (!registry) { state.modelPreviews = []; return false; }
-    state.modelPreviews = await registry.listModelPreviews();
-    return true;
-  } catch {
-    state.modelPreviews = [];
-    return false;
-  }
-}
-
-function registeredModelPreview(slot, record) {
-  if (!record || !ModelPreviewRegistry?.modelPreviewAllowedForSlot(slot.status) || !state.modelPreviews.length) return null;
-  const preview = ModelPreviewRegistry.selectModelPreview(state.modelPreviews, record, slot.slotIndex);
-  if (!preview?.blob) return null;
-  if (!state.modelPreviewUrls.has(preview.id)) state.modelPreviewUrls.set(preview.id, URL.createObjectURL(preview.blob));
-  return { ...preview, url: state.modelPreviewUrls.get(preview.id) };
-}
 
 function assignBatchSourceViews(batch, purpose) {
   return assignConsultationSourceViews(batch, availableSourceViewKeys(), `${state.sourceKey}:${purpose}`);
 }
 
 function analysisStatusText() {
-  if (state.analysisStatus === 'analyzing') return '원본 고객 사진과 요청을 AI가 분석하고 있습니다.';
-  if (state.analysisStatus === 'done') return state.analysis?.summaryKo || '헤어 분석 완료';
-  if (state.analysisStatus === 'fallback') return state.analysis?.summaryKo || '보수적 기본 분석을 적용했습니다.';
-  if (state.analysisStatus === 'failed') return '원격 분석을 사용할 수 없어 로컬·보수 분석을 적용합니다.';
-  return '사진을 추가하면 길이·질감·밀도·손상도·현재 색상을 자동 분석합니다.';
+  if (state.analysisStatus === 'analyzing') return 'ANALYZING';
+  if (state.analysisStatus === 'done') return 'READY';
+  if (state.analysisStatus === 'fallback') return 'FALLBACK';
+  if (state.analysisStatus === 'failed') return 'ERROR';
+  return 'AUTO';
 }
 
 function renderSource() {
@@ -225,8 +194,7 @@ function renderSource() {
   const intakeActions = view.id === 'front'
     ? `<div class="source-intake-actions"><button type="button" data-upload-input="view-front-camera">카메라로 바로 촬영</button><button type="button" data-upload-input="${galleryInputId}">갤러리에서 선택</button></div>`
     : `<div class="source-intake-actions one"><button type="button" data-upload-input="${galleryInputId}">사진 선택</button></div>`;
-  const continueLabel = state.structurePreparing ? '100개 구조 후보를 준비하고 있습니다.' : analyzing ? 'AI 분석 중 · 완료되면 분석 결과를 사용해 추천합니다.' : ready ? '사진과 요청을 기준으로 바로 STRUCTURE를 생성합니다.' : 'FRONT 사진을 먼저 추가하세요.';
-  return `<section class="source-step single-source"><div class="source-view-head"><b>PHOTO + REQUEST</b><span>${required} / 1 REQUIRED</span></div><div class="source-intake-layout"><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><button class="single-view-upload ${source ? 'filled' : ''}" type="button" data-upload-input="${galleryInputId}" aria-label="${source ? 'Replace' : 'Add'} ${view.label} photo" aria-busy="${processing ? 'true' : 'false'}">${uploadContent}</button>${cameraInput}<input id="${galleryInputId}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label} 갤러리 사진 선택">${intakeActions}<div class="source-view-nav"><button type="button" data-source-step="-1" aria-label="Previous view">←</button><nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => `<button type="button" data-source-view="${index}" class="${index === state.sourceViewIndex ? 'on' : ''} ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav><button type="button" data-source-step="1" aria-label="Next view">→</button></div></div><div class="source-intent"><label for="freePrompt"><b>원하는 헤어를 자유롭게 적어주세요</b><small>예: 쇄골 기장 레이어드, 애쉬 브라운은 은은하게. 2개월 전에 펌했어요.</small></label><textarea id="freePrompt" maxlength="500" placeholder="스타일, 색상, 분위기와 알고 있는 시술 이력을 자연스럽게 입력하세요.">${esc(state.freePrompt)}</textarea><section class="analysis-card ${state.analysisStatus}" aria-live="polite" aria-busy="${analyzing}"><div><b>AI HAIR ANALYSIS</b><span>${state.analysis ? `${Math.round(state.analysis.confidence * 100)}%` : 'AUTO'}</span></div><p>${esc(analysisStatusText())}</p>${state.analysis?.uncertainties?.length ? `<small>${esc(state.analysis.uncertainties.slice(0, 2).join(' · '))}</small>` : ''}<button id="reanalyze" type="button" ${requiredSourceViewsReady() && !analyzing ? '' : 'disabled'}>AI 다시 분석</button></section><a class="model-preview-link" href="/model-previews/" target="_blank" rel="noopener">대기 모델 이미지 관리 ↗</a><details class="provider"><summary>API</summary><div class="cfg"><input id="baseURL" aria-label="API URL" placeholder="API URL" value="${esc(state.cfg.baseURL)}"><input id="model" aria-label="Image model" placeholder="IMAGE MODEL" value="${esc(state.cfg.model)}"><input id="analysisModel" aria-label="Analysis model" placeholder="ANALYSIS MODEL" value="${esc(state.cfg.analysisModel)}"><input id="size" aria-label="Size" placeholder="SIZE" value="${esc(state.cfg.size)}"><input id="apiKey" aria-label="API key" placeholder="API KEY" type="password" value="${esc(state.cfg.apiKey)}"></div></details><div class="source-next"><small id="sourceContinueStatus" role="status">${continueLabel}</small><button class="next-button" id="toStructures" data-ready="${ready ? 'true' : 'false'}" aria-describedby="sourceContinueStatus" ${ready ? '' : 'disabled'}>${state.structurePreparing ? 'PREPARING…' : '추천 시작'}</button></div></div></div></section>`;
+  return `<section class="source-step single-source"><div class="source-view-head"><b>PHOTO + REQUEST</b><span>${required} / 1 REQUIRED</span></div><div class="source-intake-layout"><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><button class="single-view-upload ${source ? 'filled' : ''}" type="button" data-upload-input="${galleryInputId}" aria-label="${source ? 'Replace' : 'Add'} ${view.label} photo" aria-busy="${processing ? 'true' : 'false'}">${uploadContent}</button>${cameraInput}<input id="${galleryInputId}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label} 갤러리 사진 선택">${intakeActions}<div class="source-view-nav"><button type="button" data-source-step="-1" aria-label="Previous view">←</button><nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => `<button type="button" data-source-view="${index}" class="${index === state.sourceViewIndex ? 'on' : ''} ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav><button type="button" data-source-step="1" aria-label="Next view">→</button></div></div><div class="source-intent"><label for="freePrompt"><b>REQUEST</b></label><textarea id="freePrompt" maxlength="500" placeholder="헤어 스타일 · 색상 · 시술 이력">${esc(state.freePrompt)}</textarea><section class="analysis-card ${state.analysisStatus}" aria-live="polite" aria-busy="${analyzing}"><div><b>AI HAIR ANALYSIS</b><span>${analysisStatusText()}</span></div><button id="reanalyze" type="button" ${requiredSourceViewsReady() && !analyzing ? '' : 'disabled'}>ANALYZE</button></section><details class="provider"><summary>API</summary><div class="cfg"><input id="baseURL" aria-label="API URL" placeholder="API URL" value="${esc(state.cfg.baseURL)}"><input id="model" aria-label="Image model" placeholder="IMAGE MODEL" value="${esc(state.cfg.model)}"><input id="analysisModel" aria-label="Analysis model" placeholder="ANALYSIS MODEL" value="${esc(state.cfg.analysisModel)}"><input id="size" aria-label="Size" placeholder="SIZE" value="${esc(state.cfg.size)}"><input id="apiKey" aria-label="API key" placeholder="API KEY" type="password" value="${esc(state.cfg.apiKey)}"></div></details><div class="source-next"><button class="next-button" id="toStructures" data-ready="${ready ? 'true' : 'false'}" ${ready ? '' : 'disabled'}>${state.structurePreparing ? 'PREPARING…' : 'GENERATE 100'}</button></div></div></div></section>`;
 }
 
 function toneLabel(toneId) {
@@ -298,15 +266,11 @@ function closeImageLightbox() {
 function structureTile(slot) {
   const record = state.recordsById.get(slot.designId);
   const group = record ? state.groupsByKey.get(recordGroupKey(record)) : null;
-  const preview = registeredModelPreview(slot, record);
-  const source = slot.previewUrl || preview?.url || sourceViewPreview(slot.sourceViewKey);
+  const source = slot.previewUrl || sourceViewPreview(slot.sourceViewKey);
   const selected = state.shortlist.has(slot.designId);
   const ready = slot.status === 'done' && record;
-  const previewState = slot.status === 'active' ? '생성 중' : '생성 대기';
-  const previewLabel = preview ? `<span class="registered-model-label">등록 모델 · ${previewState}</span>` : '';
-  const previewPosition = preview ? ` style="object-position:${preview.focalX * 100}% ${preview.focalY * 100}%"` : '';
   const number = String(slot.slotIndex + 1).padStart(2, '0');
-  return `<article class="structure-tile ${mosaicTileClass(slot)} ${slot.status} ${preview ? 'registered-preview' : ''} ${selected ? 'selected' : ''}" data-structure-tile="${slot.slotIndex}"><button type="button" class="tile-image-button" data-preview-image aria-label="${number}번 이미지 크게 보기"><img src="${esc(source)}" alt="${preview ? esc(`${preview.title} · 등록 모델 미리보기 · ${previewState}`) : ready ? esc(groupLabel(group)) : ''}"${previewPosition}></button>${previewLabel}<input type="checkbox" aria-label="후보 선택 ${slot.slotIndex + 1}" data-short="${esc(slot.designId || '')}" ${selected ? 'checked' : ''} ${ready ? '' : 'disabled'}><span class="structure-meta"><b>${number}</b></span></article>`;
+  return `<article class="structure-tile ${mosaicTileClass(slot)} ${slot.status} ${selected ? 'selected' : ''}" data-structure-tile="${slot.slotIndex}"><button type="button" class="tile-image-button" data-preview-image aria-label="${number}번 이미지 크게 보기"><img src="${esc(source)}" alt="${ready ? esc(groupLabel(group)) : ''}"></button><input type="checkbox" aria-label="후보 선택 ${slot.slotIndex + 1}" data-short="${esc(slot.designId || '')}" ${selected ? 'checked' : ''} ${ready ? '' : 'disabled'}><span class="structure-meta"><b>${number}</b></span></article>`;
 }
 
 function groupLabel(group) { return `${group.lengthKo} · ${familiarStyleName(group.baseKo)} · ${group.frontKo}`; }
@@ -506,7 +470,7 @@ async function startStructureExplore() {
     state.structurePreparing = true;
     render();
     await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
-    await Promise.all([ensureCatalog(), refreshModelPreviews()]);
+    await ensureCatalog();
     state.filteredGroups = filterGroups();
     prepareGroupSummaries();
     const selection = selectConsultationStructureDesignIds(state.filteredGroups, state.diagnosis, {
@@ -948,20 +912,6 @@ function handoff() { const payload = buildConsultationHandoff(agreementPayload(t
 function loadProviderConfig() { try { const cfg = JSON.parse(localStorage.getItem('HAIR_IMAGEN_CFG') || '{}'); return { baseURL: cfg.baseURL || '', model: cfg.model || 'gpt-image-2', analysisModel: cfg.analysisModel || DEFAULT_HAIR_ANALYSIS_MODEL, size: cfg.size || '1024x1024', apiKey: sessionStorage.getItem('HAIR_IMAGEN_KEY') || '' }; } catch { localStorage.removeItem('HAIR_IMAGEN_CFG'); return { baseURL: '', model: 'gpt-image-2', analysisModel: DEFAULT_HAIR_ANALYSIS_MODEL, size: '1024x1024', apiKey: '' }; } }
 function saveProviderConfig(cfg) { localStorage.setItem('HAIR_IMAGEN_CFG', JSON.stringify({ baseURL: cfg.baseURL, model: cfg.model, analysisModel: cfg.analysisModel, size: cfg.size })); if (cfg.apiKey) sessionStorage.setItem('HAIR_IMAGEN_KEY', cfg.apiKey); else sessionStorage.removeItem('HAIR_IMAGEN_KEY'); }
 
-modelPreviewRegistryReady.then((registry) => {
-  if (!registry || modelPreviewDisposed) return;
-  modelPreviewUnsubscribe = registry.subscribeModelPreviewChanges(async () => {
-    if (modelPreviewDisposed) return;
-    await refreshModelPreviews();
-    if (state.stage === 2 || state.stage === 4) render();
-  });
-});
-window.addEventListener('pagehide', (event) => {
-  if (event.persisted) return;
-  modelPreviewDisposed = true;
-  modelPreviewUnsubscribe();
-  releaseModelPreviewUrls();
-});
 document.querySelector('#imageLightboxClose')?.addEventListener('click', closeImageLightbox);
 imageLightbox?.addEventListener('click', (event) => { if (event.target === imageLightbox) closeImageLightbox(); });
 window.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !imageLightbox.hidden) closeImageLightbox(); });
