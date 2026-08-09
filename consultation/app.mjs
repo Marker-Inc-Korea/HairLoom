@@ -98,12 +98,12 @@ function familiarStyleName(value) {
   return STYLE_NAME_REPLACEMENTS.reduce((name, [source, target]) => name.replaceAll(source, target), String(value ?? ''));
 }
 const BOARD_VIEWS = [
-  { id: 'front', label: 'FRONT' },
-  { id: 'side', label: 'SIDE' },
-  { id: 'back', label: 'BACK' },
-  { id: 'crown', label: 'CROWN' },
-  { id: 'nape', label: 'NAPE' },
-  { id: 'detail', label: 'DETAIL' }
+  { id: 'front', label: '이미지 1' },
+  { id: 'side', label: '이미지 2' },
+  { id: 'back', label: '이미지 3' },
+  { id: 'crown', label: '이미지 4' },
+  { id: 'nape', label: '이미지 5' },
+  { id: 'detail', label: '이미지 6' }
 ];
 
 function requiredSourceViewsReady() {
@@ -172,7 +172,9 @@ function renderSource() {
   const source = sourceViewSource(view);
   const required = state.originalJpegDataUrl ? 1 : 0;
   const processing = state.sourceProcessing && view.id === 'front';
-  const ready = requiredSourceViewsReady() && !state.sourceProcessing && !state.structurePreparing;
+  const provider = resolvedProviderConfig();
+  const providerReady = Boolean(provider.baseURL && provider.apiKey && provider.apiKey !== 'YOUR_PROXY_API_KEY');
+  const ready = requiredSourceViewsReady() && providerReady && !state.sourceProcessing && !state.structurePreparing;
   const uploadContent = source ? `<img src="${esc(source)}" alt="${view.label}">` : processing ? '<span class="source-processing-mark">···</span><small>PREPARING PHOTO</small>' : `<span>＋</span><small>ADD ${view.label}</small>`;
   const galleryInputId = `view-${view.id}-gallery`;
   const cameraInput = view.id === 'front' ? `<input id="view-front-camera" data-view="front" type="file" accept="image/*" capture="user" aria-label="카메라로 정면 사진 촬영">` : '';
@@ -182,7 +184,7 @@ function renderSource() {
   const previousButton = state.sourceViewIndex > 0 ? '<button type="button" data-source-step="-1" aria-label="Previous view">←</button>' : '<span></span>';
   const nextButton = state.sourceViewIndex < BOARD_VIEWS.length - 1 ? '<button type="button" data-source-step="1" aria-label="Next view">→</button>' : '<span></span>';
   const continueButton = ready ? '<button class="next-button source-photo-next" id="toStructures">NEXT</button>' : '';
-  return `<section class="source-step single-source"><div class="source-view-head"><b>PHOTO + REQUEST</b><span>${required} / 1 REQUIRED</span></div><div class="source-intake-layout"><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><button class="single-view-upload ${source ? 'filled' : ''}" type="button" data-upload-input="${galleryInputId}" aria-label="${source ? 'Replace' : 'Add'} ${view.label} photo" aria-busy="${processing ? 'true' : 'false'}">${uploadContent}</button>${cameraInput}<input id="${galleryInputId}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label} 갤러리 사진 선택">${intakeActions}${continueButton}<div class="source-view-nav">${previousButton}<nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => index === state.sourceViewIndex ? `<span class="on ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}" aria-current="true"><i></i></span>` : `<button type="button" data-source-view="${index}" class="${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav>${nextButton}</div></div><div class="source-intent"><label for="freePrompt"><b>REQUEST</b></label><textarea id="freePrompt" maxlength="500" placeholder="헤어 스타일 · 색상 · 시술 이력">${esc(state.freePrompt)}</textarea><details class="provider"><summary>API</summary><div class="cfg"><input id="baseURL" aria-label="API URL" placeholder="API URL" value="${esc(state.cfg.baseURL)}"><input id="model" aria-label="Image model" placeholder="IMAGE MODEL" value="${esc(state.cfg.model)}"><input id="size" aria-label="Size" placeholder="SIZE" value="${esc(state.cfg.size)}"><input id="apiKey" aria-label="API key" placeholder="API KEY" type="password" value="${esc(state.cfg.apiKey)}"></div></details></div></div></section>`;
+  return `<section class="source-step single-source"><div class="source-view-head"><b>PHOTO + REQUEST</b><span>${required} / 1 REQUIRED</span></div><div class="source-intake-layout"><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><button class="single-view-upload ${source ? 'filled' : ''}" type="button" data-upload-input="${galleryInputId}" aria-label="${source ? 'Replace' : 'Add'} ${view.label} photo" aria-busy="${processing ? 'true' : 'false'}">${uploadContent}</button>${cameraInput}<input id="${galleryInputId}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label} 갤러리 사진 선택">${intakeActions}${continueButton}<div class="source-view-nav">${previousButton}<nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => index === state.sourceViewIndex ? `<span class="on ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}" aria-current="true"><i></i></span>` : `<button type="button" data-source-view="${index}" class="${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav>${nextButton}</div></div><div class="source-intent"><label for="freePrompt"><b>REQUEST</b></label><div class="request-card"><div class="request-tags" aria-hidden="true"><span>헤어스타일</span><span>색상</span><span>시술 이력</span></div><textarea id="freePrompt" maxlength="500" placeholder="원하는 내용을 자유롭게 적어주세요">${esc(state.freePrompt)}</textarea></div></div></div></section>`;
 }
 
 function toneLabel(toneId) {
@@ -358,10 +360,6 @@ async function ensureCatalog() {
 function syncIntake() {
   state.freePrompt = val('freePrompt') || state.freePrompt;
   state.mood = state.freePrompt;
-  if (document.querySelector('#baseURL')) {
-    state.cfg = { baseURL: val('baseURL'), model: val('model'), size: val('size'), apiKey: val('apiKey') };
-    saveProviderConfig(state.cfg);
-  }
 }
 function val(id) { return document.querySelector(`#${id}`)?.value ?? ''; }
 function filterGroups() {
@@ -842,7 +840,6 @@ function agreementPayload(includeOriginal) { const first = state.recordsById.get
 function downloadJson() { const blob = new Blob([JSON.stringify(agreementPayload(false), null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'hairloom-consultation.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
 function handoff() { const payload = buildConsultationHandoff(agreementPayload(true)); sessionStorage.setItem(CONSULTATION_HANDOFF_STORAGE_KEY, JSON.stringify(payload)); location.href = CONSULTATION_HANDOFF_QUERY_TRIGGER; }
 function loadProviderConfig() { try { const cfg = JSON.parse(localStorage.getItem('HAIR_IMAGEN_CFG') || '{}'); return { baseURL: cfg.baseURL || '', model: cfg.model || 'gpt-image-2', size: cfg.size || '1024x1024', apiKey: sessionStorage.getItem('HAIR_IMAGEN_KEY') || '' }; } catch { localStorage.removeItem('HAIR_IMAGEN_CFG'); return { baseURL: '', model: 'gpt-image-2', size: '1024x1024', apiKey: '' }; } }
-function saveProviderConfig(cfg) { localStorage.setItem('HAIR_IMAGEN_CFG', JSON.stringify({ baseURL: cfg.baseURL, model: cfg.model, size: cfg.size })); if (cfg.apiKey) sessionStorage.setItem('HAIR_IMAGEN_KEY', cfg.apiKey); else sessionStorage.removeItem('HAIR_IMAGEN_KEY'); }
 
 document.querySelector('#imageLightboxClose')?.addEventListener('click', closeImageLightbox);
 imageLightbox?.addEventListener('click', (event) => { if (event.target === imageLightbox) closeImageLightbox(); });

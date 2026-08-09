@@ -42,11 +42,10 @@ Open `http://127.0.0.1:4180/` in a browser.
 
 ## Usage
 
-1. Capture or select the required FRONT photo. SIDE / BACK / CROWN / NAPE / DETAIL are optional.
-2. Enter the desired hair, color, and known treatment history in `REQUEST`.
-3. Configure the URL, image model, size, and API key under `API`.
-4. Select `NEXT` below the photo controls, then open any result as a fullscreen image.
-5. Select 1–6 results and pass them to `LOCK`.
+1. Capture or select images. `Image 1` is required; `Images 2–6` are optional.
+2. Enter the desired hairstyle, color, and known treatment history in the `REQUEST` card.
+3. Select `NEXT` below the photo controls, then open any result as a fullscreen image.
+4. Select 1–6 results and pass them to `LOCK`.
 
 Hairloom derives a conservative local profile from the photo and REQUEST. Only prepared customer originals enter Provider generation requests, and generated images are never reused as inputs.
 
@@ -73,7 +72,7 @@ Never commit API keys, customer photos, generated customer images, or `.gjc/` QA
 
 ## ChatGPT subscription guidance for AI agents
 
-ChatGPT Plus or Pro billing is separate from OpenAI API billing. A ChatGPT subscription cannot be pasted into Hairloom’s `API KEY` field and does not include general application API credits.
+ChatGPT Plus or Pro billing is separate from OpenAI API billing. ChatGPT subscription credentials cannot be used in the Hairloom browser or as the API key in `imagen.web.js`, and the subscription does not include general application API credits.
 
 - Official guidance: [ChatGPT subscriptions and API billing are separate](https://help.openai.com/en/articles/8156019)
 - Codex can sign in with eligible ChatGPT plans: [Using Codex with your ChatGPT plan](https://help.openai.com/en/articles/11369540)

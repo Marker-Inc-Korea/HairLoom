@@ -65,7 +65,8 @@ HOST=127.0.0.1 PORT=4180 npm run start
 - Standard Design Lock continues to use its normal recommendation path.
 - Public Hairloom uses `SOURCE → RESULTS → LOCK` without numeric stage counts.
 - It requires FRONT and accepts optional SIDE / BACK / CROWN / NAPE / DETAIL originals.
-- SOURCE contains camera/gallery intake, one REQUEST field, collapsed image Provider settings, and `NEXT` directly below photo controls when the original is ready. It must not render a separate GENERATE 100 action, AI hair-analysis card, analysis button, explanatory profile copy, manual diagnosis, or color controls.
+- SOURCE contains camera/gallery intake, one styled REQUEST card, and `NEXT` directly below photo controls only when the original and local Provider configuration are ready. It must not render API configuration controls, a separate GENERATE 100 action, AI hair-analysis card, analysis button, explanatory profile copy, manual diagnosis, or color controls.
+- Public source labels are `이미지 1` through `이미지 6`; FRONT/SIDE/BACK/CROWN/NAPE/DETAIL remain internal source keys only.
 - RESULTS lightboxes are enlargement-only. Additional variation/COMPARE generation controls must not be rendered; users select 1–6 completed result tiles directly for LOCK.
 - The silent local profile maps to the existing feasibility, diversity, color, deterministic seed, and handoff contracts without a Provider vision request.
 - Public Hairloom does not create, confirm, or send hair masks; current and non-current natural tones use the same maskless provider path.

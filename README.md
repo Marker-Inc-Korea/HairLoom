@@ -42,11 +42,10 @@ HOST=127.0.0.1 PORT=4180 npm run start
 
 ## 사용법
 
-1. FRONT 사진을 촬영하거나 갤러리에서 선택합니다. SIDE / BACK / CROWN / NAPE / DETAIL은 선택 사항입니다.
-2. `REQUEST`에 원하는 헤어와 색상, 알고 있는 시술 이력을 입력합니다.
-3. `API`에 URL, 이미지 모델, 크기, API 키를 설정합니다.
-4. 사진 선택 아래의 `NEXT`로 결과 생성을 시작하고 이미지를 눌러 전체화면으로 확대합니다.
-5. 1–6개를 선택해 `LOCK`으로 전달합니다.
+1. 카메라로 촬영하거나 갤러리에서 이미지를 선택합니다. `이미지 1`은 필수이고 `이미지 2–6`은 선택 사항입니다.
+2. `REQUEST` 카드에서 헤어스타일·색상·시술 이력을 자유롭게 입력합니다.
+3. 사진 선택 아래의 `NEXT`로 결과 생성을 시작하고 이미지를 눌러 전체화면으로 확대합니다.
+4. 1–6개를 선택해 `LOCK`으로 전달합니다.
 
 사진과 REQUEST에서 보수적인 로컬 헤어 프로필을 만들며, Provider에는 생성할 때 준비된 고객 원본만 전달합니다. 생성 이미지는 다음 요청의 입력으로 재사용하지 않습니다.
 
@@ -73,7 +72,7 @@ API 키, 고객 사진, 생성 고객 이미지, `.gjc/` QA 자료는 커밋하�
 
 ## ChatGPT 구독 연결 안내 · AI 에이전트용
 
-ChatGPT Plus·Pro 구독과 OpenAI API 결제는 별개입니다. ChatGPT 구독을 Hairloom의 `API KEY` 칸에 직접 연결할 수 없으며, 구독료에 일반 애플리케이션용 API 크레딧이 포함되지 않습니다.
+ChatGPT Plus·Pro 구독과 OpenAI API 결제는 별개입니다. ChatGPT 구독 정보는 Hairloom 브라우저 화면이나 `imagen.web.js`의 API 키로 사용할 수 없으며, 구독료에 일반 애플리케이션용 API 크레딧이 포함되지 않습니다.
 
 - 공식 안내: [ChatGPT 구독과 API 결제는 별도](https://help.openai.com/en/articles/8156019)
 - Codex는 지원되는 ChatGPT 플랜으로 로그인할 수 있습니다: [Using Codex with your ChatGPT plan](https://help.openai.com/en/articles/11369540)
