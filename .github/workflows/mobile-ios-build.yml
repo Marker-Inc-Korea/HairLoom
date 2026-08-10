@@ -33,6 +33,8 @@ jobs:
       - run: npm ci
       - run: npm run mobile:prepare
       - run: npx cap copy ios
+      - name: Install locked CocoaPods tooling
+        run: sudo gem install cocoapods -v 1.17.0
       - run: pod install --deployment
         working-directory: ios/App
       - name: Build unsigned iOS simulator app
