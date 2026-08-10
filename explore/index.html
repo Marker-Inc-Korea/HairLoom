@@ -342,24 +342,13 @@ body.explore-lightbox-open{overflow:hidden}
 <div class="cfgmask" id="cfgMask">
   <div class="cfgcard">
     <button class="cfgx" id="cfgClose" aria-label="닫기">✕</button>
-    <h3>AI 연결</h3>
-    <label>Base URL<input id="cfgBase" placeholder="https://api.openai.com/v1" autocomplete="off"></label>
-    <label>API Key<input id="cfgKey" type="password" placeholder="sk-..." autocomplete="off"></label>
-    <label>Image Model<input id="cfgModel" placeholder="gpt-image-2" autocomplete="off"></label>
-    <label>Analysis Model<input id="cfgAnalysisModel" placeholder="gpt-4.1-mini" autocomplete="off"></label>
-    <label>Size<input id="cfgSize" placeholder="1024x1024" autocomplete="off"></label>
-    <div class="cfgstat" id="cfgStat"></div>
-    <div class="cfgrow">
-      <button class="btn2 ghost" id="cfgClear">초기화</button>
-      <button class="btn2" id="cfgTest">연결 테스트</button>
-      <button class="btn2 prime" id="cfgSave">저장</button>
-    </div>
+    <h3>모바일 보안 연결</h3>
+    <p class="cfgstat" id="cfgStat">브라우저 API 키 입력은 제거되었습니다. 생성은 Hairloom 모바일 앱의 기기 보안 저장소를 사용합니다.</p>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
-<script src="imagen.web.js"></script>
 <script>
 let ExploreCore=null;
 const exploreCoreReady=import('./src/exploreCore.mjs').then(core=>(ExploreCore=core));
@@ -533,51 +522,14 @@ const CUT_KOS=new Set(CUTS.map(c=>c.ko));
 function allowedCuts(g){try{const v=JSON.parse(localStorage.getItem(refKey(g)));if(Array.isArray(v)){const valid=v.filter(k=>CUT_KOS.has(k));if(valid.length)return new Set(valid)}}catch(e){}return null}
 function setAllowed(g,a){localStorage.setItem(refKey(g),JSON.stringify(a))}
 
-/* ---- image API config (key is tab-scoped) ---- */
-const CFG_KEY='HAIR_IMAGEN_CFG';
-const CFG_SESSION_KEY='HAIR_IMAGEN_KEY';
-function getImagenCfg(){
-  try{
-    const v=JSON.parse(localStorage.getItem(CFG_KEY));
-    if(v&&v.apiKey){sessionStorage.setItem(CFG_SESSION_KEY,v.apiKey);delete v.apiKey;localStorage.setItem(CFG_KEY,JSON.stringify(v))}
-    const apiKey=sessionStorage.getItem(CFG_SESSION_KEY)||'';
-    if(v&&v.baseURL&&apiKey)return {...v,apiKey};
-  }catch(e){localStorage.removeItem(CFG_KEY)}
-  return (window.HAIR_IMAGEN&&window.HAIR_IMAGEN.baseURL&&window.HAIR_IMAGEN.apiKey)?window.HAIR_IMAGEN:null;
-}
-function refreshCfgStat(){
-  const c=getImagenCfg();const el=$('#cfgStat');if(!el)return;
-  if(c&&c.baseURL&&c.apiKey){el.textContent='● 연결됨: '+c.baseURL+' ('+(c.model||'gpt-image-1')+')';el.className='cfgstat ok'}
-  else{el.textContent='○ 미연결 — 생성이 실행되지 않습니다. API를 등록하세요.';el.className='cfgstat off'}
-}
-function fillCfgForm(){
-  const c=getImagenCfg()||{};
-  $('#cfgBase').value=c.baseURL||'';$('#cfgKey').value=c.apiKey||'';
-  $('#cfgModel').value=c.model||'gpt-image-2';$('#cfgAnalysisModel').value=c.analysisModel||HairAnalysis?.DEFAULT_HAIR_ANALYSIS_MODEL||'gpt-4.1-mini';$('#cfgSize').value=c.size||'1024x1024';
-  refreshCfgStat();
-}
-function openCfg(){fillCfgForm();$('#cfgMask').classList.add('on')}
+/* ---- Provider credentials are native-only ---- */
+function refreshCfgStat(){const el=$('#cfgStat');if(el){el.textContent='브라우저 API 키 입력은 제거되었습니다. Hairloom 모바일 앱에서 생성 연결을 사용하세요.';el.className='cfgstat off'}}
+function openCfg(){refreshCfgStat();$('#cfgMask').classList.add('on')}
 function closeCfg(){$('#cfgMask').classList.remove('on')}
 $('#openCfg').addEventListener('click',openCfg);
 $('#cfgClose').addEventListener('click',closeCfg);
 $('#cfgMask').addEventListener('click',e=>{if(e.target===$('#cfgMask'))closeCfg()});
-$('#cfgSave').addEventListener('click',()=>{
-  const cfg={baseURL:$('#cfgBase').value.trim().replace(/\/+$/,''),apiKey:$('#cfgKey').value.trim(),model:$('#cfgModel').value.trim()||'gpt-image-2',analysisModel:$('#cfgAnalysisModel').value.trim()||'gpt-4.1-mini',size:$('#cfgSize').value.trim()||'1024x1024'};
-  if(!cfg.baseURL||!cfg.apiKey){toast('Base URL과 API Key를 입력하세요');return}
-  sessionStorage.setItem(CFG_SESSION_KEY,cfg.apiKey);
-  localStorage.setItem(CFG_KEY,JSON.stringify({baseURL:cfg.baseURL,model:cfg.model,analysisModel:cfg.analysisModel,size:cfg.size}));refreshCfgStat();toast('연결 정보를 저장했어요');
-});
-$('#cfgClear').addEventListener('click',()=>{localStorage.removeItem(CFG_KEY);sessionStorage.removeItem(CFG_SESSION_KEY);fillCfgForm();toast('연결 정보를 초기화했어요')});
-$('#cfgTest').addEventListener('click',async()=>{
-  const base=$('#cfgBase').value.trim().replace(/\/+$/,''),key=$('#cfgKey').value.trim(),model=$('#cfgModel').value.trim()||'gpt-image-1';
-  if(!base||!key){toast('Base URL과 API Key를 입력하세요');return}
-  const el=$('#cfgStat');el.textContent='… 연결 테스트 중';el.className='cfgstat';
-  try{
-    const r=await fetchTimeout(base+'/images/generations',{method:'POST',headers:{'content-type':'application/json',Authorization:'Bearer '+key},body:JSON.stringify({model,prompt:'a small gray circle on white background',size:'1024x1024'})},60000);
-    if(r.ok){el.textContent='● 연결 성공';el.className='cfgstat ok'}
-    else{el.textContent='× 실패 (HTTP '+r.status+')';el.className='cfgstat off'}
-  }catch(e){el.textContent='× 실패 ('+((e&&e.name)||'error')+')';el.className='cfgstat off'}
-});
+
 
 /* EXPLORE: original front photo → 100 personalized front edits */
 const EXPLORE_LENGTH_LABELS=['귀 위','턱선','쇄골','가슴','허리'];
@@ -613,8 +565,7 @@ async function runExploreAnalysis({force=false}={}){
   const version=++EX.analysisVersion;EX.analysisController?.abort();const controller=new AbortController();EX.analysisController=controller;EX.analysisStatus='analyzing';renderExploreAnalysis();
   const freePrompt=EX.freePrompt.trim();let localTone={toneId:'unknown',confidence:0};try{localTone=await detectExploreHairTone()}catch{}
   let analysis=HairAnalysis.defaultHairAnalysis({promptIntent:freePrompt,currentToneId:localTone.toneId,confidence:localTone.confidence});
-  const cfg=getImagenCfg();
-  if(cfg?.baseURL&&cfg?.apiKey){try{const remote=await HairAnalysis.requestHairAnalysis({baseURL:cfg.baseURL,apiKey:cfg.apiKey,model:cfg.analysisModel||HairAnalysis.DEFAULT_HAIR_ANALYSIS_MODEL,imageDataUrl:EX.preparedFrontDataUrl,freePrompt,signal:controller.signal});analysis=HairAnalysis.normalizeHairAnalysis({...remote,currentToneId:remote.currentToneId==='unknown'?localTone.toneId:remote.currentToneId,confidence:Math.max(remote.confidence,localTone.confidence||0)},{freePrompt,source:'provider'})}catch(error){if(error?.name==='AbortError')return null}}
+
   if(version!==EX.analysisVersion||controller.signal.aborted)return null;
   EX.analysis=analysis;EX.settings=ExploreCore.normalizeSettings(HairAnalysis.hairAnalysisToExploreSettings(analysis));EX.colorToneId=analysis.targetToneIds[0]||HairColorPalette.PRESERVE_CURRENT_TONE_ID;EX.analysisStatus=analysis.source==='provider'?'ready':'fallback';renderExploreAnalysis();return analysis;
 }
@@ -670,18 +621,8 @@ function explorePrompt(record,colorToneId){
   return ['TASK: edit only the hair in the single uploaded original customer front photograph.','OUTPUT CONTRACT: return exactly ONE full-frame portrait containing ONE person, ONE front view and ONE image.','PRESERVE THE ENTIRE SOURCE FRAME: no crop, zoom, enlargement, reframing, collage, contact sheet, split screen, before/after, duplicate person, inset, border or multiple view.',`USER REQUEST: ${EX.freePrompt||'현재 헤어에 어울리는 자연스러운 변화'}`,`AUTOMATIC HAIR PROFILE: ${EX.analysis?.summaryKo||'conservative fallback'}`,`DESIGN LOCK ID: ${record.id}`,`STYLE: ${record.promptAtoms.titleKo}`,`STRUCTURE: ${record.promptAtoms.structureKo}`,record.promptAtoms.frontKo?`FRONT: ${record.promptAtoms.frontKo}`:'',record.promptAtoms.finishKo?`FINISH: ${record.promptAtoms.finishKo}`:'',`CURRENT LENGTH: ${EXPLORE_LENGTH_LABELS[settings.currentLength]}`,`HAIR THICKNESS: ${settings.hairThickness}`,damage,!settings.permAllowed?'NO PERM OR CHEMICAL CURL PROCESS.':'',!settings.extensionAllowed?'NO EXTENSIONS, PIECES, WIGS OR ADDED HAIR.':'',record.promptAtoms.safetyKo,NATURAL_SURFACE_FINISH_PROMPT,ExploreCore.genderLineTreatmentPrompt(record.genderId),colorRule,identityRule,'No text, logo, watermark or decorative graphic.'].filter(Boolean).join('\n');
 }
 function decodeExploreImage(base64){const binary=atob(base64),bytes=Uint8Array.from(binary,char=>char.charCodeAt(0)),mimeType=ExploreCore.detectImageMime(bytes);if(!mimeType)throw new Error('unknown image MIME');const blob=new Blob([bytes],{type:mimeType}),objectUrl=URL.createObjectURL(blob);return {url:objectUrl,objectUrl,blob,mimeType,bytes:bytes.byteLength,providerKind:'b64_json'}}
-async function callExploreEdit(job,controller){
-  const cfg=getImagenCfg();if(!cfg)return {ok:false,errorCode:'network'};
-  for(let attempt=0;attempt<2;attempt++){
-    try{
-      const form=new FormData();form.append('model',cfg.model||'gpt-image-2');form.append('prompt',explorePrompt(EX.recordsById.get(job.designId),job.colorToneId));form.append('size',cfg.size||'1024x1024');form.append('quality','low');form.append('output_format','jpeg');form.append('output_compression','70');form.append('image',EX.preparedFrontBlob,`${job.designId}.jpg`);
-      const response=await fetch(cfg.baseURL.replace(/\/+$/,'')+'/images/edits',{method:'POST',headers:{Authorization:'Bearer '+cfg.apiKey},body:form,signal:controller.signal});
-      if(response.ok){const payload=await response.json(),datum=payload?.data?.[0];if(datum?.b64_json)return {ok:true,...decodeExploreImage(datum.b64_json),providerStatus:response.status};if(datum?.url)return {ok:true,url:datum.url,mimeType:'image/jpeg',bytes:0,providerKind:'url',providerStatus:response.status};return {ok:false,errorCode:'provider-shape',providerStatus:response.status}}
-      if(attempt===0&&(response.status===429||response.status>=500)){await delay(650);continue}return {ok:false,errorCode:'http',providerStatus:response.status};
-    }catch(error){if(error?.name==='AbortError')return {ok:false,errorCode:'aborted'};if(attempt===0){await delay(400);continue}return {ok:false,errorCode:'network'}}
-  }
-  return {ok:false,errorCode:'network'};
-}
+async function callExploreEdit(){return {ok:false,errorCode:'native-provider-required'}}
+
 function renderExploreProgress(){if(!EX.batch)return;$('#exploreBatchLabel').textContent=EX.batch.centerDesignId?`NEAR · ${EX.batch.centerDesignId}`:'RANDOM FILL';$('#exploreShortlistCount').textContent=`${EX.selectedDesignIds.size}/6`;$('#exploreToLock').classList.toggle('on',EX.selectedDesignIds.size>0);document.title='HAIRLOOM · Explore'}
 const EXPLORE_MOSAIC_CLASSES=['mosaic-3x3','mosaic-2x3','mosaic-2x2','mosaic-2x1','mosaic-1x2'];
 function exploreMosaicClass(slotIndex,designId='',aspectRatio=0){
@@ -875,49 +816,7 @@ function hairPrompt(cut,angleKey='front'){
     'No text, logo, watermark or decorative graphic.'
   ].filter(Boolean).join('\n');
 }
-async function prepareImageBlob(dataUrl,max=1024){
-  const mime=(/^data:(image\/(?:png|jpeg|webp));/i.exec(dataUrl)||[])[1]?.toLowerCase()||'image/png';
-  const img=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=dataUrl});
-  const sourceMax=Math.max(img.naturalWidth,img.naturalHeight);
-  if(sourceMax<=max&&/image\/(?:png|jpeg|webp)/.test(mime)){
-    const r=await fetch(dataUrl);return r.blob();
-  }
-  const scale=Math.min(1,max/sourceMax),w=Math.round(img.naturalWidth*scale),h=Math.round(img.naturalHeight*scale);
-  const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(img,0,0,w,h);
-  const outputType=/image\/(?:jpeg|webp)/.test(mime)?mime:'image/png';
-  return await new Promise((res,rej)=>canvas.toBlob(blob=>blob?res(blob):rej(new Error('image encode failed')),outputType,outputType==='image/png'?undefined:.92));
-}
-function imageExtension(blob){return blob?.type==='image/jpeg'?'jpg':blob?.type==='image/webp'?'webp':'png'}
-function fetchTimeout(url,opts,ms){
-  const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),ms||90000);
-  return fetch(url,{...opts,signal:ctl.signal}).finally(()=>clearTimeout(t));
-}
-async function callEdit(cut,angleKey='front',preparedBlob=null){
-  const photo=S.photos[angleKey]||frontPhoto();
-  const cfg=getImagenCfg();
-  console.log('[callEdit]',cut.ko,'| lock:',DESIGN_LOCK_VERSION,'| hs:',cut.hs,'| length:',S.length,'| color:',S.color.id,'| angle:',angleKey,'| singleImage:true');
-  if(cfg&&cfg.apiKey&&cfg.baseURL){
-    try{
-      const blob=preparedBlob||await prepareImageBlob(photo,1024);
-      const form=new FormData();
-      form.append('model',cfg.model||'gpt-image-1');
-      form.append('prompt',hairPrompt(cut,angleKey));
-      form.append('size',cfg.size||'1024x1024');
-      form.append('image',blob,`${cut.hs}-${angleKey}.${imageExtension(blob)}`);
-      const r=await fetch(cfg.baseURL.replace(/\/+$/,'')+'/images/edits',{method:'POST',headers:{Authorization:'Bearer '+cfg.apiKey},body:form});
-      if(r.ok){const j=await r.json(),datum=j&&j.data&&j.data[0],b=datum&&datum.b64_json;if(b){const bytes=Uint8Array.from(atob(b),char=>char.charCodeAt(0)),mime=ExploreCore?.detectImageMime(bytes)||'image/png';return `data:${mime};base64,${b}`}if(datum&&datum.url)return datum.url;}
-      else console.warn('[callEdit] proxy status',r.status,cut.ko,angleKey);
-    }catch(e){console.warn('[callEdit] proxy fail',cut.ko,angleKey,e&&e.name);}
-  }
-  try{
-    const r=await fetch('/api/image-edit',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({imageDataUrl:photo,moduleId:'hairstyle',answers:{referenceGender:S.gender,length:S.length,dyePreference:S.color.id},tapeState:{hairStyle:cut.hs},photoName:`salon-${angleKey}.jpg`})});
-    if(r.ok){const j=await r.json();if(j&&j.imageDataUrl)return j.imageDataUrl;}
-  }catch(e){console.warn('[callEdit] bridge fail',cut.ko,angleKey,e&&e.name);}
-  console.warn('[callEdit] failed, no fallback:',cut.ko,angleKey);
-  return null;
-}
 
-let generationRun=0;
 let resultStyleIndex=0,resultAngleIndex=0;
 let resultGeneration={active:false,done:0,total:0,firstReveal:false};
 function expectedResultAngles(){return ANGLES.filter(a=>S.photos[a.k])}
@@ -960,39 +859,8 @@ function stepResultAngle(delta){
   renderResult();
 }
 function stepResultStyle(delta){const n=S.results.length;if(!n)return;resultStyleIndex=(resultStyleIndex+delta+n)%n;resultAngleIndex=0;renderResult()}
-function buildResults(){resultStyleIndex=0;resultAngleIndex=0;renderResult()}
-async function generate(){
-  const runId=++generationRun,recs=designLockSelections(),angleKeys=expectedResultAngles().map(angle=>angle.k);
-  S.results=recs.map(c=>({cut:c,views:{},failed:{}}));
-  const jobs=recs.flatMap((cut,resultIndex)=>angleKeys.map(angleKey=>({cut,resultIndex,angleKey})));
-  resultGeneration={active:true,done:0,total:jobs.length,firstReveal:false};
-  goto('results');buildResults();
-  const preparedBlobs={};
-  if(getImagenCfg()){
-    const pairs=await Promise.all(angleKeys.map(async angleKey=>{
-      try{return [angleKey,await prepareImageBlob(S.photos[angleKey]||frontPhoto(),1024)]}
-      catch(e){console.warn('[prepareImageBlob] failed',angleKey,e&&e.name);return [angleKey,null]}
-    }));
-    if(runId!==generationRun)return;
-    pairs.forEach(([angleKey,blob])=>{if(blob)preparedBlobs[angleKey]=blob});
-  }
-  let done=0;const total=jobs.length;
-  const finishOne=(job,url)=>{
-    if(runId!==generationRun)return;
-    const result=S.results[job.resultIndex];
-    if(url)result.views[job.angleKey]=url;else result.failed[job.angleKey]=true;
-    done++;resultGeneration.done=done;
-    const angles=expectedResultAngles(),angleIndex=angles.findIndex(angle=>angle.k===job.angleKey);
-    if(url&&!resultGeneration.firstReveal){resultGeneration.firstReveal=true;resultStyleIndex=job.resultIndex;resultAngleIndex=Math.max(0,angleIndex)}
-    const visible=resultStyleIndex===job.resultIndex&&angles[resultAngleIndex]?.k===job.angleKey;
-    if(visible)renderResult({reveal:!!url});else{renderStyleNav();updateGenerationProgress()}
-    if(done>=total){
-      resultGeneration.active=false;updateGenerationProgress();
-      if(!S.results.some(item=>Object.keys(item.views).length))showError(getImagenCfg()?'이미지 생성에 모두 실패했어요. 연결 상태를 확인해 주세요.':'이미지 API가 연결되어 있지 않습니다. 우측 상단 ⚙ 연결 설정에서 API를 등록해 주세요.');
-    }
-  };
-  const runJob=async job=>{let url=null;try{url=await callEdit(job.cut,job.angleKey,preparedBlobs[job.angleKey])}catch(e){url=null}finishOne(job,url)};
-  jobs.forEach(job=>runJob(job));
+function generate(){
+  showError('이미지 생성은 Hairloom 모바일 앱에서만 사용할 수 있습니다. 모바일 앱의 SOURCE 화면에서 생성 연결을 완료해 주세요.');
 }
 $('#rPrev').addEventListener('click',()=>stepResultAngle(-1));$('#rNext').addEventListener('click',()=>stepResultAngle(1));$('#rHairNext').addEventListener('click',()=>stepResultStyle(1));
 

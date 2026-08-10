@@ -8,11 +8,11 @@ This is the machine-operable guide for work in the standalone Hairloom repositor
 - Repository: `https://github.com/Marker-Inc-Korea/HairLoom`
 - Runtime: Node.js 20+
 - Module system: native ESM
-- Build step: none
+- Web build step: none; native packaging uses the explicit `mobile:prepare` and Capacitor sync commands
 - App URL: `http://127.0.0.1:4180/` redirects to the public Hairloom route at `/consultation/`
 - Health URL: `http://127.0.0.1:4180/healthz`
 - Main verification: `npm run verify`
-- Expected baseline: 92 tests passing
+- Expected baseline: 103 tests passing
 
 ## Hard project boundary
 
@@ -42,35 +42,35 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, catalog/consultation/server/trend/scheduler/automation tests, deferred model-preview module tests, hair-analysis tests, and the 92-test baseline.
+`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, catalog/consultation/server/trend/scheduler/automation tests, deferred model-preview module tests, hair-analysis tests, mobile bridge/native security contract tests, and the 103-test baseline.
 
 ## Product invariants
 
 - Hairloom is the only public product surface. `/` redirects to `/consultation/`.
 - Explore is an internal route at `/explore/`, disabled unless the server starts with `HAIRLOOM_ENABLE_EXPLORE=1`.
 - Public Hairloom camera capture (`capture="user"`) and gallery selection must feed the same prepared-original FRONT pipeline.
-- Public Hairloom must not expose or call the former AI hair-analysis surface. It derives a conservative local profile from the prepared original, local color sampling, and REQUEST text only.
+- Public Hairloom performs automatic hair-only analysis through the typed native bridge using the prepared FRONT source handle. It must not expose an analysis card or button; when native analysis is unavailable, it uses the conservative local profile fallback.
 - The local profile must never infer identity, face shape, health, ethnicity, or gender identity. `catalogLine` describes haircut geometry only and may be `F`, `M`, or neutral `U`.
 - Visually unobservable history such as bleach count, recent perm, or extensions must use conservative defaults rather than fabricated certainty.
 - High visible damage excludes every perm and extension/piece design regardless of REQUEST wording.
 - Every Provider request uses a prepared original customer photo.
 - Generated pixels and catalog model photos are never subsequent request inputs.
-- The installable mobile shell contains public Hairloom only. Its service worker must never cache Explore, model-preview routes, customer photos, analysis payloads, Provider requests/responses, generated images, API keys, `imagen.web.js`, blob URLs, or data URLs.
+- The browser/PWA shell caches public Hairloom assets only and cannot generate images. It must never cache Explore, model-preview routes, customer photos, local-profile payloads, Provider requests/responses, generated images, credentials, `imagen.web.js`, blob URLs, or data URLs.
 - REQUEST text and local-profile settings must be included in deterministic seeds/cache keys so changed intent cannot reuse stale results.
 - Loading-model previews and the model manager are deferred future work. Their dormant source and tests may remain, but active public Hairloom/Explore code must not import them and the server, manifest, and service worker must not expose their routes or assets.
-- Explore concurrency is capped at 32 per tab.
+- Explore's legacy browser generation path is fail-closed; it must not run a browser Provider queue or transport.
 - Results use 100 fixed slots and must not reorder on completion.
 - Shortlists contain 1–6 current `HLM-*` design IDs.
 - Explore handoff requires the current `catalogVersion` and `promptVersion`.
 - Standard Design Lock continues to use its normal recommendation path.
 - Public Hairloom uses `SOURCE → RESULTS → LOCK` without numeric stage counts.
 - It requires FRONT and accepts optional SIDE / BACK / CROWN / NAPE / DETAIL originals.
-- SOURCE contains camera/gallery intake, one styled REQUEST card, and `NEXT` directly below photo controls only when the original and local Provider configuration are ready. It must not render API configuration controls, a separate GENERATE 100 action, AI hair-analysis card, analysis button, explanatory profile copy, manual diagnosis, or color controls.
+- SOURCE contains camera/gallery intake, one styled REQUEST card, a native `이미지 생성 연결` status/action card, and `NEXT` directly below photo controls only when the original and native Provider are ready. It must not render URL/key/model input fields, a separate GENERATE 100 action, AI hair-analysis card, analysis button, explanatory profile copy, manual diagnosis, or color controls.
 - Public source labels are `이미지 1` through `이미지 6`; FRONT/SIDE/BACK/CROWN/NAPE/DETAIL remain internal source keys only.
 - RESULTS lightboxes are enlargement-only. Additional variation/COMPARE generation controls must not be rendered; users select 1–6 completed result tiles directly for LOCK.
-- The silent local profile maps to the existing feasibility, diversity, color, deterministic seed, and handoff contracts without a Provider vision request.
+- The silent normalized profile maps native hair-only analysis or its conservative local fallback into the existing feasibility, diversity, color, deterministic seed, and handoff contracts.
 - Public Hairloom does not create, confirm, or send hair masks; current and non-current natural tones use the same maskless provider path.
-- Provider traffic uses only `POST /images/edits`; it must not call `/responses` or `/chat/completions` for hair analysis.
+- Provider traffic uses only native iOS/Android HTTPS transport to the fixed OpenAI origin: `/responses` for prepared-original hair analysis and `/images/edits` for maskless edits. Browser/WebView JavaScript must issue neither request and must never receive authorization material.
 - Changing the source photo or REQUEST invalidates the local profile and generated surfaces.
 - Public Hairloom and Design Lock prompts must use the shared low-sheen satin-to-matte surface contract and reject wet, oily, glassy, plastic, metallic, lacquered, or synthetic-wig shine.
 - Core female and male records must receive distinct hair-only line-treatment prompts: feminine connected curves and blended face-framing versus masculine directional planes, broader sections, and controlled temple/nape transitions. The named design remains authoritative, and these rules must never alter face, body, or identity.
@@ -84,7 +84,7 @@ HOST=127.0.0.1 PORT=4180 npm run start
 - GitHub trend refresh runs through `.github/workflows/hair-trend-refresh.yml`, checks a deterministic 14-day cadence anchored at `2026-08-03`, and permits manual dispatch to force a run.
 - Automated trend refreshes may commit changes only from `data/hair-trend-signals.json` and `src/hairTrendData.mjs` on `automation/hair-trends`, must target the default branch and run full verification first, and must fail on every other tracked change or non-ignored untracked file.
 - GitHub Actions credentials must remain repository secrets or variables. Never write them to generated data, workflow artifacts, commits, logs, or PR text.
-- README subscription guidance must state that ChatGPT subscriptions and API billing are separate. Agents must never expose ChatGPT cookies, passwords, browser tokens, or `~/.codex/auth.json`, and must not claim Codex sign-in supplies Hairloom's `/images/edits` API.
+- README subscription guidance must state that ChatGPT subscriptions and API billing are separate. Agents must never expose ChatGPT cookies, passwords, browser tokens, `~/.codex/auth.json`, or private God Tibo credentials, and must not claim Codex sign-in supplies Hairloom's `/images/edits` API. A future supported subscription Provider remains a TODO behind a separate compatibility/security gate.
 - Public Hairloom fixed 100-slot allocations remain deterministic, approximately balance supplied views, and retain view/mirror/color axes through retries.
 - Provider-side mirrored source images must be flipped back before display.
 - Public Hairloom displays the provider result directly after orientation restoration; it does not composite protected source pixels over the result.
@@ -128,7 +128,7 @@ docs/assets/test-subjects/
 .gjc/
 ```
 
-API keys belong in session storage or the ignored local fallback file. Non-secret provider settings, including the image and analysis model names, may use local storage.
+API keys belong only in iOS Keychain or Android Keystore and may enter native request memory only while constructing a Provider request. Browser/WebView JavaScript, local/session storage, service workers, exports, logs, crash reports, copied web assets, and repository files must never contain them.
 
 ## Verification by change type
 
@@ -166,6 +166,19 @@ Server changes:
 node --test server.test.mjs
 npm run verify
 ```
+
+Native mobile changes:
+
+```bash
+npm run mobile:prepare
+npm run mobile:test
+npm run mobile:doctor
+JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home ANDROID_HOME=/opt/homebrew/share/android-commandlinetools ./android/gradlew -p android assembleDebug
+swiftc -frontend -parse ios/App/App/HairloomProviderPlugin.swift
+npm run verify
+```
+
+A clean iOS archive additionally requires full Xcode, CocoaPods, signing, and a real iOS device/simulator. Command Line Tools alone are not proof of an iOS build.
 
 Visual changes require Aside at minimum on:
 

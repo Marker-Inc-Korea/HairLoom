@@ -4,3 +4,4 @@ imagen.web.js
 node_modules/
 docs/assets/test-subjects/
 .gjc/
+mobile-dist/

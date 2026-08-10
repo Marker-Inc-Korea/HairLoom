@@ -1,4 +1,4 @@
-import { catalogVersion, promptVersion, hydrateCatalogPayload, normalizeProviderResult, normalizeSettings, sourcePhotoKey, genderLineTreatmentPrompt } from '../src/exploreCore.mjs';
+import { catalogVersion, promptVersion, hydrateCatalogPayload, normalizeSettings, sourcePhotoKey, genderLineTreatmentPrompt } from '../src/exploreCore.mjs';
 import {
   CONSULTATION_HANDOFF_STORAGE_KEY,
   CONSULTATION_HANDOFF_QUERY_TRIGGER,
@@ -17,7 +17,6 @@ import {
   selectConsultationStructureDesignIds,
   createConsultationBatch,
   assignConsultationSourceViews,
-  startConsultationQueuedItems,
   applyConsultationCompletion,
   supersedeConsultationBatch,
   buildConsultationHandoff
@@ -29,6 +28,21 @@ import {
   hairAnalysisToExploreSettings,
   hairAnalysisToColorProfile
 } from '../src/hairAnalysis.mjs';
+import {
+  providerStatus,
+  configureProvider,
+  clearProvider,
+  createPreparedSource,
+  deletePreparedSource,
+  readPreparedSource,
+  runNativeAnalysis,
+  createNativeBatch,
+  nativeBatchStatus,
+  cancelNativeBatch,
+  readNativeOutput,
+  deleteAllCustomerData,
+  onNativeBatchEvent
+} from '../src/mobileProviderBridge.mjs';
 
 const app = document.querySelector('#app');
 const imageLightbox = document.querySelector('#imageLightbox');
@@ -69,18 +83,18 @@ const state = {
   settings: normalizeSettings({}),
   mood: '',
   batch: null,
-  running: new Set(),
-  controllers: new Map(),
+  nativeBatchId: '',
+  nativeSources: new Map(),
+  provider: { available: false, configured: false, provider: 'native-required', model: '', loading: true },
   shortlist: new Set(),
-  error: '',
-  cfg: loadProviderConfig()
+  error: ''
 };
 
 function h(strings, ...values) {
   return strings.reduce((out, part, index) => out + part + (values[index] ?? ''), '');
 }
 const esc = (value) => String(value ?? '').replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[m]);
-const statusKo = (status) => status === 'possible' ? 'OK' : status === 'conditional' ? 'CHECK' : status === 'impossible' ? 'NO' : status === 'done' ? 'DONE' : status === 'failed' ? 'FAIL' : status === 'active' ? 'RUN' : 'WAIT';
+const statusKo = (status) => status === 'possible' ? 'OK' : status === 'conditional' ? 'CHECK' : status === 'impossible' ? 'NO' : status === 'done' ? 'DONE' : status === 'failed' ? 'FAIL' : status === 'active' ? 'RUN' : status === 'retryable' ? 'RETRY' : 'WAIT';
 const statusClass = (s) => s === 'possible' ? 'ok' : s === 'conditional' ? 'conditional' : 'impossible';
 let sourceLoadVersion = 0;
 const STYLE_NAME_REPLACEMENTS = [
@@ -167,24 +181,29 @@ function assignBatchSourceViews(batch, purpose) {
 }
 
 
+function providerConnectionCard() {
+  if (state.provider.loading) return '<div class="native-provider-card loading"><b>이미지 생성 연결</b><span>보안 연결 확인 중</span></div>';
+  if (!state.provider.available) return '<div class="native-provider-card unavailable"><b>모바일 앱 필요</b><span>이미지 생성 키는 브라우저에 저장하지 않습니다. Hairloom 모바일 앱에서 연결해주세요.</span></div>';
+  if (state.provider.configured) return `<div class="native-provider-card connected"><b>이미지 생성 연결됨</b><span>${esc(state.provider.provider)} · ${esc(state.provider.model)} · 별도 사용료 발생</span><div class="native-provider-actions"><button type="button" id="clearNativeProvider">연결 삭제</button><button type="button" id="deleteNativeCustomerData">모든 고객 데이터 삭제</button></div></div>`;
+  return '<div class="native-provider-card"><b>이미지 생성 연결</b><span>개인 이미지 API 키는 기기의 보안 저장소에만 보관됩니다.</span><div class="native-provider-actions"><button type="button" id="configureNativeProvider">안전하게 연결</button><button type="button" id="deleteNativeCustomerData">모든 고객 데이터 삭제</button></div></div>';
+}
+
 function renderSource() {
   const view = BOARD_VIEWS[state.sourceViewIndex] ?? BOARD_VIEWS[0];
   const source = sourceViewSource(view);
   const required = state.originalJpegDataUrl ? 1 : 0;
   const processing = state.sourceProcessing && view.id === 'front';
-  const provider = resolvedProviderConfig();
-  const providerReady = Boolean(provider.baseURL && provider.apiKey && provider.apiKey !== 'YOUR_PROXY_API_KEY');
-  const ready = requiredSourceViewsReady() && providerReady && !state.sourceProcessing && !state.structurePreparing;
+  const ready = requiredSourceViewsReady() && state.provider.configured && !state.sourceProcessing && !state.structurePreparing;
   const uploadContent = source ? `<img src="${esc(source)}" alt="${view.label}">` : processing ? '<span class="source-processing-mark">···</span><small>PREPARING PHOTO</small>' : `<span>＋</span><small>ADD ${view.label}</small>`;
   const galleryInputId = `view-${view.id}-gallery`;
-  const cameraInput = view.id === 'front' ? `<input id="view-front-camera" data-view="front" type="file" accept="image/*" capture="user" aria-label="카메라로 정면 사진 촬영">` : '';
+  const cameraInput = view.id === 'front' ? '<input id="view-front-camera" data-view="front" type="file" accept="image/*" capture="user" aria-label="카메라로 정면 사진 촬영">' : '';
   const intakeActions = view.id === 'front'
     ? `<div class="source-intake-actions"><button type="button" data-upload-input="view-front-camera">카메라로 바로 촬영</button><button type="button" data-upload-input="${galleryInputId}">갤러리에서 선택</button></div>`
     : `<div class="source-intake-actions one"><button type="button" data-upload-input="${galleryInputId}">사진 선택</button></div>`;
   const previousButton = state.sourceViewIndex > 0 ? '<button type="button" data-source-step="-1" aria-label="Previous view">←</button>' : '<span></span>';
   const nextButton = state.sourceViewIndex < BOARD_VIEWS.length - 1 ? '<button type="button" data-source-step="1" aria-label="Next view">→</button>' : '<span></span>';
   const continueButton = ready ? '<button class="next-button source-photo-next" id="toStructures">NEXT</button>' : '';
-  return `<section class="source-step single-source"><div class="source-view-head"><b>PHOTO + REQUEST</b><span>${required} / 1 REQUIRED</span></div><div class="source-intake-layout"><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><button class="single-view-upload ${source ? 'filled' : ''}" type="button" data-upload-input="${galleryInputId}" aria-label="${source ? 'Replace' : 'Add'} ${view.label} photo" aria-busy="${processing ? 'true' : 'false'}">${uploadContent}</button>${cameraInput}<input id="${galleryInputId}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label} 갤러리 사진 선택">${intakeActions}${continueButton}<div class="source-view-nav">${previousButton}<nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => index === state.sourceViewIndex ? `<span class="on ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}" aria-current="true"><i></i></span>` : `<button type="button" data-source-view="${index}" class="${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav>${nextButton}</div></div><div class="source-intent"><label for="freePrompt"><b>REQUEST</b></label><div class="request-card"><div class="request-tags" aria-hidden="true"><span>헤어스타일</span><span>색상</span><span>시술 이력</span></div><textarea id="freePrompt" maxlength="500" placeholder="원하는 내용을 자유롭게 적어주세요">${esc(state.freePrompt)}</textarea></div></div></div></section>`;
+  return `<section class="source-step single-source"><div class="source-view-head"><b>PHOTO + REQUEST</b><span>${required} / 1 REQUIRED</span></div><div class="source-intake-layout"><div class="source-view-stage"><div class="source-view-title"><span>${String(state.sourceViewIndex + 1).padStart(2, '0')} / 06</span><b>${view.label}</b><small>${state.sourceViewIndex === 0 ? 'REQUIRED' : 'OPTIONAL'}</small></div><button class="single-view-upload ${source ? 'filled' : ''}" type="button" data-upload-input="${galleryInputId}" aria-label="${source ? 'Replace' : 'Add'} ${view.label} photo" aria-busy="${processing ? 'true' : 'false'}">${uploadContent}</button>${cameraInput}<input id="${galleryInputId}" data-view="${view.id}" type="file" accept="image/*" aria-label="${view.label} 갤러리 사진 선택">${intakeActions}${continueButton}<div class="source-view-nav">${previousButton}<nav class="source-view-dots" aria-label="Source views">${BOARD_VIEWS.map((item, index) => index === state.sourceViewIndex ? `<span class="on ${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}" aria-current="true"><i></i></span>` : `<button type="button" data-source-view="${index}" class="${sourceViewComplete(item) ? 'done' : ''}" aria-label="${item.label}"><i></i></button>`).join('')}</nav>${nextButton}</div></div><div class="source-intent"><label for="freePrompt"><b>REQUEST</b></label><div class="request-card"><div class="request-tags" aria-hidden="true"><span>헤어스타일</span><span>색상</span><span>시술 이력</span></div><textarea id="freePrompt" maxlength="500" placeholder="원하는 내용을 자유롭게 적어주세요">${esc(state.freePrompt)}</textarea></div>${providerConnectionCard()}</div></div></section>`;
 }
 
 function toneLabel(toneId) {
@@ -208,7 +227,12 @@ function currentStageStatus() { return ''; }
 
 function renderStructure() {
   const slots = state.structureSlots.length ? state.structureSlots : Array.from({ length: 100 }, (_, slotIndex) => ({ slotIndex, status: 'queued' }));
-  return panel('RESULTS', `<div class="toolbar"><div class="stats"><span class="pill">ALL 500</span><span class="pill">MATCH ${state.filteredGroups.length}</span><span class="pill">100 PICKS</span><span class="pill">RANDOM FILL</span><span class="pill">SELECT ${state.shortlist.size}/6</span></div>${state.shortlist.size ? '<button class="next-button" id="toAgreement">LOCK</button>' : ''}</div><div class="structure-board">${slots.map(structureTile).join('')}</div>`);
+  const counts = slots.reduce((result, slot) => {
+    result[slot.status] = (result[slot.status] || 0) + 1;
+    return result;
+  }, {});
+  const progress = state.batch ? `<span class="pill">DONE ${counts.done || 0}</span><span class="pill">RUN ${counts.active || 0}</span><span class="pill">WAIT ${counts.queued || 0}</span><span class="pill retry-count">RETRY ${counts.retryable || 0}</span><span class="pill">FAIL ${counts.failed || 0}</span>` : '<span class="pill">100 PICKS</span><span class="pill">RANDOM FILL</span>';
+  return panel('RESULTS', `<div class="toolbar"><div class="stats"><span class="pill">ALL 500</span><span class="pill">MATCH ${state.filteredGroups.length}</span>${progress}<span class="pill">SELECT ${state.shortlist.size}/6</span></div>${state.shortlist.size ? '<button class="next-button" id="toAgreement">LOCK</button>' : ''}</div><div class="structure-board">${slots.map(structureTile).join('')}</div>`);
 }
 
 function visualHash(value) {
@@ -301,6 +325,11 @@ function reconcileHairColorProfile() {
 
 function clearProviderInputCache(viewKey = '') {
   for (const key of state.providerInputCache.keys()) if (!viewKey || key.startsWith(`${viewKey}:`)) state.providerInputCache.delete(key);
+  for (const [key, source] of state.nativeSources) {
+    if (viewKey && !key.startsWith(`${viewKey}:`)) continue;
+    state.nativeSources.delete(key);
+    deletePreparedSource(source.sourceId).catch(() => {});
+  }
 }
 
 
@@ -317,6 +346,52 @@ function handleNextAction(event) {
 
 app.addEventListener('click', handleNextAction, true);
 
+async function refreshProviderConnection() {
+  state.provider = { ...state.provider, loading: true };
+  render();
+  try {
+    state.provider = { ...(await providerStatus()), loading: false };
+  } catch {
+    state.provider = { available: false, configured: false, provider: 'native-required', model: '', loading: false };
+  }
+  render();
+}
+
+async function openProviderConnection() {
+  state.error = '';
+  try {
+    await configureProvider();
+  } catch (error) {
+    if (error?.message !== 'cancelled') state.error = error?.message || '이미지 생성 연결을 확인해주세요.';
+  }
+  await refreshProviderConnection();
+}
+
+async function removeProviderConnection() {
+  await clearProvider().catch(() => {});
+  if (state.batch) {
+    state.batch = {
+      ...state.batch,
+      slots: state.batch.slots.map((slot) => ['queued', 'active'].includes(slot.status) ? { ...slot, status: 'retryable' } : slot)
+    };
+    syncBatchSurface();
+  }
+  await refreshProviderConnection();
+}
+
+async function removeAllCustomerData() {
+  if (!globalThis.confirm('준비된 원본, 생성 결과, 대기열 기록을 이 기기에서 모두 삭제할까요?')) return;
+  state.error = '';
+  try {
+    await deleteAllCustomerData();
+    localStorage.removeItem('HAIRLOOM_NATIVE_BATCH_ID');
+    globalThis.location.reload();
+  } catch (error) {
+    state.error = error?.message || '고객 데이터를 삭제하지 못했습니다.';
+    render();
+  }
+}
+
 function bind() {
   document.querySelector('#backToList')?.addEventListener('click', () => { state.stage = state.structureSlots.length ? 2 : 0; render(); });
   document.querySelectorAll('[data-stage]').forEach((button) => button.addEventListener('click', () => { const next = Number(button.dataset.stage); if (stageEnabled(next)) { state.stage = next; render(); } }));
@@ -324,6 +399,9 @@ function bind() {
   document.querySelectorAll('[data-upload-input]').forEach((button) => button.addEventListener('click', () => document.querySelector(`#${button.dataset.uploadInput}`)?.click()));
   document.querySelectorAll('[data-source-view]').forEach((button) => button.addEventListener('click', () => { state.sourceViewIndex = Number(button.dataset.sourceView); render(); }));
   document.querySelectorAll('[data-source-step]').forEach((button) => button.addEventListener('click', () => { state.sourceViewIndex = Math.max(0, Math.min(BOARD_VIEWS.length - 1, state.sourceViewIndex + Number(button.dataset.sourceStep))); render(); }));
+  document.querySelector('#configureNativeProvider')?.addEventListener('click', openProviderConnection);
+  document.querySelector('#clearNativeProvider')?.addEventListener('click', removeProviderConnection);
+  document.querySelector('#deleteNativeCustomerData')?.addEventListener('click', removeAllCustomerData);
   document.querySelector('#freePrompt')?.addEventListener('input', (event) => {
     state.freePrompt = event.target.value;
     state.mood = state.freePrompt;
@@ -392,6 +470,27 @@ function applyLocalProfile(currentToneId = state.hairColorDetection.toneId) {
   return profile;
 }
 
+function applyProviderProfile(raw, currentToneId = state.hairColorDetection.toneId) {
+  const profile = normalizeHairAnalysis({
+    ...raw,
+    currentToneId: currentToneId && currentToneId !== 'unknown' ? currentToneId : raw?.currentToneId,
+    promptIntent: state.freePrompt
+  }, { freePrompt: state.freePrompt, source: 'provider' });
+  state.localProfile = profile;
+  state.diagnosis = normalizeDiagnosis(hairAnalysisToDiagnosis(profile));
+  state.settings = normalizeSettings(hairAnalysisToExploreSettings(profile));
+  state.hairColorProfile = normalizeHairColorProfile(hairAnalysisToColorProfile(profile));
+  state.mood = state.freePrompt;
+  reconcileHairColorProfile();
+  return profile;
+}
+
+async function analyzePreparedFront() {
+  const source = await ensureNativeSource({ sourceViewKey: 'front', generationAxes: { sourceViewKey: 'front', mirrored: false } });
+  const raw = await runNativeAnalysis({ sourceId: source.sourceId, sourceHash: source.sourceHash, freePrompt: state.freePrompt });
+  return applyProviderProfile(raw);
+}
+
 
 async function startStructureExplore() {
   if (state.structurePreparing) return;
@@ -400,11 +499,11 @@ async function startStructureExplore() {
     syncIntake();
     if (!requiredSourceViewsReady()) throw new Error('FRONT REQUIRED · FRONT 사진을 먼저 추가하세요.');
     applyLocalProfile();
-    const cfg = resolvedProviderConfig();
-    if (!cfg.baseURL || !cfg.apiKey || cfg.apiKey === 'YOUR_PROXY_API_KEY') throw new Error('API REQUIRED · SOURCE의 API 설정을 확인하세요.');
+    if (!state.provider.configured) throw new Error('이미지 생성 연결을 먼저 완료해주세요.');
     state.structurePreparing = true;
     render();
     await new Promise((resolve) => requestAnimationFrame(() => setTimeout(resolve, 0)));
+    try { await analyzePreparedFront(); } catch { /* Conservative local profile remains the fail-closed fallback. */ }
     await ensureCatalog();
     state.filteredGroups = filterGroups();
     prepareGroupSummaries();
@@ -419,11 +518,14 @@ async function startStructureExplore() {
     state.shortlist.clear();
     state.batch = assignBatchSourceViews(createConsultationBatch({ batchId: `structure-${Date.now()}`, designIds: selection.designIds, generationAxes: selection.generationAxes, sourcePhotoKey: state.sourceKey, settings: state.settings, metadata: { purpose: 'structure', diversityRelaxations: selection.diversityRelaxations } }), 'structure');
     state.structureSlots = state.batch.slots;
-    state.structurePreparing = false;
     state.stage = 2;
     render();
-    pumpQueue();
+    await launchNativeBatch();
+    state.structurePreparing = false;
+    render();
   } catch (error) {
+    cancelActiveBatch('launch-failed');
+    state.stage = 0;
     state.structurePreparing = false;
     state.error = error?.message || 'RESULTS ERROR';
     render();
@@ -653,26 +755,40 @@ async function restoreGeneratedOrientation(resultUrl, signal, mirrored = false) 
   return { url: await blobToDataUrl(resultBlob), bytes: resultBlob.size, mimeType: resultBlob.type || (mirrored ? 'image/png' : 'image/jpeg') };
 }
 
-function resolvedProviderConfig() {
-  const local = window.HAIR_IMAGEN || {};
-  return {
-    baseURL: state.cfg.baseURL || local.baseURL || '',
-    model: state.cfg.model || local.model || 'gpt-image-2',
-    size: state.cfg.size || local.size || '1024x1024',
-    apiKey: state.cfg.apiKey || local.apiKey || ''
-  };
+async function blobBase64(blob) {
+  const dataUrl = await blobToDataUrl(blob);
+  return dataUrl.slice(dataUrl.indexOf(',') + 1);
+}
+
+async function ensureNativeSource(item) {
+  const viewKey = item.sourceViewKey || item.generationAxes?.sourceViewKey || 'front';
+  const mirrored = Boolean(item.generationAxes?.mirrored);
+  const key = `${viewKey}:${mirrored ? 1 : 0}`;
+  if (state.nativeSources.has(key)) return state.nativeSources.get(key);
+  const { sourceBlob } = await providerInputsForItem(item);
+  const descriptor = await sourcePhotoKey(await sourceBlob.arrayBuffer(), sourceBlob.type || 'image/jpeg');
+  const sourceHash = descriptor.split(':')[0];
+  const created = await createPreparedSource({
+    viewKey,
+    sourceHash,
+    mimeType: sourceBlob.type || 'image/jpeg',
+    base64: await blobBase64(sourceBlob)
+  });
+  const value = { sourceId: created.sourceId, sourceHash, viewKey, mirrored };
+  state.nativeSources.set(key, value);
+  return value;
 }
 
 function cancelActiveBatch(reason) {
-  for (const controller of state.controllers.values()) controller.abort();
-  state.controllers.clear();
-  state.running.clear();
+  const nativeBatchId = state.nativeBatchId;
+  state.nativeBatchId = '';
+  localStorage.removeItem('HAIRLOOM_NATIVE_BATCH_ID');
+  if (nativeBatchId) cancelNativeBatch(nativeBatchId).catch(() => {});
   if (state.batch && !state.batch.supersededBy) {
     state.batch = supersedeConsultationBatch(state.batch, `${reason}-${Date.now()}`);
     if (state.batch.metadata?.purpose === 'structure') state.structureSlots = state.batch.slots;
   }
 }
-
 
 function syncBatchSurface() {
   state.structureSlots = state.batch?.slots || [];
@@ -682,55 +798,66 @@ function renderActiveBatchSurface() {
   if (state.stage === 2) render();
 }
 
-function pumpQueue() {
-  if (!state.batch || state.batch.supersededBy) return;
-  state.batch = startConsultationQueuedItems(state.batch);
-  const batchId = state.batch.batchId;
-  const active = state.batch.slots.filter((item) => item.status === 'active' && !state.running.has(`${batchId}:${item.slotIndex}`));
-  for (const item of active) runJob(item, batchId, state.batch.sourcePhotoKey);
-  syncBatchSurface();
-  renderActiveBatchSurface();
+function activeBatchForNativeEvent(event) {
+  if (!state.batch || state.batch.batchId !== event.batchId || state.nativeBatchId !== event.batchId) return null;
+  const slot = state.batch.slots[Number(event.slotIndex)];
+  const eventId = Number(event.eventId);
+  if (!Number.isSafeInteger(eventId) || eventId <= Number(slot?.nativeEventId || 0)) return null;
+  if (!slot || slot.designId !== event.designId || slot.generation !== Number(event.generation) || slot.nativeSourceHash !== event.sourceHash || ['done', 'failed', 'aborted'].includes(slot.status)) return null;
+  return {
+    ...state.batch,
+    slots: state.batch.slots.map((item) => item.slotIndex === slot.slotIndex
+      ? { ...item, status: 'active', nativeEventId: eventId, attempts: Math.max(item.attempts || 0, Number(event.attempts) || 0) }
+      : { ...item })
+  };
 }
 
-async function runJob(item, batchId, batchSourcePhotoKey) {
-  const jobKey = `${batchId}:${item.slotIndex}`;
-  const controller = new AbortController();
-  state.running.add(jobKey);
-  state.controllers.set(jobKey, controller);
-  let result;
-  try {
-    result = await requestImageEdit(item, controller.signal);
-  } catch (error) {
-    result = { ok: false, errorType: error?.name === 'AbortError' ? 'aborted' : 'network', statusCode: error?.name === 'AbortError' ? 0 : 503 };
+async function handleNativeBatchEvent(event) {
+  const batch = activeBatchForNativeEvent(event);
+  if (!batch) return;
+  const item = batch.slots[Number(event.slotIndex)];
+  if (event.status === 'queued' || event.status === 'retryable' || event.status === 'running') {
+    state.batch = {
+      ...batch,
+      slots: batch.slots.map((slot) => slot.slotIndex === item.slotIndex ? { ...slot, status: event.status === 'running' ? 'active' : event.status } : slot)
+    };
+    syncBatchSurface();
+    renderActiveBatchSurface();
+    return;
   }
-  try {
-    if (!state.batch || state.batch.batchId !== batchId || state.batch.sourcePhotoKey !== batchSourcePhotoKey) return;
-    const applied = applyConsultationCompletion(state.batch, {
-      ok: result.ok,
-      batchId,
-      sourcePhotoKey: batchSourcePhotoKey,
-      slotIndex: item.slotIndex,
-      designId: item.designId,
-      generation: item.generation,
-      sourceViewKey: item.sourceViewKey,
-      mirrored: item.generationAxes?.mirrored,
-      colorToneId: item.generationAxes?.colorToneId,
-      errorType: result.errorType,
-      statusCode: result.statusCode
-    });
-    if (!applied.accepted) return;
-    state.batch = result.ok ? withPreview(applied.batch, item.slotIndex, result.url) : applied.batch;
-  } finally {
-    state.running.delete(jobKey);
-    state.controllers.delete(jobKey);
-    if (state.batch?.batchId === batchId) {
-      syncBatchSurface();
-      const queued = state.batch.slots.some((slot) => slot.status === 'queued');
-      const active = state.batch.slots.some((slot) => slot.status === 'active');
-      renderActiveBatchSurface();
-      if (queued) pumpQueue();
+  let ok = event.status === 'done';
+  let previewUrl = '';
+  let errorType = event.errorType || 'native-provider';
+  if (ok) {
+    try {
+      const output = await readNativeOutput(event.outputId);
+      const restored = await restoreGeneratedOrientation(output.dataUrl, undefined, Boolean(item.generationAxes?.mirrored));
+      previewUrl = restored.url;
+    } catch {
+      ok = false;
+      errorType = 'output-read';
     }
   }
+  const applied = applyConsultationCompletion(batch, {
+    ok,
+    batchId: event.batchId,
+    sourcePhotoKey: batch.sourcePhotoKey,
+    slotIndex: item.slotIndex,
+    designId: item.designId,
+    generation: item.generation,
+    sourceViewKey: item.sourceViewKey,
+    mirrored: item.generationAxes?.mirrored,
+    colorToneId: item.generationAxes?.colorToneId,
+    errorType,
+    statusCode: Number(event.statusCode) || 0
+  });
+  if (!applied.accepted) return;
+  state.batch = ok ? withPreview(applied.batch, item.slotIndex, previewUrl) : applied.batch;
+  syncBatchSurface();
+  if (state.batch.slots.every((slot) => ['done', 'failed', 'aborted'].includes(slot.status))) {
+    localStorage.removeItem('HAIRLOOM_NATIVE_BATCH_ID');
+  }
+  renderActiveBatchSurface();
 }
 
 function withPreview(batch, slotIndex, url) {
@@ -796,36 +923,152 @@ function consultationPrompt(record, item) {
   ].filter(Boolean).join('\n');
 }
 
-async function requestImageEdit(item, signal) {
-  const cfg = resolvedProviderConfig();
-  const designId = item.designId;
-  const viewKey = item.sourceViewKey || item.generationAxes?.sourceViewKey || 'front';
-  const record = state.recordsById.get(designId);
-  if (!cfg.baseURL || !cfg.apiKey || !record) return { ok: false, errorType: 'config', statusCode: 0 };
-  const inputs = await providerInputsForItem(item);
-  const form = new FormData();
-  form.append('model', cfg.model);
-  form.append('prompt', consultationPrompt(record, item));
-  form.append('size', cfg.size);
-  form.append('quality', 'low');
-  form.append('output_format', 'jpeg');
-  form.append('output_compression', '70');
-  const suffix = item.generationAxes?.mirrored ? 'mirror' : 'original';
-  form.append('image', inputs.sourceBlob, `${designId}-${viewKey}-${suffix}.jpg`);
-  const response = await fetch(cfg.baseURL.replace(/\/+$/, '') + '/images/edits', { method: 'POST', headers: { Authorization: `Bearer ${cfg.apiKey}` }, body: form, signal });
-  if (!response.ok) return { ok: false, errorType: 'http', statusCode: response.status };
-  let payload;
-  try { payload = await response.json(); } catch { return { ok: false, errorType: 'provider-shape', statusCode: response.status }; }
-  const datum = payload?.data?.[0];
-  const normalized = normalizeProviderResult(datum ? { ...datum, providerStatus: response.status } : null, { designId, batchId: state.batch?.batchId, slotIndex: item.slotIndex });
-  if (!normalized.ok) return { ok: false, errorType: normalized.errorCode, statusCode: normalized.providerStatus || response.status };
+async function launchNativeBatch() {
+  const batch = state.batch;
+  if (!batch) throw new Error('RESULTS ERROR');
+  const nativeSlots = [];
+  const preparedSlots = [];
+  for (const slot of batch.slots) {
+    const record = state.recordsById.get(slot.designId);
+    if (!record) throw new Error(`Unknown design: ${slot.designId}`);
+    const source = await ensureNativeSource(slot);
+    const generation = 1;
+    preparedSlots.push({ ...slot, status: 'queued', attempts: 0, generation, nativeEventId: 0, nativeSourceId: source.sourceId, nativeSourceHash: source.sourceHash });
+    nativeSlots.push({
+      slotIndex: slot.slotIndex,
+      designId: slot.designId,
+      generation,
+      sourceId: source.sourceId,
+      sourceHash: source.sourceHash,
+      sourceViewKey: slot.sourceViewKey || slot.generationAxes?.sourceViewKey || 'front',
+      mirrored: Boolean(slot.generationAxes?.mirrored),
+      prompt: consultationPrompt(record, slot)
+    });
+  }
+  state.batch = { ...batch, slots: preparedSlots };
+  state.nativeBatchId = batch.batchId;
+  localStorage.setItem('HAIRLOOM_NATIVE_BATCH_ID', batch.batchId);
+  syncBatchSurface();
   try {
-    const restored = await restoreGeneratedOrientation(normalized.url, signal, Boolean(item.generationAxes?.mirrored));
-    return { ...normalized, ...restored, providerKind: `${normalized.providerKind}-maskless${item.generationAxes?.mirrored ? '-unmirrored' : ''}` };
+    await createNativeBatch({
+      batchId: batch.batchId,
+      sourcePhotoKey: `source_${state.sourceKey.split(':')[0]}`,
+      context: {
+        freePrompt: state.freePrompt,
+        settings: state.settings,
+        diagnosis: state.diagnosis,
+        hairColorProfile: state.hairColorProfile,
+        localProfile: state.localProfile,
+        generationAxes: preparedSlots.map((slot) => slot.generationAxes)
+      },
+      slots: nativeSlots
+    });
   } catch (error) {
-    return { ok: false, errorType: error?.name === 'AbortError' ? 'aborted' : 'result', statusCode: 0 };
+    state.nativeBatchId = '';
+    localStorage.removeItem('HAIRLOOM_NATIVE_BATCH_ID');
+    throw error;
   }
 }
+
+async function restoreNativeBatchSession() {
+  const batchId = localStorage.getItem('HAIRLOOM_NATIVE_BATCH_ID');
+  if (!batchId || !state.provider.available) return;
+  try {
+    const snapshot = await nativeBatchStatus(batchId);
+    if (snapshot.cancelled || !Array.isArray(snapshot.slots) || snapshot.slots.length !== 100) throw new Error('batch-unavailable');
+    await ensureCatalog();
+    const context = snapshot.context && typeof snapshot.context === 'object' ? snapshot.context : {};
+    state.freePrompt = String(context.freePrompt || '');
+    state.mood = state.freePrompt;
+    state.settings = normalizeSettings(context.settings || {});
+    state.diagnosis = normalizeDiagnosis(context.diagnosis || { profileGender: 'U' });
+    state.hairColorProfile = normalizeHairColorProfile(context.hairColorProfile || {});
+    state.localProfile = normalizeHairAnalysis(context.localProfile || defaultHairAnalysis({ currentToneId: state.hairColorProfile.currentToneId, promptIntent: state.freePrompt }), { freePrompt: state.freePrompt, source: context.localProfile?.source === 'provider' ? 'provider' : 'fallback' });
+    const axes = Array.isArray(context.generationAxes) && context.generationAxes.length === 100 ? context.generationAxes : [];
+    const originals = new Map();
+    for (const slot of snapshot.slots) {
+      const key = `${slot.sourceViewKey}:${slot.mirrored ? 1 : 0}`;
+      state.nativeSources.set(key, { sourceId: slot.sourceId, sourceHash: slot.sourceHash, viewKey: slot.sourceViewKey, mirrored: Boolean(slot.mirrored) });
+      if (!slot.mirrored && !originals.has(slot.sourceViewKey)) originals.set(slot.sourceViewKey, slot.sourceId);
+    }
+    for (const [viewKey, sourceId] of originals) {
+      const source = await readPreparedSource(sourceId);
+      const response = await fetch(source.dataUrl);
+      const blob = await response.blob();
+      state.sourceViews[viewKey] = source.dataUrl;
+      state.sourceViewBlobs[viewKey] = blob;
+      state.providerInputCache.set(`${viewKey}:0`, { sourceBlob: blob });
+      if (viewKey === 'front') {
+        state.originalDataUrl = source.dataUrl;
+        state.originalJpegDataUrl = source.dataUrl;
+        state.originalJpegBlob = blob;
+        state.sourceKey = await sourcePhotoKey(new Uint8Array(await blob.arrayBuffer()), blob.type);
+      }
+    }
+    if (!state.originalJpegBlob || !state.sourceKey) throw new Error('front-source-unavailable');
+    const slots = [];
+    for (const slot of snapshot.slots) {
+      const generationAxes = axes[slot.slotIndex] || {
+        version: CONSULTATION_GENERATION_AXES_VERSION,
+        sourceTransformVersion: CONSULTATION_SOURCE_TRANSFORM_VERSION,
+        sourceViewKey: slot.sourceViewKey,
+        mirrored: Boolean(slot.mirrored),
+        colorToneId: state.hairColorProfile.currentToneId,
+        colorIntensity: state.hairColorProfile.intensity
+      };
+      let status = slot.status === 'running' ? 'active' : slot.status === 'cancelled' ? 'aborted' : slot.status;
+      let previewUrl = '';
+      if (status === 'done' && slot.outputId) {
+        try {
+          const output = await readNativeOutput(slot.outputId);
+          previewUrl = (await restoreGeneratedOrientation(output.dataUrl, undefined, Boolean(slot.mirrored))).url;
+        } catch {
+          status = 'failed';
+        }
+      }
+      slots.push({
+        slotIndex: slot.slotIndex,
+        designId: slot.designId,
+        generation: Number(slot.generation) || 1,
+        attempts: Number(slot.attempts) || 0,
+        sourceViewKey: slot.sourceViewKey,
+        generationAxes,
+        nativeSourceId: slot.sourceId,
+        nativeSourceHash: slot.sourceHash,
+        nativeEventId: Number(slot.lastEventId) || 0,
+        status,
+        previewUrl,
+        result: status === 'done' ? { ok: true } : null,
+        errorCode: slot.errorType || null
+      });
+    }
+    state.batch = {
+      batchId,
+      sourcePhotoKey: state.sourceKey,
+      settings: state.settings,
+      metadata: { purpose: 'structure', restored: true, originalPhotoLineage: 'prepared-original-source-views' },
+      slots,
+      activeLimit: 4,
+      successWindow: 0,
+      pressureWindow: 0
+    };
+    state.nativeBatchId = batchId;
+    state.filteredGroups = filterGroups();
+    prepareGroupSummaries();
+    state.structureSlots = slots;
+    state.stage = 2;
+    render();
+  } catch {
+    localStorage.removeItem('HAIRLOOM_NATIVE_BATCH_ID');
+    state.nativeBatchId = '';
+  }
+}
+
+async function initializeNativeSession() {
+  await refreshProviderConnection();
+  await restoreNativeBatchSession();
+}
+
 
 function toggleShort(event) {
   const id = event.target.dataset.short;
@@ -839,10 +1082,11 @@ function toggleShort(event) {
 function agreementPayload(includeOriginal) { const first = state.recordsById.get([...state.shortlist][0]); return { ...(includeOriginal ? { originalFrontDataUrl: state.originalJpegDataUrl, sourceViews: { ...state.sourceViews, front: state.originalJpegDataUrl } } : {}), currentDesignIds: [...state.shortlist].slice(0, 6), settings: state.settings, diagnosis: state.diagnosis, hairColorProfile: state.hairColorProfile, decision: { freePrompt: state.freePrompt, selectedStructureKey: first ? canonicalStructureKey(first) : undefined }, catalogVersion, promptVersion }; }
 function downloadJson() { const blob = new Blob([JSON.stringify(agreementPayload(false), null, 2)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'hairloom-consultation.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); }
 function handoff() { const payload = buildConsultationHandoff(agreementPayload(true)); sessionStorage.setItem(CONSULTATION_HANDOFF_STORAGE_KEY, JSON.stringify(payload)); location.href = CONSULTATION_HANDOFF_QUERY_TRIGGER; }
-function loadProviderConfig() { try { const cfg = JSON.parse(localStorage.getItem('HAIR_IMAGEN_CFG') || '{}'); return { baseURL: cfg.baseURL || '', model: cfg.model || 'gpt-image-2', size: cfg.size || '1024x1024', apiKey: sessionStorage.getItem('HAIR_IMAGEN_KEY') || '' }; } catch { localStorage.removeItem('HAIR_IMAGEN_CFG'); return { baseURL: '', model: 'gpt-image-2', size: '1024x1024', apiKey: '' }; } }
 
 document.querySelector('#imageLightboxClose')?.addEventListener('click', closeImageLightbox);
 imageLightbox?.addEventListener('click', (event) => { if (event.target === imageLightbox) closeImageLightbox(); });
 window.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !imageLightbox.hidden) closeImageLightbox(); });
+onNativeBatchEvent(handleNativeBatchEvent).catch(() => {});
+initializeNativeSession().catch(() => {});
 render();
 (globalThis.requestIdleCallback || ((callback) => setTimeout(callback, 120)))(() => ensureCatalog().catch(() => {}));

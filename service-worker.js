@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hairloom-shell-v3';
+const CACHE_NAME = 'hairloom-shell-v4';
 const SHELL_PATHS = new Set([
   '/consultation/',
   '/consultation/index.html',
@@ -13,7 +13,8 @@ const SHELL_PATHS = new Set([
   '/src/hairAnalysis.mjs',
   '/src/hairColorPalette.mjs',
   '/src/trendRegistry.mjs',
-  '/src/hairTrendData.mjs'
+  '/src/hairTrendData.mjs',
+  '/src/mobileProviderBridge.mjs',
 ]);
 const NEVER_CACHE_PREFIXES = Object.freeze([
   '/healthz',

@@ -6,10 +6,11 @@ Hairloom is the public app for generating hairstyle designs from prepared custom
 
 ## Features
 
-- Installable mobile PWA with camera capture and gallery selection
+- Standalone Capacitor iOS and Android apps with camera capture and gallery selection
+- Personal image API credentials stored only in iOS Keychain or Android Keystore
 - Conservative local hair profile from the prepared customer original and `REQUEST`
 - `SOURCE → RESULTS → LOCK` flow
-- 100 fixed results, fullscreen image enlargement, and direct 1–6 selection
+- Restart-resumable 100 fixed results, fullscreen image enlargement, and direct 1–6 selection
 - Original-only Provider lineage; generated images are never request inputs
 
 ## Routes
@@ -33,12 +34,24 @@ HOST=127.0.0.1 PORT=4180 npm run start
 
 Open `http://127.0.0.1:4180/` in a browser.
 
-### Install as a mobile app
+### Standalone mobile app
 
-- Android Chrome: use the install icon in the address bar or choose `Install app` from the menu.
-- iPhone/iPad Safari: choose `Add to Home Screen` from the share menu.
-- The installed app contains the public Hairloom surface only.
-- Only the public shell is cached. Customer photos, local profiles, Provider traffic, generated images, and API keys are never cached.
+Hairloom never asks a browser to enter or store the image API credential. Generation runs inside the Capacitor native app.
+
+```bash
+npm run mobile:prepare
+npm run mobile:doctor
+npm run mobile:sync
+npm run mobile:open:ios      # requires Xcode
+npm run mobile:open:android  # use Android Studio or Gradle
+```
+
+- iOS requires Xcode and CocoaPods. `이미지 생성 연결` stores the personal key in a non-synchronizing, device-only Keychain item.
+- Android requires Java 21 and Android SDK 35. The key is encrypted with an Android Keystore AES-GCM key.
+- Prepared originals, generated outputs, and the fixed-slot journal remain in private app storage and are excluded from backup/file sharing. Completed or cancelled customer records and opaque output handles are removed by startup cleanup after seven days.
+- Long iOS batches are most reliable in the foreground. Interrupted slots return to the same-owner retry queue and resume when the app reopens.
+- `모든 고객 데이터 삭제` immediately removes prepared sources, outputs, and batch/slot/event journals. The Provider key remains until `연결 삭제` is selected separately.
+- The browser/PWA shell remains useful for reviewing the catalog and flow, but Provider generation is native-only.
 
 ## Usage
 
@@ -47,47 +60,29 @@ Open `http://127.0.0.1:4180/` in a browser.
 3. Select `NEXT` below the photo controls, then open any result as a fullscreen image.
 4. Select 1–6 results and pass them to `LOCK`.
 
-Hairloom derives a conservative local profile from the photo and REQUEST. Only prepared customer originals enter Provider generation requests, and generated images are never reused as inputs.
+A prepared customer original enters only native `/responses` analysis and `/images/edits` generation. If analysis is temporarily unavailable, Hairloom uses a conservative profile from local color sampling and the REQUEST. Generated images are never reused as analysis or generation inputs.
 
 ## Image provider configuration
 
-Copy the local provider example:
+In the Hairloom mobile app, select `이미지 생성 연결` and enter a personal OpenAI Image API key with separate billing enabled. Native code fixes the Provider origin to `https://api.openai.com/v1`, uses `gpt-4.1-mini` for analysis, and uses `gpt-image-2` for image edits. The key never enters WebView JavaScript, `localStorage`, `sessionStorage`, the service worker, logs, or export files.
 
 ```bash
-cp imagen.web.example.js imagen.web.js
+npm run mobile:doctor
+npm run mobile:test
 ```
 
-Configure the OpenAI-compatible image endpoint, image model, size, and API key in `imagen.web.js`. The file is ignored by Git.
+`imagen.web.js` and browser Bearer requests are no longer supported. Never commit API keys, customer photos, generated customer images, native signing material, or `.gjc/` QA artifacts.
 
-```js
-window.HAIR_IMAGEN = {
-  baseURL: 'https://YOUR-PROXY/v1',
-  apiKey: 'YOUR_PROXY_API_KEY',
-  model: 'gpt-image-2',
-  size: '1024x1024'
-};
-```
+## Future subscription provider TODO
 
-Never commit API keys, customer photos, generated customer images, or `.gjc/` QA artifacts.
-
-## ChatGPT subscription guidance for AI agents
-
-ChatGPT Plus or Pro billing is separate from OpenAI API billing. ChatGPT subscription credentials cannot be used in the Hairloom browser or as the API key in `imagen.web.js`, and the subscription does not include general application API credits.
+ChatGPT Plus or Pro billing is separate from OpenAI API billing. A ChatGPT/Codex subscription token is not a general `/images/edits` API key and must not be copied into the mobile app.
 
 - Official guidance: [ChatGPT subscriptions and API billing are separate](https://help.openai.com/en/articles/8156019)
 - Codex can sign in with eligible ChatGPT plans: [Using Codex with your ChatGPT plan](https://help.openai.com/en/articles/11369540)
-- Codex sign-in supplies Codex usage allowance; it does not create the `/images/edits` API required by Hairloom.
-
-AI agents must follow this implementation contract:
-
-1. Never copy a ChatGPT password, session cookie, browser token, or the contents of `~/.codex/auth.json` into the Hairloom client.
-2. Never claim that a ChatGPT subscription directly enables image API calls or build a fake compatibility layer.
-3. The currently supported path is an OpenAI image API account with separate billing or a user-operated OpenAI-compatible image proxy.
-4. Before adding a future subscription-backed local adapter, verify that the provider officially permits image editing through that subscription path.
-5. Run any adapter on the server-side loopback interface and implement the existing `POST /images/edits` request and response contract. Never send credentials to the browser.
-6. Allow prepared customer originals only; forbid generated-image re-input, credential-file exposure, and remote credential logging.
-
-To use Codex itself with a ChatGPT account, run the current Codex CLI and select **Sign in with ChatGPT**. That login is for development-agent usage and does not replace Hairloom image-provider authentication.
+- The current mobile MVP supports only a separately billed personal image API.
+- A future `CodexSubscriptionProvider` may implement the same native provider interface only after OpenAI publishes a supported mobile Codex/App Server SDK, third-party ChatGPT OAuth image-generation surface, or documented subscription image-edit API.
+- That work requires a separate compatibility/security gate proving official login, prepared-reference editing, exact-one output, cancellation, usage-limit state, logout, and token non-exposure.
+- Never import ChatGPT passwords, cookies, browser tokens, `~/.codex/auth.json`, or private God Tibo authentication into the mobile app.
 
 
 ## Trend registry
@@ -215,7 +210,7 @@ server.mjs                         Local-only static server
 ## Development principles
 
 - Hairloom and BeautyTape are separate repositories.
-- Base Explore uses only the original FRONT photo; public Hairloom uses only source views supplied by the user.
+- The internal Explore route keeps its legacy browser generation path disabled and sends no Provider request. Public Hairloom uses only user-supplied prepared originals as native generation inputs.
 - The public surface does not create or send a hair mask, and non-current colors require no mask-confirmation step.
 - Horizontal mirroring exists only at the provider boundary; final results return to the original orientation.
 - Public results use the Provider output directly without source-pixel compositing.

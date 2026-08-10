@@ -6,10 +6,11 @@ Hairloom은 고객 원본 사진과 요청을 기반으로 헤어 디자인을 �
 
 ## 주요 기능
 
-- 설치 가능한 모바일 PWA와 카메라 촬영·갤러리 선택
+- Capacitor 기반 iOS·Android 단독 실행 앱과 카메라 촬영·갤러리 선택
+- iOS Keychain·Android Keystore에만 저장되는 개인 이미지 API 연결
 - 고객 원본 사진과 자유 입력 REQUEST 기반 로컬 헤어 프로필
 - `SOURCE → RESULTS → LOCK` 흐름
-- 고정 100개 결과, 이미지 전체화면 확대, 1–6개 직접 선택
+- 재시작 뒤 이어지는 고정 100개 결과, 이미지 전체화면 확대, 1–6개 직접 선택
 - 준비된 고객 원본만 Provider 입력으로 사용하는 원본 계보 유지
 
 ## 화면
@@ -33,12 +34,24 @@ HOST=127.0.0.1 PORT=4180 npm run start
 
 브라우저에서 `http://127.0.0.1:4180/`을 엽니다.
 
-### 모바일 앱으로 설치
+### 단독 실행 모바일 앱
 
-- Android Chrome: 주소창의 설치 아이콘 또는 메뉴의 `앱 설치`를 선택합니다.
-- iPhone/iPad Safari: 공유 메뉴에서 `홈 화면에 추가`를 선택합니다.
-- 설치 앱에는 공개 Hairloom 화면만 포함합니다.
-- 오프라인 앱 셸만 캐시하며 고객 사진, 로컬 프로필, Provider 요청·응답, 생성 이미지, API 키는 캐시하지 않습니다.
+웹 브라우저에는 API 키를 입력하거나 저장하지 않습니다. 실제 이미지 생성은 Capacitor 네이티브 앱에서 실행됩니다.
+
+```bash
+npm run mobile:prepare
+npm run mobile:doctor
+npm run mobile:sync
+npm run mobile:open:ios      # Xcode 필요
+npm run mobile:open:android  # Android Studio 또는 Gradle 사용
+```
+
+- iOS: Xcode와 CocoaPods가 필요합니다. 첫 실행에서 `이미지 생성 연결`을 누르면 키가 동기화되지 않는 기기 전용 Keychain 항목에 저장됩니다.
+- Android: Java 21과 Android SDK 35가 필요합니다. 키는 Android Keystore AES-GCM으로 보호됩니다.
+- 준비된 원본, 생성 결과, 100슬롯 저널은 앱 전용 비공개 저장소에 보관되며 백업·파일 공유에서 제외됩니다. 완료·취소된 고객 자료와 불투명 출력 핸들은 7일 뒤 시작 시 정리됩니다.
+- iOS 장시간 생성은 앱을 앞에 둔 상태가 가장 안정적입니다. 중단된 슬롯은 같은 소유권으로 재시도 대기 상태가 되고 앱을 다시 열면 이어집니다.
+- `모든 고객 데이터 삭제`는 준비 원본, 생성 결과, 배치·슬롯·이벤트 저널을 즉시 지우지만 Provider 키는 별도로 `연결 삭제`하기 전까지 유지합니다.
+- 브라우저/PWA 공개 셸은 카탈로그와 흐름을 확인할 수 있지만 Provider 생성은 네이티브 앱에서만 활성화됩니다.
 
 ## 사용법
 
@@ -47,47 +60,29 @@ HOST=127.0.0.1 PORT=4180 npm run start
 3. 사진 선택 아래의 `NEXT`로 결과 생성을 시작하고 이미지를 눌러 전체화면으로 확대합니다.
 4. 1–6개를 선택해 `LOCK`으로 전달합니다.
 
-사진과 REQUEST에서 보수적인 로컬 헤어 프로필을 만들며, Provider에는 생성할 때 준비된 고객 원본만 전달합니다. 생성 이미지는 다음 요청의 입력으로 재사용하지 않습니다.
+준비된 고객 원본은 네이티브 `/responses` 분석과 `/images/edits` 생성에만 사용됩니다. 분석이 일시적으로 실패하면 사진의 로컬 색상 샘플과 REQUEST로 만든 보수적 프로필을 사용하며, 생성 이미지는 분석이나 다음 생성 요청의 입력으로 재사용하지 않습니다.
 
 ## 이미지 Provider 설정
 
-예제 설정을 로컬 설정 파일로 복사합니다.
+Hairloom 모바일 앱에서 `이미지 생성 연결`을 누르고 별도 결제가 설정된 개인 OpenAI Image API 키를 입력합니다. Provider 호스트는 네이티브 코드에서 `https://api.openai.com/v1`로 고정되고, 분석은 `gpt-4.1-mini`, 이미지 편집은 `gpt-image-2`를 사용합니다. API 키는 WebView JavaScript, `localStorage`, `sessionStorage`, 서비스 워커, 로그, 내보내기 파일에 전달되지 않습니다.
 
 ```bash
-cp imagen.web.example.js imagen.web.js
+npm run mobile:doctor
+npm run mobile:test
 ```
 
-`imagen.web.js`에서 OpenAI 호환 이미지 API의 URL, 이미지 모델, 크기, API 키를 설정합니다. 이 파일은 Git에서 제외됩니다.
+`imagen.web.js`와 브라우저 Bearer 요청은 더 이상 제공되지 않습니다. API 키, 고객 사진, 생성 고객 이미지, 네이티브 서명 자료, `.gjc/` QA 자료는 커밋하지 마세요.
 
-```js
-window.HAIR_IMAGEN = {
-  baseURL: 'https://YOUR-PROXY/v1',
-  apiKey: 'YOUR_PROXY_API_KEY',
-  model: 'gpt-image-2',
-  size: '1024x1024'
-};
-```
+## ChatGPT 구독 Provider TODO
 
-API 키, 고객 사진, 생성 고객 이미지, `.gjc/` QA 자료는 커밋하지 마세요.
-
-## ChatGPT 구독 연결 안내 · AI 에이전트용
-
-ChatGPT Plus·Pro 구독과 OpenAI API 결제는 별개입니다. ChatGPT 구독 정보는 Hairloom 브라우저 화면이나 `imagen.web.js`의 API 키로 사용할 수 없으며, 구독료에 일반 애플리케이션용 API 크레딧이 포함되지 않습니다.
+ChatGPT Plus·Pro 구독과 OpenAI API 결제는 별개입니다. ChatGPT/Codex 구독 토큰은 일반 `/images/edits` API 키가 아니며 모바일 앱에 복사하지 않습니다.
 
 - 공식 안내: [ChatGPT 구독과 API 결제는 별도](https://help.openai.com/en/articles/8156019)
 - Codex는 지원되는 ChatGPT 플랜으로 로그인할 수 있습니다: [Using Codex with your ChatGPT plan](https://help.openai.com/en/articles/11369540)
-- Codex 로그인은 Codex 사용 한도를 제공할 뿐, Hairloom이 요구하는 `/images/edits` API를 자동으로 만들지 않습니다.
-
-AI 에이전트는 다음 규칙을 지켜야 합니다.
-
-1. ChatGPT 비밀번호, 세션 쿠키, 브라우저 토큰 또는 `~/.codex/auth.json` 내용을 Hairloom 클라이언트에 복사하지 않습니다.
-2. “ChatGPT 구독만으로 이미지 API가 연결된다”고 표시하거나 가짜 호환 레이어를 만들지 않습니다.
-3. 현재 지원 방식은 별도 결제가 설정된 OpenAI 이미지 API 또는 사용자가 관리하는 OpenAI 호환 이미지 프록시입니다.
-4. 향후 구독 기반 로컬 어댑터를 추가하려면 해당 제공자가 이미지 편집을 공식 지원하는지 먼저 확인합니다.
-5. 어댑터는 서버 측 loopback에서만 실행하고 기존 `POST /images/edits` 요청·응답 계약을 구현합니다. 인증 정보는 브라우저로 보내지 않습니다.
-6. 준비된 고객 원본만 입력으로 허용하고 생성 결과의 재입력, 인증 파일 노출, 원격 로그 저장을 금지합니다.
-
-Codex 자체를 ChatGPT 계정으로 사용하는 절차는 최신 Codex CLI에서 `codex`를 실행한 뒤 **Sign in with ChatGPT**를 선택하는 것입니다. 이 로그인은 개발 에이전트 작업용이며 Hairloom 이미지 생성 API 인증을 대신하지 않습니다.
+- 현재 모바일 MVP는 별도 결제되는 개인 이미지 API만 지원합니다.
+- 향후 OpenAI가 공식 모바일 Codex/App Server SDK, 제3자 ChatGPT OAuth 이미지 생성, 또는 문서화된 구독 이미지 편집 API를 제공하면 동일한 네이티브 Provider 인터페이스에 `CodexSubscriptionProvider`를 추가할 수 있습니다.
+- 그 작업은 공식 로그인, 준비된 참조 이미지 편집, 정확히 한 개의 출력, 취소, 사용 한도, 로그아웃, 토큰 비노출을 검증하는 별도 호환성·보안 게이트를 통과해야 합니다.
+- ChatGPT 비밀번호, 세션 쿠키, 브라우저 토큰, `~/.codex/auth.json`, 비공개 God Tibo 인증 정보를 모바일 앱으로 가져오는 방식은 금지합니다.
 
 
 ## 트렌드 레지스트리
@@ -215,7 +210,7 @@ server.mjs                         로컬 전용 정적 서버
 ## 개발 원칙
 
 - Hairloom과 BeautyTape는 별도 저장소입니다.
-- 기본 Explore는 원본 FRONT만, 공개 Hairloom은 사용자가 제공한 원본 뷰만 생성 입력으로 사용합니다.
+- 내부 Explore의 레거시 브라우저 생성 경로는 비활성 상태이며 Provider 요청을 보내지 않습니다. 공개 Hairloom은 사용자가 제공한 준비 원본만 네이티브 생성 입력으로 사용합니다.
 - 공개 화면은 헤어 마스크를 생성하거나 전송하지 않으며, 다른 색상도 별도 마스크 확인 없이 생성합니다.
 - 좌우 반전은 Provider 입력에만 적용하고 결과는 원래 방향으로 복원합니다.
 - 공개 결과에는 원본 픽셀 합성을 적용하지 않고 Provider 결과를 직접 사용합니다.

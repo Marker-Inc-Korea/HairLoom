@@ -1,15 +1,14 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
   HAIR_ANALYSIS_SCHEMA_VERSION,
   buildHairAnalysisPrompt,
   defaultHairAnalysis,
-  extractHairAnalysisJson,
   hairAnalysisToColorProfile,
   hairAnalysisToDiagnosis,
   hairAnalysisToExploreSettings,
-  normalizeHairAnalysis,
-  requestHairAnalysis
+  normalizeHairAnalysis
 } from './src/hairAnalysis.mjs';
 import { evaluateVariation, normalizeDiagnosis } from './src/consultationCore.mjs';
 
@@ -59,32 +58,40 @@ test('analysis prompt forbids identity and hidden-history inference', () => {
   assert.match(prompt, /USER REQUEST: 부드러운 웨이브/);
 });
 
-test('provider response JSON is extracted from Responses and chat shapes', () => {
-  assert.deepEqual(extractHairAnalysisJson({ output_text: '```json\n{"catalogLine":"U"}\n```' }), { catalogLine: 'U' });
-  assert.deepEqual(extractHairAnalysisJson({ choices: [{ message: { content: '{"currentLength":3}' } }] }), { currentLength: 3 });
-  assert.equal(extractHairAnalysisJson({ choices: [] }), null);
+test('provider analysis normalization bounds untrusted values and text', () => {
+  const analysis = normalizeHairAnalysis({
+    actualLengthCm: 9999,
+    similarity: 99,
+    confidence: 8,
+    uncertainties: ['x'.repeat(500)],
+    summaryKo: 'y'.repeat(500)
+  }, { source: 'provider' });
+  assert.equal(analysis.actualLengthCm, 160);
+  assert.equal(analysis.similarity, 4);
+  assert.equal(analysis.confidence, 1);
+  assert.equal(analysis.uncertainties[0].length, 160);
+  assert.equal(analysis.summaryKo.length, 180);
 });
 
-test('provider analysis tries Responses then chat and sends only the supplied original data URL', async () => {
-  const calls = [];
-  const imageDataUrl = 'data:image/jpeg;base64,ORIGINAL';
-  const fetchImpl = async (url, init) => {
-    calls.push({ url, init, body: JSON.parse(init.body) });
-    if (url.endsWith('/responses')) return { ok: false, status: 404, json: async () => ({}) };
-    return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: JSON.stringify({ currentToneId: 'dark-brown', targetToneIds: ['rose-brown'], confidence: 0.9 }) } }] }) };
-  };
-  const analysis = await requestHairAnalysis({ baseURL: 'https://provider.example/v1/', apiKey: 'secret', imageDataUrl, freePrompt: '로즈 브라운', fetchImpl });
-  assert.deepEqual(calls.map((call) => call.url), ['https://provider.example/v1/responses', 'https://provider.example/v1/chat/completions']);
-  assert.match(calls[0].init.headers.Authorization, /^Bearer /);
-  assert.equal(JSON.stringify(calls).includes(imageDataUrl), true);
-  assert.equal(JSON.stringify(calls).includes('blob:'), false);
-  assert.equal(analysis.source, 'provider');
-  assert.equal(analysis.currentToneId, 'dark-brown');
-  assert.deepEqual(analysis.targetToneIds, ['rose-brown']);
+test('shared analysis code contains no browser Provider transport', async () => {
+  const source = await readFile(new URL('./src/hairAnalysis.mjs', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /\bfetch\s*\(|Authorization|Bearer|apiKey|baseURL|\/responses|\/chat\/completions/);
 });
 
-test('analysis rejects non-original image URLs', async () => {
-  await assert.rejects(() => requestHairAnalysis({ baseURL: 'https://provider.example/v1', apiKey: 'secret', imageDataUrl: 'blob:generated' }), /original image data URL/);
+test('analysis normalization drops forbidden person-inference fields', () => {
+  const analysis = normalizeHairAnalysis({
+    catalogLine: 'F',
+    identity: 'someone',
+    age: 42,
+    ethnicity: 'unknown',
+    faceShape: 'oval',
+    body: 'unknown',
+    health: 'unknown',
+    genderIdentity: 'woman'
+  }, { source: 'provider' });
+  for (const key of ['identity', 'age', 'ethnicity', 'faceShape', 'body', 'health', 'genderIdentity']) {
+    assert.equal(Object.hasOwn(analysis, key), false);
+  }
 });
 
 test('analysis converters produce existing internal setting shapes', () => {

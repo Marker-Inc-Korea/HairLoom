@@ -44,14 +44,13 @@ function resolveStaticPath(pathname, enableExplore = false) {
     decoded === '/consultation/styles.css' ||
     decoded === '/consultation/app.mjs' ||
     exploreAllowed ||
-    decoded === '/imagen.web.js' ||
-    decoded === '/imagen.web.example.js' ||
     decoded === '/src/exploreCore.mjs' ||
     decoded === '/src/trendRegistry.mjs' ||
     decoded === '/src/hairTrendData.mjs' ||
     decoded === '/src/consultationCore.mjs' ||
     decoded === '/src/hairColorPalette.mjs' ||
     decoded === '/src/hairAnalysis.mjs' ||
+    decoded === '/src/mobileProviderBridge.mjs' ||
 
     decoded === '/docs/hair-design-master/catalog.json' ||
     decoded === '/docs/hair-design-master/catalog-index.json' ||

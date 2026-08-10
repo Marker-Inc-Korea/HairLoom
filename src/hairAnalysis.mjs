@@ -1,7 +1,6 @@
 import { HAIR_COLOR_TONES, PRESERVE_CURRENT_TONE_ID, normalizeHairColorToneId } from './hairColorPalette.mjs';
 
 export const HAIR_ANALYSIS_SCHEMA_VERSION = 1;
-export const DEFAULT_HAIR_ANALYSIS_MODEL = 'gpt-4.1-mini';
 
 const LENGTH_CM = Object.freeze([8, 18, 36, 56, 78]);
 const TEXTURES = new Map([
@@ -118,17 +117,6 @@ function uniqueStrings(values) {
   return [...new Set((values ?? []).map((value) => normalizedText(value, 160)).filter(Boolean))];
 }
 
-function safeJsonParse(value) {
-  if (value && typeof value === 'object') return value;
-  const text = String(value ?? '').trim();
-  if (!text) return null;
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i)?.[1] ?? text;
-  const start = fenced.indexOf('{');
-  const end = fenced.lastIndexOf('}');
-  if (start < 0 || end <= start) return null;
-  try { return JSON.parse(fenced.slice(start, end + 1)); } catch { return null; }
-}
-
 function summaryFor(analysis) {
   const tone = TONE_BY_ID.get(analysis.currentToneId)?.labelKo ?? '현재 색상 추정 중';
   const target = analysis.targetToneIds[0] === PRESERVE_CURRENT_TONE_ID
@@ -204,89 +192,6 @@ export function buildHairAnalysisPrompt(freePrompt = '') {
     'Return JSON only with: catalogLine, currentLength (0..4), actualLengthCm, naturalTexture (straight|wavy|curly|coily), density (low|normal|high), damage (low|medium|high visible appearance only), currentToneId, targetToneIds, colorIntensity (subtle|balanced|vivid), similarity (0..4), confidence (0..1), uncertainties, summaryKo.',
     `USER REQUEST: ${request}`
   ].join('\n');
-}
-
-export function extractHairAnalysisJson(payload) {
-  if (!payload) return null;
-  if (payload.output_text) return safeJsonParse(payload.output_text);
-  const responseText = payload.output?.flatMap((item) => item?.content ?? []).find((item) => typeof item?.text === 'string')?.text;
-  if (responseText) return safeJsonParse(responseText);
-  const chatContent = payload.choices?.[0]?.message?.content;
-  if (Array.isArray(chatContent)) {
-    const text = chatContent.find((item) => typeof item?.text === 'string')?.text;
-    if (text) return safeJsonParse(text);
-  }
-  if (payload.catalogLine != null || payload.currentLength != null || payload.currentToneId != null) return payload;
-  return safeJsonParse(chatContent);
-}
-
-function analysisSchema() {
-  return {
-    type: 'object',
-    additionalProperties: false,
-    properties: {
-      catalogLine: { type: ['string', 'null'] },
-      currentLength: { type: ['integer', 'null'] },
-      actualLengthCm: { type: ['number', 'null'] },
-      naturalTexture: { type: ['string', 'null'] },
-      density: { type: ['string', 'null'] },
-      damage: { type: ['string', 'null'] },
-      currentToneId: { type: ['string', 'null'] },
-      targetToneIds: { type: 'array', items: { type: 'string' } },
-      colorIntensity: { type: ['string', 'null'] },
-      similarity: { type: ['integer', 'null'] },
-      confidence: { type: ['number', 'null'] },
-      uncertainties: { type: 'array', items: { type: 'string' } },
-      summaryKo: { type: ['string', 'null'] }
-    },
-    required: ['catalogLine', 'currentLength', 'actualLengthCm', 'naturalTexture', 'density', 'damage', 'currentToneId', 'targetToneIds', 'colorIntensity', 'similarity', 'confidence', 'uncertainties', 'summaryKo']
-  };
-}
-
-async function providerRequest(fetchImpl, url, init) {
-  const response = await fetchImpl(url, init);
-  if (!response?.ok) throw new Error(`Hair analysis provider returned ${response?.status ?? 0}`);
-  return response.json();
-}
-
-export async function requestHairAnalysis({ baseURL, apiKey, model = DEFAULT_HAIR_ANALYSIS_MODEL, imageDataUrl, freePrompt = '', fetchImpl = fetch, signal } = {}) {
-  const endpoint = String(baseURL ?? '').replace(/\/+$/, '');
-  if (!endpoint || !apiKey) throw new TypeError('Hair analysis provider configuration is required');
-  if (!String(imageDataUrl ?? '').startsWith('data:image/')) throw new TypeError('Hair analysis requires one original image data URL');
-  const prompt = buildHairAnalysisPrompt(freePrompt);
-  const headers = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
-  const attempts = [
-    {
-      url: `${endpoint}/responses`,
-      body: {
-        model,
-        input: [{ role: 'user', content: [{ type: 'input_text', text: prompt }, { type: 'input_image', image_url: imageDataUrl }] }],
-        text: { format: { type: 'json_schema', name: 'hair_analysis', strict: true, schema: analysisSchema() } }
-      }
-    },
-    {
-      url: `${endpoint}/chat/completions`,
-      body: {
-        model,
-        messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: imageDataUrl } }] }],
-        response_format: { type: 'json_object' },
-        temperature: 0
-      }
-    }
-  ];
-  const errors = [];
-  for (const attempt of attempts) {
-    try {
-      const payload = await providerRequest(fetchImpl, attempt.url, { method: 'POST', headers, body: JSON.stringify(attempt.body), signal });
-      const parsed = extractHairAnalysisJson(payload);
-      if (!parsed) throw new Error('Hair analysis provider returned invalid JSON');
-      return normalizeHairAnalysis(parsed, { freePrompt, source: 'provider' });
-    } catch (error) {
-      if (signal?.aborted || error?.name === 'AbortError') throw error;
-      errors.push(error);
-    }
-  }
-  throw new AggregateError(errors, 'Hair analysis provider unavailable');
 }
 
 export function hairAnalysisToExploreSettings(value) {
