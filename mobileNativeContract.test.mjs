@@ -5,7 +5,11 @@ import test from 'node:test';
 const read = (path) => readFile(new URL(path, import.meta.url), 'utf8');
 
 test('mobile asset packager is explicit and excludes secret/private surfaces', async () => {
-  const source = await read('./scripts/prepareMobileAssets.mjs');
+  const [source, configText] = await Promise.all([
+    read('./scripts/prepareMobileAssets.mjs'),
+    read('./capacitor.config.json')
+  ]);
+  const config = JSON.parse(configText);
   assert.match(source, /const PUBLIC_ASSETS = Object\.freeze/);
   assert.match(source, /src\/mobileProviderBridge\.mjs/);
   assert.match(source, /consultation\/app\.mjs/);
@@ -14,6 +18,9 @@ test('mobile asset packager is explicit and excludes secret/private surfaces', a
   assert.doesNotMatch(source, /['"]explore\/index\.html['"]/);
   assert.doesNotMatch(source, /model-previews\/index\.html/);
   assert.doesNotMatch(source, /test-subjects/);
+  assert.equal(config.ios.contentInset, 'never');
+  assert.equal(config.android.allowMixedContent, false);
+  assert.equal(Object.hasOwn(config.server, 'url'), false);
 });
 
 test('Android provider uses Keystore, private SQLite queue, fixed HTTPS host and no backup', async () => {

@@ -4,7 +4,7 @@
   "webDir": "mobile-dist",
   "bundledWebRuntime": false,
   "ios": {
-    "contentInset": "automatic",
+    "contentInset": "never",
     "preferredContentMode": "mobile"
   },
   "android": {
