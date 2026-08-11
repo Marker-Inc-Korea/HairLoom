@@ -117,7 +117,7 @@ test('Android preview workflow publishes only the debug APK and checksum', async
   assert.match(workflow, /actions\/upload-artifact@v7/);
   assert.match(workflow, /actions\/download-artifact@v8/);
   assert.match(workflow, /npm run mobile:prepare/);
-  assert.match(workflow, /npx cap copy android/);
+  assert.match(workflow, /npx cap sync android/);
   assert.match(workflow, /\.\/android\/gradlew -p android assembleDebug --no-daemon/);
   assert.match(workflow, /sha256sum Hairloom-android-preview\.apk > Hairloom-android-preview\.apk\.sha256/);
   assert.match(workflow, /sha256sum --check Hairloom-android-preview\.apk\.sha256/);

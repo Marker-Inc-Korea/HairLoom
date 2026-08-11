@@ -41,7 +41,7 @@ jobs:
           cache: gradle
       - run: npm ci
       - run: npm run mobile:prepare
-      - run: npx cap copy android
+      - run: npx cap sync android
       - name: Build debug APK
         run: ./android/gradlew -p android assembleDebug --no-daemon
       - name: Prepare preview artifact
