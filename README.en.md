@@ -62,6 +62,8 @@ Store submission still requires each organization's signing certificates, provis
 
 Android users can install Hairloom without building the source. Open [GitHub Releases](https://github.com/Marker-Inc-Korea/HairLoom/releases) and download the latest **Android Preview**.
 
+The repository is currently private, so downloads require a signed-in GitHub account with access to `Marker-Inc-Korea/HairLoom`. Public distribution requires a separate decision to make this repository public or publish the APK from a dedicated public download repository.
+
 Each preview contains exactly two release assets:
 
 ```text

@@ -62,6 +62,8 @@ SOURCE → RESULTS → LOCK
 
 Android 사용자는 소스를 직접 빌드하지 않고 [GitHub Releases](https://github.com/Marker-Inc-Korea/HairLoom/releases)에서 최신 **Android Preview**를 받을 수 있습니다.
 
+현재 저장소는 Private이므로 GitHub에 로그인한 뒤 `Marker-Inc-Korea/HairLoom` 접근 권한이 있는 계정으로만 다운로드할 수 있습니다. 공개 배포로 전환할 때는 저장소 공개 범위 또는 별도 공개 다운로드 저장소를 먼저 결정해야 합니다.
+
 릴리스 자산은 정확히 두 파일입니다.
 
 ```text
