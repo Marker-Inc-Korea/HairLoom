@@ -2,143 +2,298 @@
 
 [한국어 README](README.md)
 
-Hairloom is the public app for generating hairstyle designs from prepared customer originals and a freeform request.
+[![Mobile iOS Build](https://github.com/Marker-Inc-Korea/HairLoom/actions/workflows/mobile-ios-build.yml/badge.svg)](https://github.com/Marker-Inc-Korea/HairLoom/actions/workflows/mobile-ios-build.yml)
+![Node.js 20+](https://img.shields.io/badge/Node.js-20%2B-5FA04E?logo=nodedotjs&logoColor=white)
+![Capacitor 7.6.8](https://img.shields.io/badge/Capacitor-7.6.8-119EFF?logo=capacitor&logoColor=white)
 
-## Features
+Hairloom is a **standalone iOS and Android consultation app** that generates hairstyle design results from customer-supplied originals and a freeform request.
 
-- Standalone Capacitor iOS and Android apps with camera capture and gallery selection
-- Personal image API credentials stored only in iOS Keychain or Android Keystore
-- Conservative local hair profile from the prepared customer original and `REQUEST`
-- `SOURCE → RESULTS → LOCK` flow
-- Restart-resumable 100 fixed results, fullscreen image enlargement, and direct 1–6 selection
-- Original-only Provider lineage; generated images are never request inputs
+It does not require an online desktop, LAN server, Tailscale, or a separate Companion. Personal image API credentials stay in iOS Keychain or Android Keystore, while Provider authentication and image traffic run only in native code.
 
-## Routes
+<p align="center">
+  <img src="docs/assets/readme/hairloom-ios-source.png" width="360" alt="Hairloom iOS SOURCE screen">
+</p>
+
+## Product flow
 
 ```text
-Hairloom:    http://127.0.0.1:4180/
-Health check:  http://127.0.0.1:4180/healthz
+SOURCE → RESULTS → LOCK
 ```
 
-## Installation
+1. Capture an original with the camera or select one from the gallery.
+2. Enter the desired hairstyle, color, and known treatment history in `REQUEST`.
+3. Native analysis starts a fixed 100-slot result batch.
+4. Open results uncropped at their original aspect ratio and select 1–6.
+5. Pass the selected current design IDs and original-source lineage to `LOCK`.
+
+`Image 1` is required. `Images 2–6` are optional. Camera and gallery inputs use the same prepared-original pipeline.
+
+## Product guarantees
+
+- Only user-prepared originals may enter Provider requests.
+- Generated images and catalog images are never reused for analysis or later generation.
+- Each of the 100 slots keeps its index, design ID, original hash, and retry ownership regardless of completion order.
+- Completed outputs survive restart; interrupted work returns to `retryable` under the same slot ownership.
+- RESULTS enlargement contains only the uncropped image and a close control.
+- Hair analysis never infers identity, age, ethnicity, face shape, body, health, or gender identity.
+- Unobservable bleach, perm, or extension history remains unknown and conservative unless supplied by the user.
+
+## Release status
+
+The current source is a release candidate pending store signing and final operational acceptance.
+
+| Area | Status |
+| --- | --- |
+| Node verification | 103 tests passing |
+| Android | Java compilation, debug APK assembly, and API 35 emulator QA passing |
+| iOS | Simulator build, install, launch, and screenshot passing on macOS GitHub Actions |
+| Native targets | iOS 14.0+ · Android 6.0/API 23+, target SDK 35 |
+| App ID and initial version | `com.markerinc.hairloom` · version `1.0` · build/versionCode `1` |
+| Responsive web shell | Zero horizontal overflow at 1440×1000, 834×1112, and 390×844 |
+| Browser Provider | Disabled; no credential form or Bearer transport |
+| Native Provider | Personal OpenAI Image API connection supported |
+| Credentialed Provider acceptance | Final E2E required on physical devices with the release owner's separately billed API key |
+
+Store submission still requires each organization's signing certificates, provisioning profiles, Android signing configuration, store metadata, and physical-device QA. The unsigned iOS Simulator build and Android debug build do not replace signed store artifacts. Signing material and local SDK paths never belong in the repository.
+
+## Quick start: local web shell
 
 Hairloom requires Node.js 20 or newer.
 
 ```bash
 git clone https://github.com/Marker-Inc-Korea/HairLoom.git
 cd HairLoom
-npm install
+npm ci
 npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-Open `http://127.0.0.1:4180/` in a browser.
+Open:
 
-### Standalone mobile app
+```text
+Hairloom:  http://127.0.0.1:4180/
+Health:    http://127.0.0.1:4180/healthz
+```
 
-Hairloom never asks a browser to enter or store the image API credential. Generation runs inside the Capacitor native app.
+The web shell is a local preview for the product flow and catalog. Browsers cannot enter credentials or execute Provider generation.
+
+## Native builds
+
+Common preparation:
+
+```bash
+npm ci
+npm run mobile:prepare
+npm run mobile:test
+npm run mobile:doctor
+```
+
+`mobile:prepare` copies exactly 17 allowlisted public assets into `mobile-dist/`. It excludes credentials, customer photos, outputs, `.env`, `.gjc`, `imagen.web.js`, and private test assets.
+
+### iOS
+
+Requirements:
+
+- Xcode
+- CocoaPods
+- Node.js 20+
 
 ```bash
 npm run mobile:prepare
-npm run mobile:doctor
-npm run mobile:sync
-npm run mobile:open:ios      # requires Xcode
-npm run mobile:open:android  # use Android Studio or Gradle
+npx cap sync ios
+cd ios/App
+pod install
+open App.xcworkspace
 ```
 
-- iOS requires Xcode and CocoaPods. `이미지 생성 연결` stores the personal key in a non-synchronizing, device-only Keychain item.
-- Android requires Java 21 and Android SDK 35. The key is encrypted with an Android Keystore AES-GCM key.
-- Prepared originals, generated outputs, and the fixed-slot journal remain in private app storage and are excluded from backup/file sharing. Completed or cancelled customer records and opaque output handles are removed by startup cleanup after seven days.
-- Long iOS batches are most reliable in the foreground. Interrupted slots return to the same-owner retry queue and resume when the app reopens.
-- `모든 고객 데이터 삭제` immediately removes prepared sources, outputs, and batch/slot/event journals. The Provider key remains until `연결 삭제` is selected separately.
-- The browser/PWA shell remains useful for reviewing the catalog and flow, but Provider generation is native-only.
+Select the `App` scheme and a development team in Xcode, then run on a Simulator or connected device. CI verifies this pipeline:
 
-## Usage
+```text
+npm ci → mobile:prepare → cap copy ios → pod install
+→ unsigned Simulator build → simctl install/launch → screenshot
+```
 
-1. Capture or select images. `Image 1` is required; `Images 2–6` are optional.
-2. Enter the desired hairstyle, color, and known treatment history in the `REQUEST` card.
-3. Select `NEXT` below the photo controls, then open any result as a fullscreen image.
-4. Select 1–6 results and pass them to `LOCK`.
-
-A prepared customer original enters only native `/responses` analysis and `/images/edits` generation. If analysis is temporarily unavailable, Hairloom uses a conservative profile from local color sampling and the REQUEST. Generated images are never reused as analysis or generation inputs.
-
-## Image provider configuration
-
-In the Hairloom mobile app, select `이미지 생성 연결` and enter a personal OpenAI Image API key with separate billing enabled. Native code fixes the Provider origin to `https://api.openai.com/v1`, uses `gpt-4.1-mini` for analysis, and uses `gpt-image-2` for image edits. The key never enters WebView JavaScript, `localStorage`, `sessionStorage`, the service worker, logs, or export files.
+Open the project from the repository root:
 
 ```bash
-npm run mobile:doctor
-npm run mobile:test
+npm run mobile:open:ios
 ```
 
-`imagen.web.js` and browser Bearer requests are no longer supported. Never commit API keys, customer photos, generated customer images, native signing material, or `.gjc/` QA artifacts.
+Create the release archive in Xcode:
 
-## Future subscription provider TODO
+1. Confirm the `App` target's bundle identifier, version, build number, and deployment target.
+2. Select the organization's Team and provisioning under `Signing & Capabilities`.
+3. Choose `Any iOS Device (arm64)` and run **Product → Archive**.
+4. In Organizer, choose **Distribute App** to upload to TestFlight or App Store Connect.
 
-ChatGPT Plus or Pro billing is separate from OpenAI API billing. A ChatGPT/Codex subscription token is not a general `/images/edits` API key and must not be copied into the mobile app.
+Repository CI verifies an unsigned Simulator build, install, and launch. A signed archive and physical-device behavior require separate release-owner acceptance.
 
-- Official guidance: [ChatGPT subscriptions and API billing are separate](https://help.openai.com/en/articles/8156019)
-- Codex can sign in with eligible ChatGPT plans: [Using Codex with your ChatGPT plan](https://help.openai.com/en/articles/11369540)
-- The current mobile MVP supports only a separately billed personal image API.
-- A future `CodexSubscriptionProvider` may implement the same native provider interface only after OpenAI publishes a supported mobile Codex/App Server SDK, third-party ChatGPT OAuth image-generation surface, or documented subscription image-edit API.
-- That work requires a separate compatibility/security gate proving official login, prepared-reference editing, exact-one output, cancellation, usage-limit state, logout, and token non-exposure.
-- Never import ChatGPT passwords, cookies, browser tokens, `~/.codex/auth.json`, or private God Tibo authentication into the mobile app.
+### Android
 
+Requirements:
 
-## Trend registry
+- Java 21
+- Android SDK 35
+- Android Studio or Gradle
 
-Hairloom never uses external social images as generation inputs. The trend collector retains only style names, publication timestamps, public permalinks, sample counts, and momentum signals, then maps them to existing `HLM-C-*` design IDs. The initial registry contains 40 stylist-reviewed baseline styles. Trend is only a bounded secondary signal: at most 3 points in Explore and 5 points in public recommendations. Feasibility and original-source lineage always win.
+```bash
+npm run mobile:prepare
+npx cap sync android
+JAVA_HOME=/path/to/jdk-21 \
+ANDROID_HOME=/path/to/android-sdk \
+./android/gradlew -p android assembleDebug
+```
 
-Verify or rebuild the deterministic local snapshot:
+Debug APK:
+
+```text
+android/app/build/outputs/apk/debug/app-debug.apk
+```
+
+Open Android Studio:
+
+```bash
+npm run mobile:open:android
+```
+
+Release AAB/APK builds must inject the organization's signing configuration through local files or CI secrets. Never commit keystores or passwords.
+
+Create the store Android App Bundle as follows:
+
+1. Confirm the release `applicationId`, `versionCode`, `versionName`, and min/target SDK values.
+2. In Android Studio, select **Build → Generate Signed Bundle / APK**, then **Android App Bundle**.
+3. Inject the organization's upload key and passwords only from local secure storage or CI secrets.
+4. After release signing is configured, reproduce the build with `./android/gradlew -p android clean bundleRelease`.
+
+The configured release build writes `android/app/build/outputs/bundle/release/app-release.aab`. This repository intentionally contains no organization-specific upload key or signing secret, so an unsigned `release` artifact is not ready for Play Console submission.
+
+## Image Provider connection
+
+On the mobile SOURCE screen, select `이미지 생성 연결` and enter a personal OpenAI Image API key with separate billing enabled.
+
+| Purpose | Fixed native configuration |
+| --- | --- |
+| Hair analysis | `https://api.openai.com/v1/responses` · `gpt-4.1-mini` |
+| Image edit | `https://api.openai.com/v1/images/edits` · `gpt-image-2` |
+
+Credential boundary:
+
+- iOS: non-synchronizing, device-only Keychain item
+- Android: Android Keystore AES-GCM
+- No key reaches WebView JavaScript, `localStorage`, `sessionStorage`, service workers, logs, or exports
+- The bridge accepts no arbitrary URL, header, Provider method, filesystem path, or unrestricted native command
+
+ChatGPT Plus/Pro billing and OpenAI API billing are separate. Never import ChatGPT/Codex cookies, passwords, browser tokens, `~/.codex/auth.json`, or private God Tibo authentication into the mobile app.
+
+- [ChatGPT subscriptions and API billing are separate](https://help.openai.com/en/articles/8156019)
+- [Using Codex with your ChatGPT plan](https://help.openai.com/en/articles/11369540)
+
+Until an officially supported mobile subscription Provider exists, this release supports only a separately billed personal Image API.
+
+A batch owns 100 fixed result slots, and retries can add billable requests. Confirm the OpenAI API project's billing state, usage limits, and QA budget before credentialed Provider testing.
+
+## Data retention and deletion
+
+Private app layout:
+
+```text
+sources/
+outputs/
+jobs/<batchId>/<slotIndex>.json
+jobs/<batchId>/context.json
+hairloom-private.sqlite
+```
+
+- Prepared originals, outputs, batches, slots, events, and retry state remain in private app storage.
+- Raw prompts stay in protected job files, not SQLite event rows or logs.
+- iOS applies data protection and backup exclusion.
+- Android uses `allowBackup=false`, cleartext blocking, and private app storage.
+- Startup cleanup removes completed/cancelled customer data and opaque output handles after seven days.
+- `모든 고객 데이터 삭제` immediately deletes originals, outputs, jobs, and batch/slot/event journals.
+- The Provider key is separate and remains until `연결 삭제` is selected.
+
+## Verification
+
+Full verification:
+
+```bash
+npm run verify
+```
+
+Native-boundary verification:
+
+```bash
+npm run mobile:prepare
+npm run mobile:test
+npm run mobile:doctor
+```
+
+Current baseline:
+
+```text
+103 tests passing
+1,080-design taxonomy check passing
+6,500-design master catalog check passing
+500 structure groups
+12 finish records per structure
+288 deterministic variations per structure
+catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
+promptVersion: HLM-EXPLORE-PROMPT-2026-07-4
+trendRegistryVersion: HLM-TRENDS-2026-07-1
+```
+
+Primary CI workflows:
+
+- [`Mobile iOS Build`](.github/workflows/mobile-ios-build.yml): iOS Simulator build, install, and launch
+- [`Hair Trend Refresh`](.github/workflows/hair-trend-refresh.yml): validated metadata-only biweekly pull requests
+
+## Deployment checklist
+
+```text
+[ ] npm ci && npm run verify
+[ ] npm run mobile:prepare && npm run mobile:test
+[ ] Confirm iOS App scheme, bundle identifier, signing team, and provisioning
+[ ] Confirm Android applicationId, versionCode/versionName, and signing config
+[ ] Test camera and gallery on physical iOS and Android devices
+[ ] Test Keychain/Keystore connect and delete on physical devices
+[ ] Run analysis, 100 results, completed-output restoration, shortlist, and LOCK E2E with a billed API key
+[ ] Test foreground generation, interruption, termination, and restart recovery
+[ ] Verify 100 fixed slots, restored completed outputs, 1–6 shortlist, and LOCK
+[ ] Delete all customer data and confirm no source/output/journal residue
+[ ] Scan repository and artifacts for credentials, photos, signing material, and local paths
+[ ] Confirm App Store Connect and Play Console privacy-policy URL, support URL, and review notes
+```
+
+## Advanced operations: trend registry
+
+<details>
+<summary>Metadata-only trend collection and biweekly automation</summary>
+
+Hairloom never stores external social images or uses them as generation inputs. The trend collector retains style names, publication timestamps, public permalinks, sample counts, and momentum signals, then maps them to existing `HLM-C-*` design IDs.
 
 ```bash
 npm run trend:check
 npm run trend
 ```
 
-Run live collection only when Meta Hashtag Search or Naver DataLab credentials are available:
+Run live collection only with Meta Hashtag Search or Naver DataLab credentials:
 
 ```bash
 cp .env.example .env
-# Fill only the provider credentials you use.
 npm run trend:live
 ```
 
-### Periodic updates on macOS
-
-Preview the launchd configuration without changing files or system services:
+Preview or install the macOS launchd schedule:
 
 ```bash
 npm run trend:schedule -- --dry-run --interval-hours=336
-```
-
-When `.env` contains one complete Meta or Naver credential pair, install the schedule at the default biweekly interval of 14 days (336 hours). Intervals are bounded to 1–336 hours.
-
-```bash
 npm run trend:schedule
-npm run trend:schedule -- --interval-hours=168
-```
-
-Inspect status, run one update immediately, or remove the schedule:
-
-```bash
 npm run trend:schedule:status
 npm run trend:update
 npm run trend:schedule:remove
 ```
 
-The launchd label is `com.hairloom.trend-update`. The plist never embeds credentials; the update command reads Hairloom's ignored `.env` at runtime. Logs go to ignored `.gjc/logs/hair-trends.log` and `.gjc/logs/hair-trends.error.log`. The manager refuses to overwrite or remove an unmanaged launch agent at the same path. Reinstall the schedule after changing the Node executable path.
-
-### GitHub biweekly data pull requests
-
-`.github/workflows/hair-trend-refresh.yml` starts every Monday at 00:30 UTC, then deterministically checks whether the date is on the 14-day cadence anchored at `2026-08-03`. A manual `workflow_dispatch` bypasses the date gate.
-
-```bash
-npm run trend:cadence
-npm run trend:cadence -- --date=2026-08-17
-```
-
-Configure these GitHub Actions secrets for the repository. One complete Meta or Naver pair is sufficient.
+GitHub Actions live refresh requires one complete Meta or Naver credential pair:
 
 ```text
 HAIRLOOM_META_ACCESS_TOKEN
@@ -147,73 +302,46 @@ HAIRLOOM_NAVER_CLIENT_ID
 HAIRLOOM_NAVER_CLIENT_SECRET
 ```
 
-Optionally configure the repository variable `HAIRLOOM_META_API_VERSION`. In the repository Actions settings, enable `Allow GitHub Actions to create and approve pull requests`. Without one complete provider pair, live collection fails visibly and creates no pull request.
-
-After full verification, the biweekly workflow commits changes only from these two files on `automation/hair-trends` and creates or updates a pull request against the default branch:
+Automated pull requests may change only:
 
 ```text
 data/hair-trend-signals.json
 src/hairTrendData.mjs
 ```
 
-Any other tracked change or non-ignored untracked file fails the workflow. No data change means no commit and no pull request. Provider credentials and external images are never committed.
+Image URLs, thumbnails, Base64, external image data, and secret-shaped fields are rejected during import.
 
-Import reviewed metadata batches from Google Trends, Pinterest Trends, Instagram Business Discovery, or editorial sources:
+</details>
 
-```bash
-npm run trend -- --import=./local-trend-batch.json
-```
-
-Imports must use `metadata-only` rights. Image URLs, thumbnails, Base64, and image data URLs are rejected. `data/hair-trend-signals.json` is the source configuration and metadata ledger; `src/hairTrendData.mjs` is the deterministic browser-runtime snapshot.
-
-Official integration references: [Meta Hashtag Search](https://developers.facebook.com/docs/instagram-api/guides/hashtag-search/), [Meta App Review](https://developers.facebook.com/docs/instagram-platform/app-review), [Naver DataLab](https://developers.naver.com/docs/serviceapi/datalab/search/search.md), [Google Trends](https://trends.google.com/trends/), and [Pinterest Trends](https://trends.pinterest.com/).
-
-## Verification
-
-```bash
-npm run verify
-```
-
-Current baseline:
+## Repository map
 
 ```text
-92 tests passing
-1,080-design taxonomy check passing
-6,500-design v2 master catalog check passing
-catalogVersion: HLM-MASTER-2026-07-EXPLORE-2
-promptVersion: HLM-EXPLORE-PROMPT-2026-07-4
-trendRegistryVersion: HLM-TRENDS-2026-07-1
+consultation/                           Public Hairloom UI
+src/mobileProviderBridge.mjs            Allowlisted WebView↔native bridge
+src/hairAnalysis.mjs                    Conservative hair-profile normalization
+src/consultationCore.mjs                Recommendation, feasibility, and fixed-slot domain
+src/exploreCore.mjs                     Catalog and deterministic selection domain
+android/app/src/main/java/...            Android Provider, Keystore, and SQLite implementation
+ios/App/App/HairloomProviderPlugin.swift iOS Provider, Keychain, and SQLite implementation
+scripts/prepareMobileAssets.mjs          Allowlisted native asset packaging
+scripts/doctorMobile.mjs                 Mobile toolchain and security-boundary diagnostics
+docs/hair-design-master/                6,500-record runtime catalog
+server.mjs                               Local-only static server and public routes
 ```
 
-## Main files
+## Never commit
 
 ```text
-server.mjs                        `/` → Hairloom redirect and public asset allowlist
-consultation/                     Public Hairloom UI
-explore/                          Internal Explore UI enabled only by environment flag
-src/exploreCore.mjs               Shared catalog and queue domain logic
-src/consultationCore.mjs          Consultation, feasibility, and queue logic
-src/hairAnalysis.mjs              Local hair profile, color-request parsing, and internal conversion
-src/trendRegistry.mjs             Trend validation, scoring, and catalog mapping
-src/hairTrendData.mjs             Generated 40-record runtime trend snapshot
-src/modelPreviewRegistry.mjs      Deferred future model-library module
-scripts/generateHairMasterCatalog.mjs  6,500-design catalog generator
-scripts/syncHairTrends.mjs         Local checks, imports, and optional live collection
-scripts/manageHairTrendSchedule.mjs macOS periodic install, status, and removal
-scripts/checkHairTrendCadence.mjs   Deterministic biweekly date gate
-scripts/checkHairTrendChanges.mjs   Automated commit path allowlist guard
-.github/workflows/hair-trend-refresh.yml Data-only automated commit and PR
-docs/hair-design-master/           Runtime catalog and generated documentation
-server.mjs                         Local-only static server
+.env
+imagen.web.js
+API keys
+customer photos
+generated customer images
+native signing material
+local SDK paths
+crash artifacts
+.gjc/
+mobile-dist/
 ```
 
-## Development principles
-
-- Hairloom and BeautyTape are separate repositories.
-- The internal Explore route keeps its legacy browser generation path disabled and sends no Provider request. Public Hairloom uses only user-supplied prepared originals as native generation inputs.
-- The public surface does not create or send a hair mask, and non-current colors require no mask-confirmation step.
-- Horizontal mirroring exists only at the provider boundary; final results return to the original orientation.
-- Public results use the Provider output directly without source-pixel compositing.
-- High-damage profiles exclude perm and extension designs.
-- External social images are never stored, served, or used as generation inputs; only validated metadata signals are accepted.
-- Customer photos, generated images, API keys, and QA artifacts never belong in the repository.
+Hairloom and BeautyTape are separate repositories. Hairloom changes belong only in `Marker-Inc-Korea/HairLoom`.
