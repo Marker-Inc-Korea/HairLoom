@@ -3,6 +3,7 @@
 [한국어 README](README.md)
 
 [![Mobile iOS Build](https://github.com/Marker-Inc-Korea/HairLoom/actions/workflows/mobile-ios-build.yml/badge.svg)](https://github.com/Marker-Inc-Korea/HairLoom/actions/workflows/mobile-ios-build.yml)
+[![Mobile Android Preview](https://github.com/Marker-Inc-Korea/HairLoom/actions/workflows/mobile-android-preview.yml/badge.svg)](https://github.com/Marker-Inc-Korea/HairLoom/actions/workflows/mobile-android-preview.yml)
 ![Node.js 20+](https://img.shields.io/badge/Node.js-20%2B-5FA04E?logo=nodedotjs&logoColor=white)
 ![Capacitor 7.6.8](https://img.shields.io/badge/Capacitor-7.6.8-119EFF?logo=capacitor&logoColor=white)
 
@@ -44,8 +45,9 @@ The current source is a release candidate pending store signing and final operat
 
 | Area | Status |
 | --- | --- |
-| Node verification | 103 tests passing |
+| Node verification | 104 tests passing |
 | Android | Java compilation, debug APK assembly, and API 35 emulator QA passing |
+| GitHub preview | Installable Android APK and SHA-256 checksum published as a GitHub prerelease |
 | iOS | Simulator build, install, launch, and screenshot passing on macOS GitHub Actions |
 | Native targets | iOS 14.0+ · Android 6.0/API 23+, target SDK 35 |
 | App ID and initial version | `com.markerinc.hairloom` · version `1.0` · build/versionCode `1` |
@@ -55,6 +57,49 @@ The current source is a release candidate pending store signing and final operat
 | Credentialed Provider acceptance | Final E2E required on physical devices with the release owner's separately billed API key |
 
 Store submission still requires each organization's signing certificates, provisioning profiles, Android signing configuration, store metadata, and physical-device QA. The unsigned iOS Simulator build and Android debug build do not replace signed store artifacts. Signing material and local SDK paths never belong in the repository.
+
+## Download the Android APK from GitHub
+
+Android users can install Hairloom without building the source. Open [GitHub Releases](https://github.com/Marker-Inc-Korea/HairLoom/releases) and download the latest **Android Preview**.
+
+Each preview contains exactly two release assets:
+
+```text
+Hairloom-android-preview.apk
+Hairloom-android-preview.apk.sha256
+```
+
+Installation:
+
+1. Download both files into the same folder.
+2. Confirm that the APK's SHA-256 digest matches the checksum file.
+
+   macOS or Linux:
+
+   ```bash
+   shasum -a 256 Hairloom-android-preview.apk
+   cat Hairloom-android-preview.apk.sha256
+   ```
+
+   Windows PowerShell:
+
+   ```powershell
+   (Get-FileHash .\Hairloom-android-preview.apk -Algorithm SHA256).Hash.ToLower()
+   Get-Content .\Hairloom-android-preview.apk.sha256
+   ```
+
+3. Open the downloaded APK on Android and, when prompted, allow **Install unknown apps** for the browser or file manager used to open it.
+4. On the SOURCE screen, select `이미지 생성 연결` and enter a separately billed OpenAI API key through the native secure dialog.
+
+Developers with ADB can also install it with:
+
+```bash
+adb install Hairloom-android-preview.apk
+```
+
+This APK is a **debug-signed sideload preview** for direct GitHub installation and internal testing. It is not a Play Store artifact. The GitHub runner's debug signing certificate may change between preview builds; if an update fails with `INSTALL_FAILED_UPDATE_INCOMPATIBLE`, uninstall the previous preview before installing the new APK. Uninstalling resets app-private originals, outputs, and settings.
+
+iOS binaries cannot be installed on ordinary devices from GitHub without Apple signing and provisioning. Use the Xcode build instructions below for iOS; TestFlight and App Store distribution remain deferred.
 
 ## Quick start: local web shell
 
@@ -231,7 +276,7 @@ npm run mobile:doctor
 Current baseline:
 
 ```text
-103 tests passing
+104 tests passing
 1,080-design taxonomy check passing
 6,500-design master catalog check passing
 500 structure groups
@@ -245,6 +290,7 @@ trendRegistryVersion: HLM-TRENDS-2026-07-1
 Primary CI workflows:
 
 - [`Mobile iOS Build`](.github/workflows/mobile-ios-build.yml): iOS Simulator build, install, and launch
+- [`Mobile Android Preview`](.github/workflows/mobile-android-preview.yml): debug APK/SHA-256 artifact validation and version-tag prerelease publication
 - [`Hair Trend Refresh`](.github/workflows/hair-trend-refresh.yml): validated metadata-only biweekly pull requests
 
 ## Deployment checklist

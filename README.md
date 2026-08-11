@@ -3,6 +3,7 @@
 [English README](README.en.md)
 
 [![Mobile iOS Build](https://github.com/Marker-Inc-Korea/HairLoom/actions/workflows/mobile-ios-build.yml/badge.svg)](https://github.com/Marker-Inc-Korea/HairLoom/actions/workflows/mobile-ios-build.yml)
+[![Mobile Android Preview](https://github.com/Marker-Inc-Korea/HairLoom/actions/workflows/mobile-android-preview.yml/badge.svg)](https://github.com/Marker-Inc-Korea/HairLoom/actions/workflows/mobile-android-preview.yml)
 ![Node.js 20+](https://img.shields.io/badge/Node.js-20%2B-5FA04E?logo=nodedotjs&logoColor=white)
 ![Capacitor 7.6.8](https://img.shields.io/badge/Capacitor-7.6.8-119EFF?logo=capacitor&logoColor=white)
 
@@ -44,8 +45,9 @@ SOURCE → RESULTS → LOCK
 
 | 항목 | 상태 |
 | --- | --- |
-| Node 검증 | 103 tests passing |
+| Node 검증 | 104 tests passing |
 | Android | Java 컴파일, debug APK assembly, API 35 에뮬레이터 QA 통과 |
+| GitHub Preview | Android 설치용 APK와 SHA-256 체크섬을 GitHub Prerelease로 제공 |
 | iOS | macOS GitHub Actions에서 Simulator 빌드·설치·실행·스크린샷 통과 |
 | 네이티브 타깃 | iOS 14.0 이상 · Android 6.0/API 23 이상, target SDK 35 |
 | 앱 식별자·초기 버전 | `com.markerinc.hairloom` · version `1.0` · build/versionCode `1` |
@@ -55,6 +57,49 @@ SOURCE → RESULTS → LOCK
 | 실제 Provider 승인 | 릴리스 담당자의 실제 기기와 별도 과금 API 키로 최종 E2E 필요 |
 
 스토어 제출 전에는 각 조직의 서명 인증서, provisioning profile, Android signing config, 스토어 메타데이터와 실제 기기 QA가 필요합니다. CI의 unsigned iOS Simulator 빌드와 Android debug 빌드는 서명된 스토어 산출물을 대신하지 않습니다. 서명 자료와 로컬 SDK 경로는 저장소에 포함하지 않습니다.
+
+## GitHub에서 Android APK 받기
+
+Android 사용자는 소스를 직접 빌드하지 않고 [GitHub Releases](https://github.com/Marker-Inc-Korea/HairLoom/releases)에서 최신 **Android Preview**를 받을 수 있습니다.
+
+릴리스 자산은 정확히 두 파일입니다.
+
+```text
+Hairloom-android-preview.apk
+Hairloom-android-preview.apk.sha256
+```
+
+설치 순서:
+
+1. 두 파일을 같은 폴더에 다운로드합니다.
+2. APK의 SHA-256 값이 체크섬 파일과 일치하는지 확인합니다.
+
+   macOS 또는 Linux:
+
+   ```bash
+   shasum -a 256 Hairloom-android-preview.apk
+   cat Hairloom-android-preview.apk.sha256
+   ```
+
+   Windows PowerShell:
+
+   ```powershell
+   (Get-FileHash .\Hairloom-android-preview.apk -Algorithm SHA256).Hash.ToLower()
+   Get-Content .\Hairloom-android-preview.apk.sha256
+   ```
+
+3. Android에서 다운로드한 APK를 열고, 요청될 때 해당 브라우저 또는 파일 앱의 **알 수 없는 앱 설치** 권한을 허용합니다.
+4. SOURCE 화면의 `이미지 생성 연결`에서 별도 과금 OpenAI API 키를 네이티브 보안 입력창에 등록합니다.
+
+ADB가 설치된 개발 환경에서는 다음 명령도 사용할 수 있습니다.
+
+```bash
+adb install Hairloom-android-preview.apk
+```
+
+이 APK는 GitHub 직접 설치와 내부 테스트를 위한 **debug-signed sideload preview**이며 Play Store 제출용 산출물이 아닙니다. GitHub 빌드마다 debug 서명 인증서가 달라질 수 있으므로 업데이트가 `INSTALL_FAILED_UPDATE_INCOMPATIBLE`로 실패하면 이전 Preview를 제거한 뒤 새 APK를 설치해야 합니다. 제거하면 앱 전용 원본·출력·설정도 초기화됩니다.
+
+iOS는 Apple 서명과 provisioning 없이는 GitHub에서 받은 바이너리를 일반 기기에 설치할 수 없습니다. 현재 iOS 배포는 아래 Xcode 빌드 절차를 사용하며 TestFlight/App Store 배포는 추후 진행합니다.
 
 ## 빠른 시작: 로컬 웹 셸
 
@@ -231,7 +276,7 @@ npm run mobile:doctor
 현재 기준:
 
 ```text
-103 tests passing
+104 tests passing
 1,080-design taxonomy check passing
 6,500-design master catalog check passing
 500 structure groups
@@ -245,6 +290,7 @@ trendRegistryVersion: HLM-TRENDS-2026-07-1
 주요 CI:
 
 - [`Mobile iOS Build`](.github/workflows/mobile-ios-build.yml): iOS Simulator 빌드·설치·실행
+- [`Mobile Android Preview`](.github/workflows/mobile-android-preview.yml): debug APK·SHA-256 artifact 검증과 version tag Prerelease 게시
 - [`Hair Trend Refresh`](.github/workflows/hair-trend-refresh.yml): 검증된 메타데이터 전용 격주 PR
 
 ## 배포 체크리스트

@@ -1,0 +1,105 @@
+name: Mobile Android Preview
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/mobile-android-preview.yml'
+      - 'android/**'
+      - 'capacitor.config.json'
+      - 'consultation/**'
+      - 'mobileNativeContract.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/prepareMobileAssets.mjs'
+      - 'src/**'
+  push:
+    tags:
+      - 'v*-preview*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-android-preview-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  build-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: npm ci
+      - run: npm run mobile:prepare
+      - run: npx cap copy android
+      - name: Build debug APK
+        run: ./android/gradlew -p android assembleDebug --no-daemon
+      - name: Prepare preview artifact
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/debug/app-debug.apk dist/Hairloom-android-preview.apk
+          cd dist
+          sha256sum Hairloom-android-preview.apk > Hairloom-android-preview.apk.sha256
+          test -s Hairloom-android-preview.apk
+          test -s Hairloom-android-preview.apk.sha256
+      - uses: actions/upload-artifact@v7
+        with:
+          name: hairloom-android-preview
+          path: |
+            dist/Hairloom-android-preview.apk
+            dist/Hairloom-android-preview.apk.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+  publish-prerelease:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    needs: build-preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: hairloom-android-preview
+          path: dist
+      - name: Verify downloaded APK
+        working-directory: dist
+        run: sha256sum --check Hairloom-android-preview.apk.sha256
+      - name: Publish GitHub prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY"; then
+            echo "::error::Release $GITHUB_REF_NAME already exists; refusing to overwrite preview assets."
+            exit 1
+          fi
+          cat > release-notes.md <<'EOF'
+          ## Hairloom Android Preview
+
+          This is a debug-signed, sideload-only Android preview for direct GitHub installation and internal testing. It is not a Play Store build.
+
+          - Download `Hairloom-android-preview.apk` and its `.sha256` checksum.
+          - Provider analysis and image generation require a separately billed personal OpenAI API key entered only through Hairloom's native secure dialog.
+          - The debug signing certificate may change between preview builds. Android may require uninstalling the previous preview before installing this version, which resets app-private data.
+          - No keystore, signing credential, customer photo, generated output, or Provider credential is included.
+          EOF
+          gh release create "$GITHUB_REF_NAME" \
+            "dist/Hairloom-android-preview.apk#Hairloom Android Preview APK" \
+            "dist/Hairloom-android-preview.apk.sha256#SHA-256 checksum" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --prerelease \
+            --title "Hairloom Android Preview $GITHUB_REF_NAME" \
+            --notes-file release-notes.md

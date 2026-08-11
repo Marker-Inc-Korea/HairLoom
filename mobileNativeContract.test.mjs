@@ -106,3 +106,35 @@ test('public web surfaces contain no browser credential transport', async () => 
   assert.match(sources, /deleteAllCustomerData/);
   assert.match(sources, /모든 고객 데이터 삭제/);
 });
+
+test('Android preview workflow publishes only the debug APK and checksum', async () => {
+  const workflow = await read('./.github/workflows/mobile-android-preview.yml');
+  assert.match(workflow, /^name: Mobile Android Preview$/m);
+  assert.match(workflow, /tags:\n\s+- 'v\*-preview\*'/);
+  assert.match(workflow, /actions\/checkout@v7/);
+  assert.match(workflow, /actions\/setup-node@v7[\s\S]*node-version: 20/);
+  assert.match(workflow, /actions\/setup-java@v5[\s\S]*distribution: temurin[\s\S]*java-version: 21/);
+  assert.match(workflow, /actions\/upload-artifact@v7/);
+  assert.match(workflow, /actions\/download-artifact@v8/);
+  assert.match(workflow, /npm run mobile:prepare/);
+  assert.match(workflow, /npx cap copy android/);
+  assert.match(workflow, /\.\/android\/gradlew -p android assembleDebug --no-daemon/);
+  assert.match(workflow, /sha256sum Hairloom-android-preview\.apk > Hairloom-android-preview\.apk\.sha256/);
+  assert.match(workflow, /sha256sum --check Hairloom-android-preview\.apk\.sha256/);
+  assert.match(workflow, /retention-days: 30/);
+  assert.match(workflow, /if: github\.event_name == 'push' && startsWith\(github\.ref, 'refs\/tags\/'\)/);
+  assert.match(workflow, /--verify-tag/);
+  assert.match(workflow, /--prerelease/);
+  assert.match(workflow, /already exists; refusing to overwrite preview assets/);
+
+  const upload = workflow.match(/- uses: actions\/upload-artifact@v7[\s\S]*?retention-days: 30/)?.[0] || '';
+  assert.match(upload, /name: hairloom-android-preview/);
+  assert.match(upload, /dist\/Hairloom-android-preview\.apk\n/);
+  assert.match(upload, /dist\/Hairloom-android-preview\.apk\.sha256\n/);
+  assert.doesNotMatch(upload, /keystore|\.jks|signing|customer|credential/i);
+
+  const release = workflow.match(/gh release create[\s\S]*?--notes-file release-notes\.md/)?.[0] || '';
+  assert.match(release, /dist\/Hairloom-android-preview\.apk#Hairloom Android Preview APK/);
+  assert.match(release, /dist\/Hairloom-android-preview\.apk\.sha256#SHA-256 checksum/);
+  assert.doesNotMatch(release, /keystore|\.jks|mobile-dist|customer|credential/i);
+});

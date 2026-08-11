@@ -12,7 +12,7 @@ This is the machine-operable guide for work in the standalone Hairloom repositor
 - App URL: `http://127.0.0.1:4180/` redirects to the public Hairloom route at `/consultation/`
 - Health URL: `http://127.0.0.1:4180/healthz`
 - Main verification: `npm run verify`
-- Expected baseline: 103 tests passing
+- Expected baseline: 104 tests passing
 
 ## Hard project boundary
 
@@ -42,7 +42,7 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, catalog/consultation/server/trend/scheduler/automation tests, deferred model-preview module tests, hair-analysis tests, mobile bridge/native security contract tests, and the 103-test baseline.
+`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, catalog/consultation/server/trend/scheduler/automation tests, deferred model-preview module tests, hair-analysis tests, mobile bridge/native security contract tests, Android preview workflow publication tests, and the 104-test baseline.
 
 ## Product invariants
 
@@ -129,6 +129,8 @@ docs/assets/test-subjects/
 ```
 
 API keys belong only in iOS Keychain or Android Keystore and may enter native request memory only while constructing a Provider request. Browser/WebView JavaScript, local/session storage, service workers, exports, logs, crash reports, copied web assets, and repository files must never contain them.
+
+GitHub Android previews are sideload-only debug builds. `.github/workflows/mobile-android-preview.yml` may publish exactly `Hairloom-android-preview.apk` and `Hairloom-android-preview.apk.sha256` from tags matching `v*-preview*`; it must never upload a keystore, signing secret, credential, customer file, generated output, or private configuration. Preview signing may change between runs, so documentation must preserve the uninstall-before-update warning.
 
 ## Verification by change type
 
