@@ -107,10 +107,10 @@ test('public web surfaces contain no browser credential transport', async () => 
   assert.match(sources, /모든 고객 데이터 삭제/);
 });
 
-test('Android preview workflow publishes only the debug APK and checksum', async () => {
+test('Android release workflow publishes only the versioned APK and checksum', async () => {
   const workflow = await read('./.github/workflows/mobile-android-preview.yml');
-  assert.match(workflow, /^name: Mobile Android Preview$/m);
-  assert.match(workflow, /tags:\n\s+- 'v\*-preview\*'/);
+  assert.match(workflow, /^name: Mobile Android Release$/m);
+  assert.match(workflow, /tags:\n\s+- 'v\*'/);
   assert.match(workflow, /actions\/checkout@v7/);
   assert.match(workflow, /actions\/setup-node@v7[\s\S]*node-version: 20/);
   assert.match(workflow, /actions\/setup-java@v5[\s\S]*distribution: temurin[\s\S]*java-version: 21/);
@@ -119,22 +119,71 @@ test('Android preview workflow publishes only the debug APK and checksum', async
   assert.match(workflow, /npm run mobile:prepare/);
   assert.match(workflow, /npx cap sync android/);
   assert.match(workflow, /\.\/android\/gradlew -p android assembleDebug --no-daemon/);
-  assert.match(workflow, /sha256sum Hairloom-android-preview\.apk > Hairloom-android-preview\.apk\.sha256/);
-  assert.match(workflow, /sha256sum --check Hairloom-android-preview\.apk\.sha256/);
+  assert.match(workflow, /package-version-mismatch/);
+  assert.match(workflow, /versionName \\"\$VERSION\\"/);
+  assert.match(workflow, /Hairloom-\$\{VERSION\}-android\.apk/);
+  assert.match(workflow, /sha256sum "\$APK_NAME" > "\$APK_NAME\.sha256"/);
+  assert.match(workflow, /sha256sum --check "\$CHECKSUM_NAME"/);
+  assert.match(workflow, /find \. -maxdepth 1 -type f/);
   assert.match(workflow, /retention-days: 30/);
   assert.match(workflow, /if: github\.event_name == 'push' && startsWith\(github\.ref, 'refs\/tags\/'\)/);
+  assert.match(workflow, /Release \$GITHUB_REF_NAME already exists; refusing to overwrite release assets/);
+  assert.match(workflow, /Missing stable release notes/);
   assert.match(workflow, /--verify-tag/);
-  assert.match(workflow, /--prerelease/);
-  assert.match(workflow, /already exists; refusing to overwrite preview assets/);
+  assert.match(workflow, /RELEASE_ARGS\+=\(--prerelease\)/);
+  assert.match(workflow, /dist\/\$APK_NAME#Hairloom Android APK/);
+  assert.match(workflow, /dist\/\$CHECKSUM_NAME#SHA-256 checksum/);
+  const uploadPaths = workflow.match(/- uses: actions\/upload-artifact@v7[\s\S]*?retention-days: 30/)?.[0] || '';
+  const releaseAssets = workflow.match(/gh release create[\s\S]*?--notes-file "\$NOTES_FILE"/)?.[0] || '';
+  assert.doesNotMatch(uploadPaths, /\.jks|keystore|signing|customer|credential|mobile-dist/i);
+  assert.doesNotMatch(releaseAssets, /\.jks|keystore|signing|customer|credential|mobile-dist/i);
+});
 
-  const upload = workflow.match(/- uses: actions\/upload-artifact@v7[\s\S]*?retention-days: 30/)?.[0] || '';
-  assert.match(upload, /name: hairloom-android-preview/);
-  assert.match(upload, /dist\/Hairloom-android-preview\.apk\n/);
-  assert.match(upload, /dist\/Hairloom-android-preview\.apk\.sha256\n/);
-  assert.doesNotMatch(upload, /keystore|\.jks|signing|customer|credential/i);
+test('release metadata is aligned at noncommercial version 1.0.0', async () => {
+  const [packageText, lockText, android, iosProject] = await Promise.all([
+    read('./package.json'),
+    read('./package-lock.json'),
+    read('./android/app/build.gradle'),
+    read('./ios/App/App.xcodeproj/project.pbxproj')
+  ]);
+  const packageJson = JSON.parse(packageText);
+  const packageLock = JSON.parse(lockText);
+  assert.equal(packageJson.version, '1.0.0');
+  assert.equal(packageJson.private, true);
+  assert.equal(packageJson.license, 'PolyForm-Noncommercial-1.0.0');
+  assert.equal(packageLock.version, '1.0.0');
+  assert.equal(packageLock.packages[''].version, '1.0.0');
+  assert.equal(packageLock.packages[''].license, 'PolyForm-Noncommercial-1.0.0');
+  assert.match(android, /versionCode 1/);
+  assert.match(android, /versionName "1\.0\.0"/);
+  assert.equal((iosProject.match(/MARKETING_VERSION = 1\.0\.0;/g) || []).length, 2);
+  assert.equal((iosProject.match(/CURRENT_PROJECT_VERSION = 1;/g) || []).length, 2);
+});
 
-  const release = workflow.match(/gh release create[\s\S]*?--notes-file release-notes\.md/)?.[0] || '';
-  assert.match(release, /dist\/Hairloom-android-preview\.apk#Hairloom Android Preview APK/);
-  assert.match(release, /dist\/Hairloom-android-preview\.apk\.sha256#SHA-256 checksum/);
-  assert.doesNotMatch(release, /keystore|\.jks|mobile-dist|customer|credential/i);
+test('public release license and guidance remain noncommercial source-available', async () => {
+  const [license, commercial, security, readmeKo, readmeEn, releaseNotes] = await Promise.all([
+    read('./LICENSE'),
+    read('./COMMERCIAL-LICENSE.md'),
+    read('./SECURITY.md'),
+    read('./README.md'),
+    read('./README.en.md'),
+    read('./docs/releases/v1.0.0.md')
+  ]);
+  assert.match(license, /^# PolyForm Noncommercial License 1\.0\.0/m);
+  assert.match(license, /^Required Notice: Copyright 2026 NomaDamas\.$/m);
+  assert.match(license, /## Noncommercial Purposes/);
+  assert.match(license, /## No Liability/);
+  assert.match(commercial, /separate written commercial license from NomaDamas/);
+  assert.match(commercial, /별도의 서면 상업 라이선스/);
+  assert.match(security, /Security → Report a vulnerability/);
+  assert.match(security, /API keys, customer photos, generated outputs/);
+  for (const document of [readmeKo, readmeEn, releaseNotes]) {
+    assert.match(document, /1\.0\.0/);
+    assert.match(document, /PolyForm Noncommercial License 1\.0\.0/);
+    assert.match(document, /source-available/);
+  }
+  assert.match(readmeKo, /OSI 승인 오픈소스 라이선스가 아닙니다/);
+  assert.match(readmeEn, /not an OSI-approved open-source license/);
+  assert.match(releaseNotes, /컴퓨터.*Android APK/s);
+  assert.match(releaseNotes, /실제 Provider 분석·생성은 실행하지 않습니다/);
 });
