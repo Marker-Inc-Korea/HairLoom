@@ -15,30 +15,43 @@ const mimeTypes = {
   '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
-  '.webp': 'image/webp'
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml; charset=utf-8',
 };
 
-function resolveStaticPath(pathname) {
+function resolveStaticPath(pathname, enableExplore = false) {
   let decoded;
   try {
-    decoded = decodeURIComponent(pathname === '/' ? '/index.html' : pathname);
+    decoded = decodeURIComponent(pathname);
   } catch {
     return null;
   }
 
+  const exploreAllowed = enableExplore && (
+    decoded === '/explore/' ||
+    decoded === '/explore/index.html'
+  );
   const allowed =
-    decoded === '/index.html' ||
+    decoded === '/manifest.webmanifest' ||
+    decoded === '/service-worker.js' ||
+    /^\/icons\/hairloom-(?:icon\.svg|192\.png|512\.png)$/i.test(decoded) ||
     decoded === '/consultation/' ||
     decoded === '/consultation/index.html' ||
     decoded === '/consultation/styles.css' ||
     decoded === '/consultation/app.mjs' ||
-    decoded === '/imagen.web.js' ||
-    decoded === '/imagen.web.example.js' ||
+    exploreAllowed ||
     decoded === '/src/exploreCore.mjs' ||
+    decoded === '/src/trendRegistry.mjs' ||
+    decoded === '/src/hairTrendData.mjs' ||
     decoded === '/src/consultationCore.mjs' ||
+    decoded === '/src/hairColorPalette.mjs' ||
+    decoded === '/src/hairAnalysis.mjs' ||
+    decoded === '/src/mobileProviderBridge.mjs' ||
+
     decoded === '/docs/hair-design-master/catalog.json' ||
     decoded === '/docs/hair-design-master/catalog-index.json' ||
     /^\/docs\/assets\/(?:samples|test-mannequin|test-mannequin-female)\/[a-z0-9._-]+\.(?:jpg|jpeg|png|webp)$/i.test(decoded) ||
@@ -46,6 +59,7 @@ function resolveStaticPath(pathname) {
 
   if (!allowed) return null;
   if (decoded === '/consultation/') decoded = '/consultation/index.html';
+  if (decoded === '/explore/') decoded = '/explore/index.html';
   const filePath = resolve(root, `.${decoded}`);
   return filePath.startsWith(root) ? filePath : null;
 }
@@ -81,7 +95,7 @@ function rejectBadRequest(response) {
   response.end('Bad request');
 }
 
-export function createHairloomServer() {
+export function createHairloomServer({ enableExplore = process.env.HAIRLOOM_ENABLE_EXPLORE === '1' } = {}) {
   return createServer((request, response) => {
     if (!isTrustedHostHeader(request.headers.host)) {
       rejectBadRequest(response);
@@ -94,6 +108,15 @@ export function createHairloomServer() {
       return;
     }
 
+    if (url.pathname === '/' || url.pathname === '/index.html') {
+      response.writeHead(302, {
+        location: '/consultation/',
+        'cache-control': 'no-store'
+      });
+      response.end();
+      return;
+    }
+
     if (url.pathname === '/healthz') {
       response.writeHead(200, {
         'content-type': 'application/json; charset=utf-8',
@@ -103,7 +126,7 @@ export function createHairloomServer() {
       return;
     }
 
-    const filePath = resolveStaticPath(url.pathname);
+    const filePath = resolveStaticPath(url.pathname, enableExplore);
     if (!filePath || !existsSync(filePath) || !statSync(filePath).isFile()) {
       response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
       response.end('Not found');

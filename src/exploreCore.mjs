@@ -1,8 +1,21 @@
+import { trendSelectionBonusForCandidate } from './trendRegistry.mjs';
+
 export const schemaVersion = 1;
-export const catalogVersion = 'HLM-MASTER-2026-07-EXPLORE-1';
-export const promptVersion = 'HLM-EXPLORE-PROMPT-2026-07-1';
+export const catalogVersion = 'HLM-MASTER-2026-07-EXPLORE-2';
+export const promptVersion = 'HLM-EXPLORE-PROMPT-2026-07-4';
 export const MAX_EXPLORE_ACTIVE = 32;
 export const EXPLORE_SELECTION_LIMIT = 100;
+
+const MASCULINE_LINE_TREATMENT_PROMPT = 'MASCULINE LINE TREATMENT: the named haircut remains authoritative. Use stronger directional planes, broader hair sections, controlled weight, compact side volume, deliberate temple and ear transitions, and a clean decisive nape. Avoid a diffuse rounded halo, fine decorative face-framing wisps, ornamental feathering, or uniformly soft curl edges unless the named design explicitly requires them. Apply this language to hair only; never alter the face, body, or identity.';
+const FEMININE_LINE_TREATMENT_PROMPT = 'FEMININE LINE TREATMENT: the named haircut remains authoritative. Use softer connected arcs, blended weight transitions, nuanced face-framing, gentle temple and ear transitions, fluid side-to-back movement, and tapered or feathered ends where the design allows. Avoid clipper-like boxiness, hard squared corners, rigid top planes, abrupt disconnected side panels, or a severe barbershop nape unless the named design explicitly requires them. Apply this language to hair only; never alter the face, body, or identity.';
+const GENDER_NEUTRAL_LINE_TREATMENT_PROMPT = 'GENDER-NEUTRAL LINE TREATMENT: follow the named design’s established contour and weight without imposing masculine or feminine facial cues. Apply the design language to hair only; never alter the face, body, or identity.';
+
+export function genderLineTreatmentPrompt(value) {
+  const gender = String(value ?? '').trim().toUpperCase();
+  if (gender === 'M' || gender === 'MALE' || gender === '남성') return MASCULINE_LINE_TREATMENT_PROMPT;
+  if (gender === 'F' || gender === 'FEMALE' || gender === '여성') return FEMININE_LINE_TREATMENT_PROMPT;
+  return GENDER_NEUTRAL_LINE_TREATMENT_PROMPT;
+}
 
 const DEFAULT_SETTINGS = Object.freeze({
   currentLength: 2,
@@ -231,7 +244,7 @@ function diversityScore(record, selected, seed) {
     + 8 / (1 + bucketCount(selected, 'finishBucket', v.finishBucket))
     + 6 / (1 + bucketCount(selected, 'textureBucket', v.textureBucket));
   const jitter = stableHash32(`${seed}|${record.id}`) / 0xffffffff;
-  return coverage + jitter;
+  return coverage + trendSelectionBonusForCandidate(record) + jitter;
 }
 
 export function selectDiverse100(indexRecords, rawSettings, seedInput = '') {
@@ -288,7 +301,7 @@ export function selectNeighbor100(indexRecords, rawSettings, clickedDesignId, se
 
 export function buildExploreCacheKey({ sourcePhotoKey, settings, batchKind = 'initial', centerDesignId = 'initial' }) {
   const settingsHash = stableHash32(stableSettingsString(settings)).toString(16).padStart(8, '0');
-  return `hlm:explore:v1:${catalogVersion}:${promptVersion}:${sourcePhotoKey}:${settingsHash}:${batchKind}:${centerDesignId}`;
+  return `hlm:explore:v2:${catalogVersion}:${promptVersion}:${sourcePhotoKey}:${settingsHash}:${batchKind}:${centerDesignId}`;
 }
 
 export async function sourcePhotoKey(bytes, mimeType = 'image/jpeg') {
@@ -309,7 +322,7 @@ export function createExploreBatch({ batchId, designIds, sourcePhotoKey, setting
     promptVersion,
     settings: normalizeSettings(settings),
     slots: ordered.map((designId, slotIndex) => ({ batchId, designId, slotIndex, status: 'queued', imageUrl: null })),
-    queue: ordered.map((designId, slotIndex) => ({ batchId, designId, slotIndex, sourcePhotoKey, promptVersion, priority: slotIndex === 0 && priorityDesignId === designId ? 1 : 0, status: 'queued' })),
+    queue: ordered.map((designId, slotIndex) => ({ batchId, designId, slotIndex, sourcePhotoKey, promptVersion, priority: slotIndex === 0 && priorityDesignId === designId ? 1 : 0, startRank: stableHash32(`${batchId}:${sourcePhotoKey}:${designId}:${slotIndex}:start`), status: 'queued' })),
     activeCount: 0,
     completedCount: 0,
     failedCount: 0,
@@ -320,7 +333,7 @@ export function createExploreBatch({ batchId, designIds, sourcePhotoKey, setting
 export function startQueuedItems(batch, maxActive = MAX_EXPLORE_ACTIVE) {
   const next = structuredClone(batch);
   const capacity = Math.max(0, Math.min(MAX_EXPLORE_ACTIVE, maxActive) - next.activeCount);
-  const queued = next.queue.filter((item) => item.status === 'queued').sort((a, b) => b.priority - a.priority || a.slotIndex - b.slotIndex).slice(0, capacity);
+  const queued = next.queue.filter((item) => item.status === 'queued').sort((a, b) => b.priority - a.priority || a.startRank - b.startRank || a.slotIndex - b.slotIndex).slice(0, capacity);
   for (const item of queued) {
     item.status = 'active';
     next.slots[item.slotIndex].status = 'active';
@@ -433,7 +446,7 @@ export function validateShortlist(selectedDesignIds, catalogRecordsById, setting
 export function validateExploreHandoffPayload(payload) {
   assertNoBannedFaceKeys(payload);
   if (!payload?.frontOriginalDataUrl || !String(payload.frontOriginalDataUrl).startsWith('data:image/')) throw new TypeError('Original front photo is required');
-  const forbidden = ['imageUrl', 'objectUrl', 'generatedImageUrl', 'generatedBlob', 'exploreResultUrl'];
+  const forbidden = ['imageUrl', 'objectUrl', 'generatedImageUrl', 'generatedBlob', 'exploreResultUrl', 'modelPreviewUrl', 'registeredModelPreview', 'modelPreviewBlob'];
   for (const key of forbidden) if (key in payload) throw new TypeError('Generated Explore artifacts cannot be handoff inputs');
   if (payload.catalogVersion !== catalogVersion) throw new TypeError(`Explore handoff catalogVersion must be ${catalogVersion}`);
   if (payload.promptVersion !== promptVersion) throw new TypeError(`Explore handoff promptVersion must be ${promptVersion}`);

@@ -1,0 +1,153 @@
+name: Mobile Android Release
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/mobile-android-preview.yml'
+      - 'android/**'
+      - 'capacitor.config.json'
+      - 'consultation/**'
+      - 'mobileNativeContract.test.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/prepareMobileAssets.mjs'
+      - 'src/**'
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-android-release-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    outputs:
+      artifact-name: ${{ steps.names.outputs.artifact_name }}
+      apk-name: ${{ steps.names.outputs.apk_name }}
+      checksum-name: ${{ steps.names.outputs.checksum_name }}
+      version: ${{ steps.names.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: npm ci
+      - run: npm run mobile:prepare
+      - run: npx cap sync android
+      - name: Verify tag and package versions
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          node -e "const p=require('./package.json'); if (p.version !== process.argv[1]) throw new Error('package-version-mismatch')" "$VERSION"
+          grep -F "versionName \"$VERSION\"" android/app/build.gradle
+      - name: Build debug APK
+        run: ./android/gradlew -p android assembleDebug --no-daemon
+      - name: Name release assets
+        id: names
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            APK_NAME="Hairloom-${VERSION}-android.apk"
+            ARTIFACT_NAME="hairloom-${VERSION}-android"
+          else
+            VERSION="preview"
+            APK_NAME="Hairloom-android-preview.apk"
+            ARTIFACT_NAME="hairloom-android-preview"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "apk_name=$APK_NAME" >> "$GITHUB_OUTPUT"
+          echo "checksum_name=$APK_NAME.sha256" >> "$GITHUB_OUTPUT"
+          echo "artifact_name=$ARTIFACT_NAME" >> "$GITHUB_OUTPUT"
+      - name: Prepare APK and checksum
+        env:
+          APK_NAME: ${{ steps.names.outputs.apk_name }}
+        run: |
+          mkdir -p dist
+          cp android/app/build/outputs/apk/debug/app-debug.apk "dist/$APK_NAME"
+          cd dist
+          sha256sum "$APK_NAME" > "$APK_NAME.sha256"
+          test -s "$APK_NAME"
+          test -s "$APK_NAME.sha256"
+          test "$(find . -maxdepth 1 -type f | wc -l | tr -d ' ')" = "2"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.names.outputs.artifact_name }}
+          path: |
+            dist/${{ steps.names.outputs.apk-name }}
+            dist/${{ steps.names.outputs.checksum-name }}
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+  publish-release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    needs: build-apk
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.build-apk.outputs.artifact-name }}
+          path: dist
+      - name: Verify downloaded APK
+        working-directory: dist
+        env:
+          CHECKSUM_NAME: ${{ needs.build-apk.outputs.checksum-name }}
+        run: sha256sum --check "$CHECKSUM_NAME"
+      - name: Publish GitHub release
+        env:
+          APK_NAME: ${{ needs.build-apk.outputs.apk-name }}
+          CHECKSUM_NAME: ${{ needs.build-apk.outputs.checksum-name }}
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build-apk.outputs.version }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY"; then
+            echo "::error::Release $GITHUB_REF_NAME already exists; refusing to overwrite release assets."
+            exit 1
+          fi
+
+          NOTES_FILE="docs/releases/v$VERSION.md"
+          TITLE="Hairloom $VERSION"
+          RELEASE_ARGS=()
+          if [[ "$GITHUB_REF_NAME" == *-preview* ]]; then
+            TITLE="Hairloom Android Preview $GITHUB_REF_NAME"
+            RELEASE_ARGS+=(--prerelease)
+            cat > preview-release-notes.md <<'EOF'
+          ## Hairloom Android Preview
+
+          This is a debug-signed, sideload-only Android preview for direct GitHub installation and internal testing. It is not a Play Store build.
+
+          - Provider analysis and image generation require a separately billed personal OpenAI API key entered only through Hairloom's native secure dialog.
+          - The debug signing certificate may change between builds. Android may require uninstalling the previous preview, which resets app-private data.
+          - No keystore, signing credential, customer photo, generated output, or Provider credential is included.
+          EOF
+            NOTES_FILE="preview-release-notes.md"
+          elif [[ ! -s "$NOTES_FILE" ]]; then
+            echo "::error::Missing stable release notes: $NOTES_FILE"
+            exit 1
+          fi
+
+          gh release create "$GITHUB_REF_NAME" \
+            "dist/$APK_NAME#Hairloom Android APK" \
+            "dist/$CHECKSUM_NAME#SHA-256 checksum" \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            "${RELEASE_ARGS[@]}" \
+            --title "$TITLE" \
+            --notes-file "$NOTES_FILE"

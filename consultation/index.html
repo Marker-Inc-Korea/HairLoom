@@ -2,13 +2,26 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>HAIRLOOM · PRO</title>
-  <link rel="stylesheet" href="/consultation/styles.css?v=20260726-upload-button">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>HAIRLOOM</title>
+  <meta name="theme-color" content="#080606">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Hairloom">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/hairloom-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/hairloom-192.png">
+  <link rel="stylesheet" href="/consultation/styles.css?v=20260810-native-provider-v1">
 </head>
 <body>
   <main id="app" class="shell"></main>
-  <script src="/imagen.web.js" defer></script>
-  <script type="module" src="/consultation/app.mjs?v=20260726-upload-button"></script>
+  <div class="image-lightbox" id="imageLightbox" hidden role="dialog" aria-modal="true" aria-label="이미지 크게 보기">
+    <div class="image-lightbox-shell">
+      <button class="image-lightbox-close" id="imageLightboxClose" type="button" aria-label="닫기">×</button>
+      <div class="image-lightbox-frame"><img id="imageLightboxImage" alt=""></div>
+    </div>
+  </div>
+  <script>if(!globalThis.Capacitor&&'serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/service-worker.js').catch(()=>{}));</script>
+  <script type="module" src="/consultation/app.mjs?v=20260810-native-provider-v1"></script>
 </body>
 </html>

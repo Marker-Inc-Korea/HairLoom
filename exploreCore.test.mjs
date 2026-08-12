@@ -10,6 +10,7 @@ import {
   defaultExploreSettings,
   detectImageMime,
   filterFeasible,
+  genderLineTreatmentPrompt,
   normalizeProviderResult,
   normalizeSettings,
   passesDamageCondition,
@@ -86,6 +87,21 @@ test('settings normalize exact six defaults, damage alias, and reject seventh se
   assert.deepEqual(normalizeSettings({ damage: 'high' }), { ...defaultExploreSettings(), damageCondition: 'high' });
   assert.equal(Object.keys(normalizeSettings({})).length, 6);
   assert.throws(() => normalizeSettings({ tolerance: 'wide' }), /Unknown Explore setting/);
+});
+
+test('gender line treatment keeps distinct masculine and feminine hair geometry', () => {
+  const masculine = genderLineTreatmentPrompt('M');
+  const feminine = genderLineTreatmentPrompt('female');
+  assert.match(masculine, /MASCULINE LINE TREATMENT/);
+  assert.match(masculine, /stronger directional planes/);
+  assert.match(masculine, /clean decisive nape/);
+  assert.match(feminine, /FEMININE LINE TREATMENT/);
+  assert.match(feminine, /softer connected arcs/);
+  assert.match(feminine, /nuanced face-framing/);
+  assert.notEqual(masculine, feminine);
+  assert.match(masculine, /hair only; never alter the face, body, or identity/);
+  assert.match(feminine, /hair only; never alter the face, body, or identity/);
+  assert.match(genderLineTreatmentPrompt('U'), /GENDER-NEUTRAL LINE TREATMENT/);
 });
 
 test('banned face keys are rejected without rejecting hair landmarks', () => {
@@ -167,17 +183,22 @@ test('cache key and stable settings string use dc=', () => {
   assert.match(serialized, /dc=high/);
   assert.doesNotMatch(serialized, /damage=/);
   const key = buildExploreCacheKey({ sourcePhotoKey: 'abc123', settings: { damage: 'high' } });
-  assert.match(key, /^hlm:explore:v1:HLM-MASTER-2026-07-EXPLORE-1:HLM-EXPLORE-PROMPT-2026-07-1:abc123:/);
+  assert.match(key, /^hlm:explore:v2:HLM-MASTER-2026-07-EXPLORE-2:HLM-EXPLORE-PROMPT-2026-07-4:abc123:/);
 });
 
-test('queue enforces max 32, supersession, stale guards, and out-of-order stable slots', () => {
-  const batch = createExploreBatch({ batchId: 'b1', designIds: catalog(40).map((record) => record.id), sourcePhotoKey: 'src', settings });
-  const active = startQueuedItems(batch, 99);
+test('queue starts deterministic random positions, caps at 32, and preserves stable slots', () => {
+  const input = { batchId: 'b1', designIds: catalog(40).map((record) => record.id), sourcePhotoKey: 'src', settings };
+  const active = startQueuedItems(createExploreBatch(input), 99);
+  const repeated = startQueuedItems(createExploreBatch(input), 99);
+  const activeIndices = active.queue.filter((item) => item.status === 'active').map((item) => item.slotIndex).sort((a, b) => a - b);
   assert.equal(active.activeCount, MAX_EXPLORE_ACTIVE);
-  assert.equal(active.queue.filter((item) => item.status === 'active').length, 32);
-  const completed = applyQueueCompletion(active, { ok: true, batchId: 'b1', designId: active.slots[5].designId, slotIndex: 5, sourcePhotoKey: 'src', promptVersion: active.promptVersion, url: 'blob:5' });
-  assert.equal(completed.slots[5].status, 'ready');
-  assert.equal(completed.slots[5].imageUrl, 'blob:5');
+  assert.equal(activeIndices.length, 32);
+  assert.deepEqual(activeIndices, repeated.queue.filter((item) => item.status === 'active').map((item) => item.slotIndex).sort((a, b) => a - b));
+  assert.notDeepEqual(activeIndices, Array.from({ length: 32 }, (_, index) => index));
+  const activeSlotIndex = activeIndices[5];
+  const completed = applyQueueCompletion(active, { ok: true, batchId: 'b1', designId: active.slots[activeSlotIndex].designId, slotIndex: activeSlotIndex, sourcePhotoKey: 'src', promptVersion: active.promptVersion, url: 'blob:ready' });
+  assert.equal(completed.slots[activeSlotIndex].status, 'ready');
+  assert.equal(completed.slots[activeSlotIndex].imageUrl, 'blob:ready');
   const stale = applyQueueCompletion(completed, { ok: true, batchId: 'old', designId: completed.slots[6].designId, slotIndex: 6, sourcePhotoKey: 'src', promptVersion: completed.promptVersion, url: 'blob:old' });
   assert.equal(stale.staleIgnored, 1);
   assert.notEqual(stale.slots[6].imageUrl, 'blob:old');
@@ -232,6 +253,7 @@ test('shortlist validates 1–6 ids and rejects generated artifact handoff', () 
   assert.throws(() => validateShortlist([], byId, settings), /1–6/);
   assert.throws(() => validateShortlist(records.slice(0, 7).map((record) => record.id), byId, settings), /1–6/);
   assert.throws(() => validateExploreHandoffPayload({ frontOriginalDataUrl: 'data:image/jpeg;base64,aaa', generatedImageUrl: 'blob:bad', selectedDesignIds: [records[0].id], catalogRecordsById: byId, exploreSettings: settings, catalogVersion, promptVersion }), /Generated Explore artifacts/);
+  assert.throws(() => validateExploreHandoffPayload({ frontOriginalDataUrl: 'data:image/jpeg;base64,aaa', modelPreviewUrl: 'blob:display-only', selectedDesignIds: [records[0].id], catalogRecordsById: byId, exploreSettings: settings, catalogVersion, promptVersion }), /Generated Explore artifacts/);
   assert.throws(() => validateExploreHandoffPayload({ frontOriginalDataUrl: 'data:image/jpeg;base64,aaa', selectedDesignIds: [records[0].id], catalogRecordsById: byId, exploreSettings: settings }), /catalogVersion must be/);
   assert.throws(() => validateExploreHandoffPayload({ frontOriginalDataUrl: 'data:image/jpeg;base64,aaa', selectedDesignIds: [records[0].id], catalogRecordsById: byId, exploreSettings: settings, catalogVersion }), /promptVersion must be/);
   assert.throws(() => validateExploreHandoffPayload({ frontOriginalDataUrl: 'data:image/jpeg;base64,aaa', selectedDesignIds: [records[0].id], catalogRecordsById: byId, exploreSettings: settings, catalogVersion: 'stale-catalog', promptVersion }), /catalogVersion must be/);

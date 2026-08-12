@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Hairloom</string>
+    <string name="title_activity_main">Hairloom</string>
+    <string name="package_name">com.markerinc.hairloom</string>
+    <string name="custom_url_scheme">com.markerinc.hairloom</string>
+</resources>

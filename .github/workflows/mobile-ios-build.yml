@@ -1,0 +1,72 @@
+name: Mobile iOS Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/mobile-ios-build.yml'
+      - 'capacitor.config.json'
+      - 'consultation/**'
+      - 'ios/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/prepareMobileAssets.mjs'
+      - 'src/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulator-build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run mobile:prepare
+      - run: npx cap copy ios
+      - name: Install locked CocoaPods tooling
+        run: sudo gem install cocoapods -v 1.17.0
+      - run: pod install
+        working-directory: ios/App
+      - name: Build unsigned iOS simulator app
+        run: >-
+          xcodebuild
+          -workspace ios/App/App.xcworkspace
+          -scheme App
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath "$RUNNER_TEMP/HairloomDerivedData"
+          CODE_SIGNING_ALLOWED=NO
+          build
+      - name: Launch built app in iOS Simulator
+        run: |
+          DEVICE_UDID="$(python3 - <<'PY'
+          import json, subprocess
+          payload = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', 'available', '-j']))
+          devices = [device for runtime in payload['devices'].values() for device in runtime if device['name'].startswith('iPhone')]
+          if not devices:
+              raise SystemExit('No available iPhone simulator')
+          print(devices[0]['udid'])
+          PY
+          )"
+          xcrun simctl boot "$DEVICE_UDID" || true
+          xcrun simctl bootstatus "$DEVICE_UDID" -b
+          xcrun simctl install "$DEVICE_UDID" "$RUNNER_TEMP/HairloomDerivedData/Build/Products/Debug-iphonesimulator/App.app"
+          xcrun simctl launch "$DEVICE_UDID" com.markerinc.hairloom
+          sleep 5
+          xcrun simctl io "$DEVICE_UDID" screenshot "$RUNNER_TEMP/hairloom-ios-simulator.png"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hairloom-ios-simulator
+          path: ${{ runner.temp }}/hairloom-ios-simulator.png
+          if-no-files-found: error

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>HAIRLOOM · 대기 모델 사진</title>
+  <meta name="theme-color" content="#161010">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Hairloom Models">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/hairloom-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/hairloom-192.png">
+  <link rel="stylesheet" href="/model-previews/styles.css?v=20260804-stylist-compact-v5">
+</head>
+<body>
+  <main>
+    <header>
+      <div><small>SALON TOOL</small><h1>대기 모델 사진</h1></div>
+      <a href="/">HAIRLOOM ↗</a>
+    </header>
+    <p class="intro">고객이 결과를 기다리는 동안 보여 줄 모델 사진을 등록합니다. 사진을 선택하고 사용 권리만 확인하면 바로 사용할 수 있습니다.</p>
+
+    <details class="storage-panel">
+      <summary>사진 보관 설정</summary>
+      <div class="storage-content"><p id="storageStatus">저장 공간을 확인하는 중입니다.</p><button id="persistStorage" type="button">이 기기에 안전하게 보관</button></div>
+    </details>
+
+    <section class="workspace">
+      <form id="previewForm">
+        <input id="editingId" type="hidden">
+        <input id="sourceKind" type="hidden" value="salon">
+        <textarea id="designRefs" hidden></textarea>
+        <label id="urlField" hidden>사진 주소<input id="imageUrl" type="url"></label>
+        <div class="form-heading"><div><small id="formMode">새 사진</small><h2>사진 등록</h2></div><button id="cancelEdit" type="button" hidden>수정 취소</button></div>
+
+        <label id="fileField" class="photo-picker">사진 선택<input id="imageFile" type="file" accept="image/jpeg,image/png,image/webp" multiple required><small>한 번에 여러 장을 선택할 수 있습니다. JPG, PNG, WebP · 장당 8MB 이하</small></label>
+
+        <section id="cropPreview" class="crop-preview" hidden aria-label="사진 위치 미리보기">
+          <div class="crop-frame"><img id="cropImage" alt="사진 위치 미리보기"></div>
+          <div class="row"><label>가로 위치<input id="focalX" type="range" min="0" max="100" value="50"><output id="focalXValue">50%</output></label><label>세로 위치<input id="focalY" type="range" min="0" max="100" value="50"><output id="focalYValue">50%</output></label></div>
+        </section>
+
+        <section class="usage-check" aria-labelledby="usageTitle">
+          <div><small>필수 확인</small><h3 id="usageTitle">사진 사용 정보</h3></div>
+          <label>촬영·사용 기록<input id="attribution" maxlength="160" placeholder="예: 강남점 직접 촬영 · 모델 사용 동의" required></label>
+          <div class="row"><label>사진 권리<select id="rights"><option value="salon-owned">매장 직접 촬영</option><option value="model-consented">모델 사용 동의</option><option value="licensed-stock">사용 허가 사진</option><option value="public-domain">자유 사용 사진</option></select></label><label>확인 날짜<input id="consentVerifiedAt" type="date" required></label></div>
+          <label class="confirm"><input id="consent" type="checkbox" required><span>사진을 화면에 표시할 권리와 인물 사용 동의를 확인했습니다.</span></label>
+        </section>
+
+        <details class="optional-settings">
+          <summary>표시 조건과 기록 더보기</summary>
+          <div class="optional-content">
+            <label>사진 이름 <span>선택</span><input id="title" maxlength="80" placeholder="비우면 파일 이름을 사용합니다"></label>
+            <div class="row"><label>표시 성별<select id="gender"><option value="U">모두</option><option value="F">여성</option><option value="M">남성</option></select></label><label>표시 기장<select id="length"><option value="">모두</option><option value="US">아주 짧음</option><option value="S">짧음</option><option value="MD">중간</option><option value="L">김</option><option value="XL">아주 김</option></select></label></div>
+            <label>표시 모발<select id="texture"><option value="">모두</option><option value="0">스트레이트</option><option value="1">웨이브</option><option value="2">컬</option><option value="3">코일</option></select></label>
+            <div class="row"><label>사용 기록 번호 <span>선택</span><input id="rightsReference" maxlength="120" placeholder="동의서 또는 촬영 기록 번호"></label><label>확인한 사람 <span>선택</span><input id="reviewedBy" maxlength="80" placeholder="담당 미용사"></label></div>
+            <label>사용 종료일 <span>선택</span><input id="rightsExpiresAt" type="date"><small>날짜가 지나면 사진이 자동으로 표시되지 않습니다.</small></label>
+          </div>
+        </details>
+
+        <div class="form-actions"><button class="save" type="submit">사진 등록</button><button id="disableFromForm" class="secondary" type="button" hidden>사용 중지</button></div>
+        <div id="status" aria-live="polite"></div>
+      </form>
+
+      <section class="library">
+        <div class="library-head"><div><small>등록 사진</small><h2>현재 사진</h2></div><b id="count">0</b></div>
+        <div class="library-tools"><label>사진 찾기<input id="search" type="search" placeholder="이름 · 촬영 기록"></label><label>상태<select id="statusFilter"><option value="all">전체</option><option value="active">사용 중</option><option value="expired">기간 종료</option><option value="revoked">사용 중지</option></select></label></div>
+        <section class="bulk-tools" aria-label="선택 사진 관리">
+          <label class="bulk-select"><input id="selectVisible" type="checkbox"><span>현재 목록 선택</span></label><b id="selectedCount" aria-live="polite">0개 선택</b>
+          <div class="bulk-actions"><button id="bulkEnable" type="button" disabled>다시 사용</button><button id="bulkDisable" type="button" disabled>사용 중지</button><button id="bulkDelete" class="danger" type="button" disabled>삭제</button></div>
+        </section>
+        <details class="archive-tools"><summary>사진 백업·복원</summary><p>10자 이상의 비밀번호로 백업 파일을 보호합니다. 비밀번호는 따로 보관하세요.</p><label>백업 비밀번호<input id="archivePassphrase" type="password" minlength="10" autocomplete="new-password"></label><div class="archive-actions"><button id="exportArchive" type="button">백업 파일 만들기</button><label class="import-button">백업 파일 가져오기<input id="importArchive" type="file" accept="application/json,.json,.hairloom"></label></div></details>
+        <div id="libraryWarning" class="library-warning" aria-live="polite"></div>
+        <div id="previewList" class="preview-list"></div>
+      </section>
+    </section>
+  </main>
+  <script type="module" src="/model-previews/app.mjs?v=20260804-stylist-compact-v5"></script>
+  <script>if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/service-worker.js').catch(()=>{}));</script>
+</body>
+</html>
