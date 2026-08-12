@@ -73,8 +73,8 @@ Open the latest `Hairloom Android Preview` under [GitHub Releases](https://githu
 Download:
 
 ```text
-Hairloom-android-preview.apk
-Hairloom-android-preview.apk.sha256
+Hairloom-1.0.0-android.apk
+Hairloom-1.0.0-android.apk.sha256
 ```
 
 ### Verify the checksum
@@ -82,15 +82,15 @@ Hairloom-android-preview.apk.sha256
 macOS or Linux:
 
 ```bash
-shasum -a 256 Hairloom-android-preview.apk
-cat Hairloom-android-preview.apk.sha256
+shasum -a 256 Hairloom-1.0.0-android.apk
+cat Hairloom-1.0.0-android.apk.sha256
 ```
 
 Windows PowerShell:
 
 ```powershell
-(Get-FileHash .\Hairloom-android-preview.apk -Algorithm SHA256).Hash.ToLower()
-Get-Content .\Hairloom-android-preview.apk.sha256
+(Get-FileHash .\Hairloom-1.0.0-android.apk -Algorithm SHA256).Hash.ToLower()
+Get-Content .\Hairloom-1.0.0-android.apk.sha256
 ```
 
 Confirm that the values match, then open the APK on Android. When prompted, allow **Install unknown apps** for the browser or file manager used to open it.
@@ -98,7 +98,7 @@ Confirm that the values match, then open the APK on Android. When prompted, allo
 With ADB:
 
 ```bash
-adb install Hairloom-android-preview.apk
+adb install Hairloom-1.0.0-android.apk
 ```
 
 The APK supports Android 6.0/API 23 or newer and targets SDK 35.
