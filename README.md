@@ -167,7 +167,7 @@ Android: versionName 1.0.0 / versionCode 1
 iOS: MARKETING_VERSION 1.0.0 / build 1
 ```
 
-변경 내용은 [1.0.0 릴리스 노트](docs/releases/v1.0.0.md)를 확인하세요.
+변경 내용은 [1.0.0 릴리스 노트](docs/releases/v1.0.0.md), 공유용 문안은 [1.0.0 공개 안내](docs/releases/v1.0.0-launch.md)를 확인하세요.
 
 ## 버그 제보와 기여
 
@@ -204,7 +204,7 @@ npm run mobile:doctor
 현재 기준:
 
 ```text
-106 tests passing
+107 tests passing
 1,080-design taxonomy check passing
 6,500-design master catalog check passing
 500 structure groups
