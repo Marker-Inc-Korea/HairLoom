@@ -187,3 +187,28 @@ test('public release license and guidance remain noncommercial source-available'
   assert.match(releaseNotes, /컴퓨터.*Android APK/s);
   assert.match(releaseNotes, /실제 Provider 분석·생성은 실행하지 않습니다/);
 });
+
+test('launch announcement preserves public distribution and security claims', async () => {
+  const [launch, readmeKo, readmeEn, releaseNotes] = await Promise.all([
+    read('./docs/releases/v1.0.0-launch.md'),
+    read('./README.md'),
+    read('./README.en.md'),
+    read('./docs/releases/v1.0.0.md')
+  ]);
+  assert.match(launch, /Hairloom 1\.0\.0 공개/);
+  assert.match(launch, /Hairloom 1\.0\.0 is public/);
+  assert.match(launch, /https:\/\/github\.com\/Marker-Inc-Korea\/HairLoom/);
+  assert.match(launch, /https:\/\/github\.com\/Marker-Inc-Korea\/HairLoom\/releases\/tag\/v1\.0\.0/);
+  assert.match(launch, /컴퓨터.*Android/s);
+  assert.match(launch, /별도 과금 OpenAI API 키/);
+  assert.match(launch, /separately billed OpenAI API key/);
+  assert.match(launch, /PolyForm Noncommercial 1\.0\.0/);
+  assert.match(launch, /비상업적 source-available/);
+  assert.match(launch, /noncommercial source-available/);
+  assert.match(launch, /Play Store와 App Store 배포는 보류/);
+  assert.match(launch, /debug-signed sideload/);
+  assert.doesNotMatch(launch, /API key[:=]|sk-[A-Za-z0-9_-]{20,}|~\/\.codex\/auth\.json|ChatGPT 비밀번호|ChatGPT password/i);
+  assert.match(readmeKo, /docs\/releases\/v1\.0\.0-launch\.md/);
+  assert.match(readmeEn, /docs\/releases\/v1\.0\.0-launch\.md/);
+  assert.match(releaseNotes, /\(v1\.0\.0-launch\.md\)/);
+});

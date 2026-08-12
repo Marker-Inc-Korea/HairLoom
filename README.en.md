@@ -167,7 +167,7 @@ Android: versionName 1.0.0 / versionCode 1
 iOS: MARKETING_VERSION 1.0.0 / build 1
 ```
 
-See the [1.0.0 release notes](docs/releases/v1.0.0.md).
+See the [1.0.0 release notes](docs/releases/v1.0.0.md) and the reusable [1.0.0 launch announcement](docs/releases/v1.0.0-launch.md).
 
 ## Bugs and contributions
 
@@ -204,7 +204,7 @@ npm run mobile:doctor
 Current baseline:
 
 ```text
-106 tests passing
+107 tests passing
 1,080-design taxonomy check passing
 6,500-design master catalog check passing
 500 structure groups

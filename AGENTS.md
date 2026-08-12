@@ -12,7 +12,7 @@ This is the machine-operable guide for work in the standalone Hairloom repositor
 - App URL: `http://127.0.0.1:4180/` redirects to the public Hairloom route at `/consultation/`
 - Health URL: `http://127.0.0.1:4180/healthz`
 - Main verification: `npm run verify`
-- Expected baseline: 106 tests passing
+- Expected baseline: 107 tests passing
 
 ## Hard project boundary
 
@@ -42,7 +42,7 @@ npm run verify
 HOST=127.0.0.1 PORT=4180 npm run start
 ```
 
-`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, catalog/consultation/server/trend/scheduler/automation tests, deferred model-preview module tests, hair-analysis tests, mobile bridge/native security contract tests, Android release workflow publication tests, release metadata/license tests, and the 106-test baseline.
+`npm run verify` must cover syntax checks, both catalog drift checks, deterministic trend-registry drift checks, catalog/consultation/server/trend/scheduler/automation tests, deferred model-preview module tests, hair-analysis tests, mobile bridge/native security contract tests, Android release workflow publication tests, release metadata/license/launch-copy tests, and the 107-test baseline.
 
 ## Product invariants
 
