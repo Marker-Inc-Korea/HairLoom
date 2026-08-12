@@ -73,8 +73,8 @@ http://127.0.0.1:4180/healthz
 다운로드 파일:
 
 ```text
-Hairloom-android-preview.apk
-Hairloom-android-preview.apk.sha256
+Hairloom-1.0.0-android.apk
+Hairloom-1.0.0-android.apk.sha256
 ```
 
 ### 체크섬 확인
@@ -82,15 +82,15 @@ Hairloom-android-preview.apk.sha256
 macOS 또는 Linux:
 
 ```bash
-shasum -a 256 Hairloom-android-preview.apk
-cat Hairloom-android-preview.apk.sha256
+shasum -a 256 Hairloom-1.0.0-android.apk
+cat Hairloom-1.0.0-android.apk.sha256
 ```
 
 Windows PowerShell:
 
 ```powershell
-(Get-FileHash .\Hairloom-android-preview.apk -Algorithm SHA256).Hash.ToLower()
-Get-Content .\Hairloom-android-preview.apk.sha256
+(Get-FileHash .\Hairloom-1.0.0-android.apk -Algorithm SHA256).Hash.ToLower()
+Get-Content .\Hairloom-1.0.0-android.apk.sha256
 ```
 
 두 값이 같은지 확인한 뒤 Android에서 APK를 엽니다. 요청될 때 브라우저 또는 파일 앱의 **알 수 없는 앱 설치** 권한을 허용합니다.
@@ -98,7 +98,7 @@ Get-Content .\Hairloom-android-preview.apk.sha256
 ADB를 사용하는 경우:
 
 ```bash
-adb install Hairloom-android-preview.apk
+adb install Hairloom-1.0.0-android.apk
 ```
 
 APK는 Android 6.0/API 23 이상을 지원하고 target SDK 35로 빌드됩니다.
