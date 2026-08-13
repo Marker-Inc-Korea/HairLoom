@@ -46,15 +46,18 @@ final class HairloomProviderPlugin: CAPPlugin, CAPBridgedPlugin {
 
     @objc func configure(_ call: CAPPluginCall) {
         DispatchQueue.main.async {
-            let alert = UIAlertController(title: "이미지 생성 연결", message: "개인 OpenAI Image API를 사용하며 별도 사용료가 발생합니다. 키는 iOS Keychain으로 보호되고 웹 화면에는 전달되지 않습니다.", preferredStyle: .alert)
+            let configured = HairloomKeychain.hasSecret
+            let alert = UIAlertController(title: configured ? "API 키 변경" : "API 키 입력", message: "별도 과금 OpenAI API 키를 입력하세요. 키는 iOS Keychain에만 저장되고 웹 화면·브라우저 저장소·로그에는 전달되지 않습니다.", preferredStyle: .alert)
             alert.addTextField { field in
-                field.placeholder = "OpenAI API key"
+                field.placeholder = "sk-..."
                 field.isSecureTextEntry = true
+                field.textContentType = nil
+                field.keyboardType = .asciiCapable
                 field.autocapitalizationType = .none
                 field.autocorrectionType = .no
             }
             alert.addAction(UIAlertAction(title: "취소", style: .cancel) { _ in call.reject("cancelled") })
-            alert.addAction(UIAlertAction(title: "연결", style: .default) { _ in
+            alert.addAction(UIAlertAction(title: configured ? "변경" : "저장", style: .default) { _ in
                 guard let key = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespacesAndNewlines), key.count >= 20 else {
                     call.reject("API 키를 확인해주세요.")
                     return

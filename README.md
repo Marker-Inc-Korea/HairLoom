@@ -111,8 +111,8 @@ Hairloom의 실제 분석과 이미지 생성에는 사용자가 직접 준비�
 
 1. [OpenAI Platform](https://platform.openai.com/)에서 API 프로젝트와 결제를 설정합니다.
 2. 개인 API 키를 발급합니다.
-3. Hairloom Android 앱의 SOURCE 화면에서 `이미지 생성 연결`을 누릅니다.
-4. 네이티브 보안 입력창에 키를 입력합니다.
+3. Hairloom Android 또는 iOS 앱의 SOURCE 화면에서 상단 `설정` 또는 `API 설정하기`를 누릅니다.
+4. `API 키 입력`을 선택하고 네이티브 보안 입력창에 키를 저장합니다. 연결 후 같은 화면에서 키 변경, 연결 삭제, 고객 데이터 전체 삭제를 각각 실행할 수 있습니다.
 5. `이미지 1`을 추가하고 REQUEST를 입력한 뒤 결과 생성을 시작합니다.
 
 고정 Provider 설정:

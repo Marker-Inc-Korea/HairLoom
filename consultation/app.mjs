@@ -86,6 +86,7 @@ const state = {
   nativeBatchId: '',
   nativeSources: new Map(),
   provider: { available: false, configured: false, provider: 'native-required', model: '', loading: true },
+  settingsOpen: false,
   shortlist: new Set(),
   error: ''
 };
@@ -145,7 +146,8 @@ function render() {
       <nav class="stages" aria-label="Progress">${visibleStages.filter(({ stateIndex }) => stageEnabled(stateIndex)).map(({ label, stateIndex }) => state.stage === stateIndex ? `<span class="stage" aria-label="${label}" aria-current="true"><i></i></span>` : `<button class="stage" aria-label="${label}" data-stage="${stateIndex}"><i></i></button>`).join('')}</nav>
     </aside>
     <main class="content" data-stage="${state.stage}">
-      <header class="content-head"><b>HAIRLOOM</b><span>${currentStageLabel()}</span></header>
+      <header class="content-head"><b>HAIRLOOM</b><div><span>${currentStageLabel()}</span><button type="button" class="settings-trigger" id="openMobileSettings" aria-label="설정 열기" aria-expanded="${state.settingsOpen ? 'true' : 'false'}">설정</button></div></header>
+      ${state.settingsOpen ? mobileSettingsPanel() : ''}
       ${state.error ? `<div class="status-banner error" role="alert">${esc(state.error)}</div>` : currentStageStatus() ? `<div class="status-banner" role="status">${esc(currentStageStatus())}</div>` : ''}
       ${stageMarkup}
     </main>
@@ -180,13 +182,23 @@ function assignBatchSourceViews(batch, purpose) {
   return assignConsultationSourceViews(batch, availableSourceViewKeys(), `${state.sourceKey}:${purpose}`);
 }
 
+function mobileSettingsPanel() {
+  if (!state.provider.available) return '<section class="mobile-settings-panel" aria-labelledby="mobileSettingsTitle"><div class="mobile-settings-head"><div><small>SETTINGS</small><b id="mobileSettingsTitle">API 설정</b></div><button type="button" id="closeMobileSettings" aria-label="설정 닫기">닫기</button></div><div class="mobile-settings-status unavailable"><i></i><div><b>모바일 앱에서 설정</b><span>API 키 입력은 Android·iOS 네이티브 앱에서만 열립니다. 브라우저에는 키를 입력하거나 저장하지 않습니다.</span></div></div></section>';
+  const status = state.provider.configured
+    ? `<div class="mobile-settings-status connected"><i></i><div><b>연결됨</b><span>${esc(state.provider.provider)} · ${esc(state.provider.model)}</span></div></div><button type="button" class="settings-primary" id="configureNativeProvider">API 키 변경</button><button type="button" class="settings-danger" id="clearNativeProvider">연결 삭제</button>`
+    : '<div class="mobile-settings-status"><i></i><div><b>연결 안 됨</b><span>개인 OpenAI API 키를 기기의 보안 저장소에 등록하세요.</span></div></div><button type="button" class="settings-primary" id="configureNativeProvider">API 키 입력</button>';
+  return `<section class="mobile-settings-panel" aria-labelledby="mobileSettingsTitle"><div class="mobile-settings-head"><div><small>SETTINGS</small><b id="mobileSettingsTitle">API 설정</b></div><button type="button" id="closeMobileSettings" aria-label="설정 닫기">닫기</button></div>${status}<p class="mobile-settings-note">키는 네이티브 보안 입력창에서만 처리되며 WebView·브라우저 저장소·로그에 전달되지 않습니다. ChatGPT 구독과 API 사용료는 별개입니다.</p><div class="mobile-settings-separator"></div><button type="button" class="settings-data" id="deleteNativeCustomerData">모든 고객 데이터 삭제</button><small class="mobile-settings-data-note">사진·생성 결과·대기열 기록을 삭제합니다. API 연결 삭제와는 별도입니다.</small></section>`;
+}
+
 
 function providerConnectionCard() {
-  if (state.provider.loading) return '<div class="native-provider-card loading"><b>이미지 생성 연결</b><span>보안 연결 확인 중</span></div>';
-  if (!state.provider.available) return '<div class="native-provider-card unavailable"><b>모바일 앱 필요</b><span>이미지 생성 키는 브라우저에 저장하지 않습니다. Hairloom 모바일 앱에서 연결해주세요.</span></div>';
-  if (state.provider.configured) return `<div class="native-provider-card connected"><b>이미지 생성 연결됨</b><span>${esc(state.provider.provider)} · ${esc(state.provider.model)} · 별도 사용료 발생</span><div class="native-provider-actions"><button type="button" id="clearNativeProvider">연결 삭제</button><button type="button" id="deleteNativeCustomerData">모든 고객 데이터 삭제</button></div></div>`;
-  return '<div class="native-provider-card"><b>이미지 생성 연결</b><span>개인 이미지 API 키는 기기의 보안 저장소에만 보관됩니다.</span><div class="native-provider-actions"><button type="button" id="configureNativeProvider">안전하게 연결</button><button type="button" id="deleteNativeCustomerData">모든 고객 데이터 삭제</button></div></div>';
+  if (state.provider.loading) return '<div class="native-provider-card loading"><b>API 설정 확인 중</b><span>기기의 보안 연결 상태를 확인하고 있습니다.</span></div>';
+  if (!state.provider.available) return '<div class="native-provider-card unavailable"><b>모바일 앱 필요</b><span>실제 분석·생성은 모바일 앱에서만 사용할 수 있습니다. 브라우저에는 API 키를 입력하지 않습니다.</span></div>';
+  const status = state.provider.configured ? '<span class="provider-status-dot connected"></span><b>API 연결됨</b>' : '<span class="provider-status-dot"></span><b>API 연결 필요</b>';
+  const description = state.provider.configured ? `${esc(state.provider.provider)} · ${esc(state.provider.model)}` : '설정에서 개인 OpenAI API 키를 안전하게 입력하세요.';
+  return `<div class="native-provider-card ${state.provider.configured ? 'connected' : ''}"><div class="provider-card-status">${status}</div><span>${description}</span><button type="button" class="provider-settings-link" id="openProviderSettings">${state.provider.configured ? '설정 열기' : 'API 설정하기'}</button></div>`;
 }
+
 
 function renderSource() {
   const view = BOARD_VIEWS[state.sourceViewIndex] ?? BOARD_VIEWS[0];
@@ -357,12 +369,17 @@ async function refreshProviderConnection() {
   render();
 }
 
+function setMobileSettings(open) {
+  state.settingsOpen = Boolean(open);
+  render();
+}
+
 async function openProviderConnection() {
   state.error = '';
   try {
     await configureProvider();
   } catch (error) {
-    if (error?.message !== 'cancelled') state.error = error?.message || '이미지 생성 연결을 확인해주세요.';
+    if (error?.message !== 'cancelled' && error?.code !== 'cancelled') state.error = error?.message || 'API 설정을 확인해주세요.';
   }
   await refreshProviderConnection();
 }
@@ -393,6 +410,9 @@ async function removeAllCustomerData() {
 }
 
 function bind() {
+  document.querySelector('#openMobileSettings')?.addEventListener('click', () => setMobileSettings(!state.settingsOpen));
+  document.querySelector('#openProviderSettings')?.addEventListener('click', () => setMobileSettings(true));
+  document.querySelector('#closeMobileSettings')?.addEventListener('click', () => setMobileSettings(false));
   document.querySelector('#backToList')?.addEventListener('click', () => { state.stage = state.structureSlots.length ? 2 : 0; render(); });
   document.querySelectorAll('[data-stage]').forEach((button) => button.addEventListener('click', () => { const next = Number(button.dataset.stage); if (stageEnabled(next)) { state.stage = next; render(); } }));
   document.querySelectorAll('[data-view]').forEach((input) => input.addEventListener('change', loadBoardView));
@@ -1085,7 +1105,11 @@ function handoff() { const payload = buildConsultationHandoff(agreementPayload(t
 
 document.querySelector('#imageLightboxClose')?.addEventListener('click', closeImageLightbox);
 imageLightbox?.addEventListener('click', (event) => { if (event.target === imageLightbox) closeImageLightbox(); });
-window.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !imageLightbox.hidden) closeImageLightbox(); });
+window.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') return;
+  if (state.settingsOpen) setMobileSettings(false);
+  else if (!imageLightbox.hidden) closeImageLightbox();
+});
 onNativeBatchEvent(handleNativeBatchEvent).catch(() => {});
 initializeNativeSession().catch(() => {});
 render();

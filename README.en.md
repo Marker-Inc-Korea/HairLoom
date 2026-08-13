@@ -111,8 +111,8 @@ Real Hairloom analysis and image generation require a user-owned **separately bi
 
 1. Configure an API project and billing at [OpenAI Platform](https://platform.openai.com/).
 2. Create a personal API key.
-3. On the Hairloom Android SOURCE screen, select `이미지 생성 연결`.
-4. Enter the key through the native secure dialog.
+3. On the Hairloom Android or iOS SOURCE screen, select the top `설정` (Settings) button or `API 설정하기` (API settings).
+4. Select `API 키 입력` (Enter API key) and save the key through the native secure dialog. The same panel keeps key replacement, connection removal, and full customer-data deletion as separate actions.
 5. Add `Image 1`, enter a REQUEST, and start result generation.
 
 Fixed Provider configuration:
