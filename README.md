@@ -7,7 +7,15 @@
 ![Node.js 20+](https://img.shields.io/badge/Node.js-20%2B-5FA04E?logo=nodedotjs&logoColor=white)
 ![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-B26A7A)
 
+<p align="center">
+  <img src="docs/assets/promo/hairloom-feature-16x9.jpg" width="100%" alt="한 장의 원본 사진에서 같은 가상 인물의 여러 헤어 결과를 비교하는 Hairloom 기능 예시">
+</p>
+
+<p align="center"><sub>AI로 생성한 동일한 가상 인물의 기능 예시입니다. 실제 고객 사진이나 Hairloom Provider의 실사용 결과가 아닙니다.</sub></p>
+
 Hairloom은 고객이 제공한 원본 사진과 요청을 바탕으로 헤어 디자인 상담 결과를 만드는 source-available 애플리케이션입니다.
+
+정면 사진 한 장으로 시작할 수 있으며, 필요하면 다른 각도의 사진을 추가할 수 있습니다. 입력한 사진과 원하는 스타일을 바탕으로 다양한 헤어 결과를 한 화면에서 빠르게 비교합니다.
 
 ```text
 SOURCE → RESULTS → LOCK
