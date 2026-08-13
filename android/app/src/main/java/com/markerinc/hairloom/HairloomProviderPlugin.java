@@ -11,6 +11,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.text.InputType;
+import android.text.method.PasswordTransformationMethod;
 import android.util.Base64;
 import android.widget.EditText;
 import android.widget.LinearLayout;
@@ -103,22 +104,30 @@ public class HairloomProviderPlugin extends Plugin {
     public void configure(PluginCall call) {
         getActivity().runOnUiThread(() -> {
             EditText keyField = new EditText(getActivity());
-            keyField.setHint("OpenAI API key");
+            keyField.setHint("sk-...");
             keyField.setSingleLine(true);
-            keyField.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+            keyField.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+            keyField.setTransformationMethod(PasswordTransformationMethod.getInstance());
+            keyField.setImportantForAutofill(EditText.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS);
             LinearLayout layout = new LinearLayout(getActivity());
             layout.setOrientation(LinearLayout.VERTICAL);
             int padding = Math.round(24 * getContext().getResources().getDisplayMetrics().density);
             layout.setPadding(padding, padding / 2, padding, 0);
             layout.addView(keyField);
-            new AlertDialog.Builder(getActivity())
-                .setTitle("이미지 생성 연결")
-                .setMessage("개인 OpenAI Image API를 사용하며 별도 사용료가 발생합니다. 키는 Android Keystore로 보호되고 웹 화면에는 전달되지 않습니다.")
+            AlertDialog dialog = new AlertDialog.Builder(getActivity())
+                .setTitle(vault.hasSecret() ? "API 키 변경" : "API 키 입력")
+                .setMessage("별도 과금 OpenAI API 키를 입력하세요. 키는 Android Keystore에만 저장되고 웹 화면·브라우저 저장소·로그에는 전달되지 않습니다.")
                 .setView(layout)
-                .setPositiveButton("연결", (dialog, which) -> {
+                .setPositiveButton(vault.hasSecret() ? "변경" : "저장", null)
+                .setNegativeButton("취소", (ignored, which) -> call.reject("cancelled"))
+                .setCancelable(false)
+                .create();
+            dialog.setOnShowListener(ignored -> {
+                keyField.requestFocus();
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
                     String value = keyField.getText().toString().trim();
                     if (value.length() < 20) {
-                        call.reject("API 키를 확인해주세요.");
+                        keyField.setError("API 키를 확인해주세요.");
                         return;
                     }
                     try {
@@ -129,13 +138,13 @@ public class HairloomProviderPlugin extends Plugin {
                         result.put("model", MODEL);
                         call.resolve(result);
                         resumeAll();
+                        dialog.dismiss();
                     } catch (Exception error) {
-                        call.reject("보안 저장소에 연결 정보를 저장하지 못했습니다.");
+                        keyField.setError("보안 저장소에 저장하지 못했습니다.");
                     }
-                })
-                .setNegativeButton("취소", (dialog, which) -> call.reject("cancelled"))
-                .setCancelable(false)
-                .show();
+                });
+            });
+            dialog.show();
         });
     }
 

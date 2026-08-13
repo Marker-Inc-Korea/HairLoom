@@ -81,7 +81,7 @@ test('serves Hairloom publicly and isolates Explore behind opt-in', async () => 
     assert.equal(manifest.short_name, 'Hairloom');
 
     const serviceWorkerSource = await (await fetch(`http://127.0.0.1:${port}/service-worker.js`)).text();
-    assert.match(serviceWorkerSource, /hairloom-shell-v4/);
+    assert.match(serviceWorkerSource, /hairloom-shell-v5/);
     assert.match(serviceWorkerSource, /'\/explore\/'/);
     assert.match(serviceWorkerSource, /'\/model-previews\/'/);
     assert.doesNotMatch(serviceWorkerSource, /modelPreviewRegistry/);
@@ -125,8 +125,8 @@ test('serves only consultation route and allowlisted consultation assets', async
       assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
       assert.match(response.headers.get('cache-control') || '', /no-store/);
       const html = await response.text();
-      assert.match(html, /styles\.css\?v=20260810-native-provider-v1/);
-      assert.match(html, /app\.mjs\?v=20260810-native-provider-v1/);
+      assert.match(html, /styles\.css\?v=20260813-settings-v1/);
+      assert.match(html, /app\.mjs\?v=20260813-settings-v1/);
       assert.match(html, /rel="manifest" href="\/manifest\.webmanifest"/);
       assert.match(html, /serviceWorker\.register\('\/service-worker\.js'\)/);
       assert.match(html, /id="imageLightbox"/);

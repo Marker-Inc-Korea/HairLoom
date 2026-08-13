@@ -107,6 +107,36 @@ test('public web surfaces contain no browser credential transport', async () => 
   assert.match(sources, /모든 고객 데이터 삭제/);
 });
 
+test('mobile SOURCE exposes simple secure API settings without a WebView key field', async () => {
+  const [app, css, android, ios, guide] = await Promise.all([
+    read('./consultation/app.mjs'),
+    read('./consultation/styles.css'),
+    read('./android/app/src/main/java/com/markerinc/hairloom/HairloomProviderPlugin.java'),
+    read('./ios/App/App/HairloomProviderPlugin.swift'),
+    read('./AGENTS.md')
+  ]);
+  assert.match(app, /id="openMobileSettings"/);
+  assert.match(app, /id="openProviderSettings"/);
+  assert.match(app, /API 설정/);
+  assert.match(app, /API 키 입력/);
+  assert.match(app, /API 키 변경/);
+  assert.match(app, /id="clearNativeProvider"/);
+  assert.match(app, /id="deleteNativeCustomerData"/);
+  assert.match(app, /API 연결 삭제와는 별도/);
+  assert.match(app, /WebView·브라우저 저장소·로그에 전달되지 않습니다/);
+  assert.doesNotMatch(app, /<input[^>]+(?:api|key)|type=["']password["']/i);
+  assert.match(css, /simple secure mobile API settings/);
+  assert.match(css, /\.mobile-settings-panel\{/);
+  assert.match(android, /API 키 변경/);
+  assert.match(android, /PasswordTransformationMethod\.getInstance\(\)/);
+  assert.match(android, /IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS/);
+  assert.match(ios, /API 키 변경/);
+  assert.match(ios, /isSecureTextEntry = true/);
+  assert.match(ios, /textContentType = nil/);
+  assert.match(guide, /clear `설정` \/ `API 설정하기` entry points/);
+  assert.match(guide, /keep `연결 삭제` separate from `모든 고객 데이터 삭제`/);
+});
+
 test('Android release workflow publishes only the versioned APK and checksum', async () => {
   const workflow = await read('./.github/workflows/mobile-android-preview.yml');
   assert.match(workflow, /^name: Mobile Android Release$/m);
