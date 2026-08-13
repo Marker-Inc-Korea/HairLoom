@@ -7,7 +7,15 @@
 ![Node.js 20+](https://img.shields.io/badge/Node.js-20%2B-5FA04E?logo=nodedotjs&logoColor=white)
 ![License](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-B26A7A)
 
+<p align="center">
+  <img src="docs/assets/promo/hairloom-feature-16x9.jpg" width="100%" alt="Hairloom feature example comparing multiple hairstyles for the same virtual person from one source photo">
+</p>
+
+<p align="center"><sub>Feature illustration using the same AI-generated virtual person. This is not a customer photo or a result produced by the live Hairloom Provider.</sub></p>
+
 Hairloom is a source-available hairstyle consultation application that creates design results from customer-supplied originals and requests.
+
+Start with one front photo and optionally add other angles. Hairloom uses the supplied photos and request to present multiple hairstyle results for quick comparison.
 
 ```text
 SOURCE → RESULTS → LOCK
