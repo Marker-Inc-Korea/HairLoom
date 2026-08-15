@@ -107,6 +107,12 @@ test('public web surfaces contain no browser credential transport', async () => 
   assert.match(sources, /모든 고객 데이터 삭제/);
 });
 
+test('stage navigation only binds click handlers to stage buttons', async () => {
+  const app = await read('./consultation/app.mjs');
+  assert.match(app, /querySelectorAll\('button\[data-stage\]'\)/);
+  assert.doesNotMatch(app, /querySelectorAll\('\[data-stage\]'\)/);
+});
+
 test('mobile SOURCE exposes simple secure API settings without a WebView key field', async () => {
   const [app, css, android, ios, guide] = await Promise.all([
     read('./consultation/app.mjs'),

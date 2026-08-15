@@ -414,7 +414,7 @@ function bind() {
   document.querySelector('#openProviderSettings')?.addEventListener('click', () => setMobileSettings(true));
   document.querySelector('#closeMobileSettings')?.addEventListener('click', () => setMobileSettings(false));
   document.querySelector('#backToList')?.addEventListener('click', () => { state.stage = state.structureSlots.length ? 2 : 0; render(); });
-  document.querySelectorAll('[data-stage]').forEach((button) => button.addEventListener('click', () => { const next = Number(button.dataset.stage); if (stageEnabled(next)) { state.stage = next; render(); } }));
+  document.querySelectorAll('button[data-stage]').forEach((button) => button.addEventListener('click', () => { const next = Number(button.dataset.stage); if (stageEnabled(next)) { state.stage = next; render(); } }));
   document.querySelectorAll('[data-view]').forEach((input) => input.addEventListener('change', loadBoardView));
   document.querySelectorAll('[data-upload-input]').forEach((button) => button.addEventListener('click', () => document.querySelector(`#${button.dataset.uploadInput}`)?.click()));
   document.querySelectorAll('[data-source-view]').forEach((button) => button.addEventListener('click', () => { state.sourceViewIndex = Number(button.dataset.sourceView); render(); }));
